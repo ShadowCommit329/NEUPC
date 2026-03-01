@@ -6,23 +6,25 @@
 import { supabaseAdmin } from './supabase';
 
 /**
+ * Extract data from a settled promise result, returning fallback on rejection.
+ * @param {PromiseSettledResult} result
+ * @param {*} fallback
+ */
+function settled(result, fallback = { data: [], count: 0 }) {
+  if (result.status === 'fulfilled') return result.value;
+  console.error('[security-service] Query failed:', result.reason);
+  return fallback;
+}
+
+/**
  * Fetches all security-relevant data in parallel.
+ * Uses Promise.allSettled so a single query failure doesn't crash the dashboard.
  */
 export async function getSecurityData() {
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  const [
-    activeSessions,
-    suspendedUsers,
-    bannedUsers,
-    lockedUsers,
-    pendingUsers,
-    recentLogs,
-    roleChangeLogs,
-    loginLogs,
-    recentRoleAssignments,
-  ] = await Promise.all([
+  const results = await Promise.allSettled([
     // Users currently marked online (is_active = true)
     supabaseAdmin
       .from('users')
@@ -109,6 +111,17 @@ export async function getSecurityData() {
       .order('assigned_at', { ascending: false })
       .limit(30),
   ]);
+
+  // Safely extract results from settled promises
+  const activeSessions = settled(results[0]);
+  const suspendedUsers = settled(results[1]);
+  const bannedUsers = settled(results[2]);
+  const lockedUsers = settled(results[3]);
+  const pendingUsers = settled(results[4]);
+  const recentLogs = settled(results[5]);
+  const roleChangeLogs = settled(results[6]);
+  const loginLogs = settled(results[7]);
+  const recentRoleAssignments = settled(results[8]);
 
   // Derive threat indicators
   const failedLogins = (loginLogs.data || []).filter(

@@ -13,83 +13,87 @@ export default async function sitemap() {
   const baseUrl =
     process.env.NEXT_PUBLIC_SITE_URL || 'https://neupc.vercel.app';
 
+  // Use a stable build timestamp so sitemap doesn't change on every request.
+  // Dynamic pages use their own updated_at from the database.
+  const buildDate = new Date('2026-03-01T00:00:00Z');
+
   // Static pages with stable lastModified dates
   const staticPages = [
     {
       url: baseUrl,
-      lastModified: new Date(),
+      lastModified: buildDate,
       changeFrequency: 'weekly',
       priority: 1,
     },
     {
       url: `${baseUrl}/about`,
-      lastModified: new Date(),
+      lastModified: buildDate,
       changeFrequency: 'monthly',
       priority: 0.8,
     },
     {
       url: `${baseUrl}/events`,
-      lastModified: new Date(),
+      lastModified: buildDate,
       changeFrequency: 'weekly',
       priority: 0.9,
     },
     {
       url: `${baseUrl}/achievements`,
-      lastModified: new Date(),
+      lastModified: buildDate,
       changeFrequency: 'monthly',
       priority: 0.7,
     },
     {
       url: `${baseUrl}/blogs`,
-      lastModified: new Date(),
+      lastModified: buildDate,
       changeFrequency: 'weekly',
       priority: 0.8,
     },
     {
       url: `${baseUrl}/roadmaps`,
-      lastModified: new Date(),
+      lastModified: buildDate,
       changeFrequency: 'monthly',
       priority: 0.7,
     },
     {
       url: `${baseUrl}/committee`,
-      lastModified: new Date(),
+      lastModified: buildDate,
       changeFrequency: 'monthly',
       priority: 0.6,
     },
     {
       url: `${baseUrl}/gallery`,
-      lastModified: new Date(),
+      lastModified: buildDate,
       changeFrequency: 'monthly',
       priority: 0.6,
     },
     {
       url: `${baseUrl}/contact`,
-      lastModified: new Date(),
+      lastModified: buildDate,
       changeFrequency: 'yearly',
       priority: 0.5,
     },
     {
       url: `${baseUrl}/developers`,
-      lastModified: new Date(),
+      lastModified: buildDate,
       changeFrequency: 'monthly',
       priority: 0.4,
     },
     {
       url: `${baseUrl}/join`,
-      lastModified: new Date(),
+      lastModified: buildDate,
       changeFrequency: 'yearly',
       priority: 0.7,
     },
     {
       url: `${baseUrl}/privacy`,
-      lastModified: new Date(),
+      lastModified: buildDate,
       changeFrequency: 'yearly',
       priority: 0.2,
     },
     {
       url: `${baseUrl}/terms`,
-      lastModified: new Date(),
+      lastModified: buildDate,
       changeFrequency: 'yearly',
       priority: 0.2,
     },

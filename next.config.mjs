@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Production logging
+  logging: {
+    fetches: {
+      fullUrl: process.env.NODE_ENV === 'development',
+    },
+  },
+
   images: {
     qualities: [75, 80],
     // Optimize device sizes for common breakpoints
@@ -7,6 +14,8 @@ const nextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
     // Serve modern formats first
     formats: ['image/avif', 'image/webp'],
+    // Limit concurrent image optimizations to prevent memory spikes
+    minimumCacheTTL: 60,
     remotePatterns: [
       {
         protocol: 'https',
@@ -25,7 +34,7 @@ const nextConfig = {
     ],
   },
 
-  // Compress responses
+  // Compress responses (Vercel CDN handles this, but useful for local prod)
   compress: true,
 
   // Enable React strict mode for catching potential issues
@@ -80,6 +89,18 @@ const nextConfig = {
 
   // Disable the X-Powered-By header (hides Next.js fingerprint)
   poweredByHeader: false,
+
+  // ── Server External Packages ────────────────────────────────────────────
+  // Keep heavy server-only packages out of the client bundle
+  serverExternalPackages: ['nodemailer', 'sanitize-html'],
+
+  // ── Experimental ──────────────────────────────────────────────────────────
+  experimental: {
+    // Enable server actions size limit (default 1MB)
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
 };
 
 export default nextConfig;

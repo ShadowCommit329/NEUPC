@@ -6,6 +6,8 @@
  * @module validation
  */
 
+import sanitizeHtmlLib from 'sanitize-html';
+
 // ── Sanitisation ────────────────────────────────────────────────────────────
 
 /**
@@ -46,25 +48,58 @@ export function sanitizeText(input, maxLength = 500) {
 }
 
 /**
- * Sanitise rich content (blog posts, descriptions) — strips dangerous tags
- * but preserves basic formatting. For maximum safety, use a whitelist-based
- * approach in a future iteration with DOMPurify / sanitize-html.
+ * Sanitise rich content (blog posts, descriptions) using sanitize-html
+ * with a safe whitelist of allowed tags, attributes, and protocols.
+ * Strips all dangerous content (scripts, event handlers, javascript: URIs).
  * @param {string|null|undefined} input
  * @param {number} [maxLength=50000]
  * @returns {string}
  */
 export function sanitizeRichText(input, maxLength = 50000) {
   if (!input || typeof input !== 'string') return '';
-  // Remove script/style tags and their contents
-  let cleaned = input
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
-    .replace(/on\w+\s*=\s*(['"])[^'"]*\1/gi, '') // Remove event handlers
-    .replace(/on\w+\s*=\s*[^\s>]*/gi, '') // on-event without quotes
-    .replace(/javascript\s*:/gi, '') // javascript: URLs
-    .replace(/data\s*:[^;]*;base64/gi, '') // data: URIs
-    .replace(/vbscript\s*:/gi, ''); // vbscript: URLs
-  return cleaned.slice(0, maxLength).trim();
+  const cleaned = sanitizeHtmlLib(input.slice(0, maxLength), {
+    allowedTags: sanitizeHtmlLib.defaults.allowedTags.concat([
+      'img',
+      'h1',
+      'h2',
+      'h3',
+      'span',
+      'del',
+      'ins',
+      'sub',
+      'sup',
+      'mark',
+      'figure',
+      'figcaption',
+      'hr',
+    ]),
+    allowedAttributes: {
+      ...sanitizeHtmlLib.defaults.allowedAttributes,
+      img: ['src', 'alt', 'title', 'width', 'height', 'loading'],
+      a: ['href', 'title', 'target', 'rel'],
+      span: ['style', 'class'],
+      td: ['colspan', 'rowspan'],
+      th: ['colspan', 'rowspan'],
+      '*': ['class', 'id'],
+    },
+    allowedSchemes: ['http', 'https', 'mailto'],
+    allowedStyles: {
+      span: {
+        color: [/^#[0-9a-fA-F]{3,6}$/, /^rgb\(/],
+        'background-color': [/^#[0-9a-fA-F]{3,6}$/, /^rgb\(/],
+        'text-align': [/^left$/, /^right$/, /^center$/, /^justify$/],
+      },
+    },
+    // Strip disallowed tags (keeping their text content) rather than escaping
+    disallowedTagsMode: 'discard',
+    // Enforce noopener noreferrer on all links
+    transformTags: {
+      a: sanitizeHtmlLib.simpleTransform('a', {
+        rel: 'noopener noreferrer',
+      }),
+    },
+  });
+  return cleaned.trim();
 }
 
 // ── Validation ──────────────────────────────────────────────────────────────

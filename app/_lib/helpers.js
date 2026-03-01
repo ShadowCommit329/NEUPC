@@ -34,6 +34,7 @@ export async function requireAdmin() {
 
 /**
  * Log an activity directly with explicit entity type.
+ * Errors are logged but never block the calling action.
  */
 export async function logActivity(
   userId,
@@ -50,8 +51,14 @@ export async function logActivity(
       entity_id: entityId,
       details,
     });
-  } catch {
-    // non-critical — don't break the main action
+  } catch (error) {
+    // Non-critical — log for debugging but don't break the primary action
+    console.error('[logActivity] Failed to write activity log:', {
+      action,
+      entityType,
+      entityId,
+      error: error?.message || error,
+    });
   }
 }
 
