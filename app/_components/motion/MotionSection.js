@@ -1,14 +1,15 @@
 /**
  * @file MotionSection — Scroll-triggered section wrapper.
  * Replaces the useScrollReveal + CSS transition pattern with Framer Motion.
+ * Supports `prefers-reduced-motion` — falls back to opacity-only fade.
  *
  * @module MotionSection
  */
 
 'use client';
 
-import { motion } from 'framer-motion';
-import { fadeUp, viewportConfig } from './motion';
+import { motion, useReducedMotion } from 'framer-motion';
+import { fadeUp, fadeIn, viewportConfig } from './motion';
 import { cn } from '@/app/_lib/utils';
 
 /**
@@ -30,8 +31,10 @@ export default function MotionSection({
   viewport,
   ...rest
 }) {
-  // Allow passing a full variant object or default to fadeUp
-  const variants = variant || fadeUp;
+  const prefersReduced = useReducedMotion();
+
+  // When reduced motion is preferred, use opacity-only fade
+  const variants = prefersReduced ? fadeIn : (variant || fadeUp);
 
   const Component = motion.create(as);
 

@@ -14,7 +14,7 @@ import Blogs from './_components/sections/Blogs';
 import Join from './_components/sections/Join';
 import Wave from './_components/ui/Wave';
 import ScrollToTop from './_components/ui/ScrollToTop';
-import ScrollReveal from './_components/ui/ScrollReveal';
+import MotionSection from './_components/motion/MotionSection';
 import { OrganizationJsonLd, WebsiteJsonLd } from './_components/ui/JsonLd';
 import { getHomePageData } from './_lib/public-actions';
 import { buildMetadata } from './_lib/seo';
@@ -125,41 +125,41 @@ export default async function HomePage() {
       <Wave />
 
       {/* ── Events ──────────────────────────────────────────────────── */}
-      <ScrollReveal animation="fade-up" duration={900}>
+      <MotionSection>
         <Events
           events={events}
           featuredEvents={featuredEvents}
           recentEvents={recentEvents}
           settings={settings}
         />
-      </ScrollReveal>
+      </MotionSection>
       <Wave />
 
       {/* ── Achievements ────────────────────────────────────────────── */}
-      <ScrollReveal animation="fade-up" duration={900}>
+      <MotionSection>
         <Achievements
           achievements={achievements}
           participations={participations}
           stats={stats}
           settings={settings}
         />
-      </ScrollReveal>
+      </MotionSection>
       <Wave />
 
       {/* ── Blogs ───────────────────────────────────────────────────── */}
-      <ScrollReveal animation="fade-up" duration={900}>
+      <MotionSection>
         <Blogs
           featuredBlogs={featuredBlogs}
           recentBlogs={recentBlogs}
           settings={settings}
         />
-      </ScrollReveal>
+      </MotionSection>
       <Wave />
 
       {/* ── Join ────────────────────────────────────────────────────── */}
-      <ScrollReveal animation="scale-up" duration={900}>
+      <MotionSection>
         <Join benefits={joinBenefits} settings={settings} />
-      </ScrollReveal>
+      </MotionSection>
       <Wave />
 
       <ScrollToTop />

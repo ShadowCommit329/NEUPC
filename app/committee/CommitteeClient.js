@@ -24,8 +24,12 @@ const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
 });
 import PageBackground from '../_components/ui/PageBackground';
 import PageShell from '../_components/ui/PageShell';
+import PageHero from '../_components/ui/PageHero';
+import MotionSection from '../_components/motion/MotionSection';
+import MotionFadeIn from '../_components/motion/MotionFadeIn';
+import MotionStagger from '../_components/motion/MotionStagger';
 import { GitHubIcon, LinkedInIcon } from '../_components/ui/SocialIcons';
-import { useDelayedLoad, useScrollReveal, useStaggerReveal } from '../_lib/hooks';
+import { useDelayedLoad } from '../_lib/hooks';
 import { cn, driveImageUrl, getInitials } from '../_lib/utils';
 
 // ---------------------------------------------------------------------------
@@ -599,9 +603,6 @@ export default function CommitteeClient({
   settings = {},
 }) {
   const isLoaded = useDelayedLoad();
-  const [advisorRef, advisorVisible] = useScrollReveal({ threshold: 0.05 });
-  const [coreRef, coreVisible] = useScrollReveal({ threshold: 0.05 });
-  const { ref: membersRef, isVisible: membersVisible } = useStaggerReveal({ threshold: 0.05 });
 
   const facultyAdvisors = propAdvisors.length > 0 ? propAdvisors : DEFAULT_ADVISORS;
   const coreExecutives = propCore;
@@ -611,73 +612,23 @@ export default function CommitteeClient({
   return (
     <PageShell>
       {/* ── Hero ──────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden pt-28 pb-20 md:pt-36 md:pb-24">
-        <PageBackground variant="absolute" />
-
-        {/* Radial top-center glow */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 -top-20 mx-auto h-72 w-full max-w-lg rounded-full bg-primary-500/6 blur-3xl"
-        />
-
-        <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            {/* Eyebrow badge */}
-            <div
-              className={cn(
-                'mb-5 inline-flex items-center gap-2 rounded-full border border-primary-500/20 bg-primary-500/8 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary-300 uppercase transition-all duration-700',
-                isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'
-              )}
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-primary-400 animate-pulse" />
-              {settings?.committee_page_badge || 'Leadership Team 2025–26'}
-            </div>
-
-            {/* Headline */}
-            <h1
-              className={cn(
-                'text-4xl font-bold tracking-tight text-white transition-all delay-100 duration-700 sm:text-5xl md:text-6xl',
-                isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
-              )}
-            >
-              {settings?.committee_page_title || (
-                <>
-                  Meet the{' '}
-                  <span className="bg-gradient-to-r from-primary-400 to-secondary-400 bg-clip-text text-transparent">
-                    Committee
-                  </span>
-                </>
-              )}
-            </h1>
-
-            {/* Subtitle */}
-            <p
-              className={cn(
-                'mx-auto mt-5 max-w-xl text-sm leading-relaxed text-gray-400 transition-all delay-200 duration-700 sm:text-base',
-                isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-              )}
-            >
-              {settings?.committee_page_description ||
-                'The dedicated team leading the Netrokona University Programming Club towards excellence in competitive programming and software development.'}
-            </p>
-
-            {/* Stats row */}
-            <div
-              className={cn(
-                'mx-auto mt-10 grid max-w-lg gap-3 sm:grid-cols-3 sm:max-w-2xl transition-all delay-300 duration-700',
-                isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-              )}
-            >
-              {heroStats.map((stat) => (
-                <StatCard key={stat.label} stat={stat} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      <PageHero
+        badge={settings?.committee_page_badge || 'Leadership Team 2025–26'}
+        badgeIcon="👥"
+        title={settings?.committee_page_title || 'Meet the Committee'}
+        description={
+          settings?.committee_page_description ||
+          'The dedicated team leading the Netrokona University Programming Club towards excellence in competitive programming and software development.'
+        }
+        stats={heroStats.map((s) => ({
+          value: s.value,
+          label: s.label,
+          color: s.accent === 'primary' ? 'text-primary-300' : s.accent === 'secondary' ? 'text-secondary-300' : 'text-purple-300',
+        }))}
+      />
 
       {/* ── Faculty Advisors ──────────────────────────────────────────── */}
-      <section ref={advisorRef} className="relative px-4 py-14 sm:px-6 md:py-20 lg:px-8">
+      <MotionSection as="section" className="relative px-4 py-14 sm:px-6 md:py-20 lg:px-8">
         <div className="mx-auto max-w-4xl">
           <SectionHeader
             badge="Guidance"
@@ -685,29 +636,26 @@ export default function CommitteeClient({
             subtitle="Providing expertise and mentorship to our club's journey"
             lineClassName="to-primary-500/40"
             titleClassName="from-white via-gray-100 to-gray-300"
-            className={cn(
-              'transition-all duration-700',
-              advisorVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
-            )}
           />
 
           <div className="space-y-4">
             {facultyAdvisors.map((advisor, i) => (
-              <AdvisorCard
-                key={advisor.id || i}
-                advisor={advisor}
-                isLoaded={advisorVisible}
-                index={i}
-              />
+              <MotionFadeIn key={advisor.id || i} direction="up">
+                <AdvisorCard
+                  advisor={advisor}
+                  isLoaded={true}
+                  index={i}
+                />
+              </MotionFadeIn>
             ))}
           </div>
         </div>
-      </section>
+      </MotionSection>
 
       <SectionDivider />
 
       {/* ── Core Executive Panel ──────────────────────────────────────── */}
-      <section ref={coreRef} className="relative px-4 py-14 sm:px-6 md:py-20 lg:px-8">
+      <MotionSection as="section" className="relative px-4 py-14 sm:px-6 md:py-20 lg:px-8">
         <div className="mx-auto max-w-5xl">
           <SectionHeader
             badge="Leadership"
@@ -715,33 +663,30 @@ export default function CommitteeClient({
             subtitle="The leadership driving our club's vision and mission"
             lineClassName="to-secondary-500/40"
             titleClassName="from-white via-gray-100 to-gray-300"
-            className={cn(
-              'transition-all duration-700',
-              coreVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
-            )}
           />
 
           {coreExecutives.length > 0 ? (
-            <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
+            <MotionStagger stagger={0.06} className="grid gap-4 sm:gap-5 md:grid-cols-2">
               {coreExecutives.map((exec, i) => (
-                <CoreExecCard
-                  key={exec.id}
-                  exec={exec}
-                  index={i}
-                  isLoaded={coreVisible}
-                />
+                <MotionFadeIn key={exec.id} direction="up">
+                  <CoreExecCard
+                    exec={exec}
+                    index={i}
+                    isLoaded={true}
+                  />
+                </MotionFadeIn>
               ))}
-            </div>
+            </MotionStagger>
           ) : (
             <EmptySlot message="Core executive members will appear here once positions are assigned." />
           )}
         </div>
-      </section>
+      </MotionSection>
 
       <SectionDivider />
 
       {/* ── Executive Members ─────────────────────────────────────────── */}
-      <section ref={membersRef} className="relative px-4 py-14 sm:px-6 md:py-20 lg:px-8">
+      <MotionSection as="section" className="relative px-4 py-14 sm:px-6 md:py-20 lg:px-8">
         <div className="mx-auto max-w-6xl">
           <SectionHeader
             badge="Team"
@@ -749,28 +694,25 @@ export default function CommitteeClient({
             subtitle="Supporting the club's operations and initiatives"
             lineClassName="to-white/20"
             titleClassName="from-white via-gray-100 to-gray-300"
-            className={cn(
-              'transition-all duration-700',
-              membersVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
-            )}
           />
 
           {executiveMembers.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <MotionStagger stagger={0.05} className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {executiveMembers.map((member, i) => (
-                <MemberCard
-                  key={member.id}
-                  member={member}
-                  isVisible={membersVisible}
-                  index={i}
-                />
+                <MotionFadeIn key={member.id} direction="up">
+                  <MemberCard
+                    member={member}
+                    isVisible={true}
+                    index={i}
+                  />
+                </MotionFadeIn>
               ))}
-            </div>
+            </MotionStagger>
           ) : (
             <EmptySlot message="Additional executive members will appear here once assigned." />
           )}
         </div>
-      </section>
+      </MotionSection>
 
       {/* ── CTA ───────────────────────────────────────────────────────── */}
       <CTASection

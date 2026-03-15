@@ -1,12 +1,13 @@
 /**
  * @file MotionFadeIn — Simple fade-in wrapper with configurable direction.
+ * Supports `prefers-reduced-motion` — forces opacity-only fade (no direction).
  *
  * @module MotionFadeIn
  */
 
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { fadeUp, fadeDown, fadeLeft, fadeRight, fadeIn, viewportConfig } from './motion';
 import { cn } from '@/app/_lib/utils';
 
@@ -35,7 +36,12 @@ export default function MotionFadeIn({
   inView = true,
   ...rest
 }) {
-  const variants = DIRECTION_MAP[direction] || fadeUp;
+  const prefersReduced = useReducedMotion();
+
+  // Force opacity-only when reduced motion is preferred
+  const variants = prefersReduced
+    ? fadeIn
+    : (DIRECTION_MAP[direction] || fadeUp);
 
   const animateProps = inView
     ? {

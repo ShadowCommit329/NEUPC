@@ -94,10 +94,10 @@ function GridCard({ blog }) {
   const catColor = getBlogCategoryColor(blog.category);
 
   return (
-    <motion.div variants={fadeUp} className="touch-pan-y" whileHover={cardHover}>
+    <div>
       <Link
         href={`/blogs/${blog.slug || blog.id}`}
-        className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-white/3 transition-colors duration-300 hover:border-white/15 hover:shadow-xl hover:shadow-black/30"
+        className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-white/3 transition-all duration-300 hover:-translate-y-1 hover:border-white/15 hover:shadow-xl hover:shadow-black/30"
       >
         {/* Thumbnail */}
         <div className="relative h-44 overflow-hidden bg-white/5">
@@ -175,13 +175,10 @@ function ListCard({ blog }) {
   const catColor = getBlogCategoryColor(blog.category);
 
   return (
-    <motion.div
-      variants={fadeUp} className="touch-pan-y"
-      whileHover={{ y: -2, transition: { duration: 0.2 } }}
-    >
+    <div>
       <Link
         href={`/blogs/${blog.slug || blog.id}`}
-        className="group relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-white/8 bg-white/3 p-6 transition-colors duration-300 hover:border-white/15 hover:bg-white/5 sm:flex-row"
+        className="group relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-white/8 bg-white/3 p-6 transition-all duration-300 hover:-translate-y-1 hover:border-white/15 hover:bg-white/5 sm:flex-row"
       >
         {/* Thumbnail */}
         {blog.thumbnail && (
@@ -495,7 +492,7 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
           <>
             {view === 'grid' ? (
               <motion.div
-                variants={staggerContainer(0.07)}
+                style={{ touchAction: "pan-y" }} variants={staggerContainer(0.07)}
                 initial="hidden"
                 whileInView="visible"
                 viewport={viewportConfig}
@@ -507,7 +504,7 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
               </motion.div>
             ) : (
               <motion.div
-                variants={staggerContainer(0.08)}
+                style={{ touchAction: "pan-y" }} variants={staggerContainer(0.08)}
                 initial="hidden"
                 whileInView="visible"
                 viewport={viewportConfig}

@@ -1,9 +1,8 @@
 /**
- * @file MotionStagger — Container that staggers its children's animations.
- * Wrap any list or grid of items for a cascading entrance effect.
- * Supports `prefers-reduced-motion` — reduces stagger delay to zero.
+ * @file MotionContainer — Combines layout container with scroll-triggered animation.
+ * Use instead of raw `<motion.div variants={staggerContainer(...)}>` + manual setup.
  *
- * @module MotionStagger
+ * @module MotionContainer
  */
 
 'use client';
@@ -13,26 +12,28 @@ import { staggerContainer, viewportConfig } from './motion';
 import { cn } from '@/app/_lib/utils';
 
 /**
- * MotionStagger — Stagger container for child animations.
+ * MotionContainer — Animated stagger container with layout.
  *
- * @param {number}  [stagger=0.08]  — Delay between each child
- * @param {number}  [delay=0]       — Initial delay before stagger starts
+ * @param {number}  [stagger=0.08]  — Delay between children
+ * @param {number}  [delay=0]       — Initial delay
  * @param {string}  [className]
  * @param {boolean} [inView=true]   — Scroll-triggered vs immediate
+ * @param {string}  [as='div']      — HTML element tag
  * @param {React.ReactNode} children
  */
-export default function MotionStagger({
+export default function MotionContainer({
   children,
   stagger = 0.08,
   delay = 0,
   className,
   inView = true,
+  as = 'div',
   ...rest
 }) {
   const prefersReduced = useReducedMotion();
-
-  // When reduced motion is preferred, show all children at once (no stagger)
   const effectiveStagger = prefersReduced ? 0 : stagger;
+
+  const Component = motion.create(as);
 
   const animateProps = inView
     ? {
@@ -46,13 +47,13 @@ export default function MotionStagger({
       };
 
   return (
-    <motion.div
+    <Component
       variants={staggerContainer(effectiveStagger, delay)}
       {...animateProps}
       className={cn(className)}
       {...rest}
     >
       {children}
-    </motion.div>
+    </Component>
   );
 }

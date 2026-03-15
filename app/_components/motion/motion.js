@@ -112,3 +112,32 @@ export const buttonHover = {
 export const buttonTap = {
   scale: 0.97,
 };
+
+// ─── Reduced-Motion Safe Variants ─────────────────────────────────────────────
+// Opacity-only transitions for users who prefer reduced motion.
+
+export const reducedFadeIn = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeOut' } },
+};
+
+/** No-animation fallback — instant appear with no transform. */
+export const noMotion = {
+  hidden: { opacity: 1 },
+  visible: { opacity: 1 },
+};
+
+/** Reduced-motion card hover — no transform, just subtle opacity change. */
+export const reducedCardHover = {
+  opacity: 0.92,
+  transition: { duration: 0.15 },
+};
+
+// ─── Device-Aware Presets ─────────────────────────────────────────────────────
+
+/** Animation timing presets by device class. */
+export const devicePresets = {
+  mobile: { stagger: 0.04, duration: 0.3 },
+  tablet: { stagger: 0.06, duration: 0.4 },
+  desktop: { stagger: 0.08, duration: 0.5 },
+};

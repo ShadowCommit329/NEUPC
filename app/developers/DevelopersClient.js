@@ -14,12 +14,17 @@ const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
   ssr: false,
 });
 import PageBackground from '../_components/ui/PageBackground';
+import PageShell from '../_components/ui/PageShell';
+import PageHero from '../_components/ui/PageHero';
+import MotionSection from '../_components/motion/MotionSection';
+import MotionFadeIn from '../_components/motion/MotionFadeIn';
+import MotionStagger from '../_components/motion/MotionStagger';
 import {
   GitHubIcon,
   LinkedInIcon,
   GlobeIcon,
 } from '../_components/ui/SocialIcons';
-import { useDelayedLoad, useScrollReveal } from '../_lib/hooks';
+import { useDelayedLoad } from '../_lib/hooks';
 import { cn } from '../_lib/utils';
 
 // ---------------------------------------------------------------------------
@@ -329,10 +334,6 @@ export default function DevelopersClient({
   settings = {},
 }) {
   const isLoaded = useDelayedLoad();
-  const [teamRef, teamVisible] = useScrollReveal({ threshold: 0.05 });
-  const [techRef, techVisible] = useScrollReveal({ threshold: 0.1 });
-  const [contribRef, contribVisible] = useScrollReveal({ threshold: 0.05 });
-  const [timelineRef, timelineVisible] = useScrollReveal({ threshold: 0.1 });
 
   // --- Data normalization ---
   const coreDevelopers =
@@ -354,288 +355,114 @@ export default function DevelopersClient({
   };
 
   return (
-    <main className="relative min-h-screen bg-linear-to-b from-gray-900 via-black to-gray-900">
+    <PageShell>
       {/* Hero Section */}
-      <section className="relative overflow-hidden px-4 py-16 sm:px-6 sm:py-20 md:py-24 lg:px-8 lg:py-28">
-        <PageBackground />
+      <PageHero
+        badge={settings?.developers_page_badge || 'Development Team'}
+        badgeIcon="💻"
+        title={settings?.developers_page_title || 'Meet the Developers'}
+        description={
+          settings?.developers_page_description ||
+          'The minds behind the digital platform of Netrokona University Programming Club. Passionate developers building the future of our community.'
+        }
+        stats={GITHUB_STAT_ITEMS.map((stat) => ({
+          value: githubStats[stat.key],
+          label: stat.label,
+          color: stat.colorClass,
+        }))}
+      />
 
-        <div className="relative mx-auto max-w-7xl text-center">
-          <div
-            className={cn(
-              'bg-primary-500/10 text-primary-300 ring-primary-500/20 mb-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold ring-1 transition-all duration-700 sm:text-sm',
-              isLoaded
-                ? 'translate-y-0 opacity-100'
-                : '-translate-y-4 opacity-0'
-            )}
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-              />
-            </svg>
-            {settings?.developers_page_badge || 'Development Team'}
-          </div>
-
-          <h1
-            className={cn(
-              'from-primary-300 to-secondary-300 mb-4 bg-linear-to-r via-white bg-clip-text font-mono text-3xl leading-tight font-extrabold text-transparent transition-all delay-100 duration-700 sm:text-4xl md:text-5xl lg:text-6xl',
-              isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-            )}
-          >
-            {settings?.developers_page_title || 'Meet the Developers'}
-          </h1>
-
-          <p
-            className={cn(
-              'mx-auto mb-8 max-w-3xl text-sm leading-relaxed text-gray-300 transition-all delay-200 duration-700 sm:text-base md:text-lg lg:text-xl',
-              isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-            )}
-          >
-            {settings?.developers_page_description ||
-              'The minds behind the digital platform of Netrokona University Programming Club. Passionate developers building the future of our community.'}
-          </p>
-
-          {/* GitHub Stats */}
-          <div
-            className={cn(
-              'mx-auto mt-12 grid max-w-4xl grid-cols-2 gap-4 transition-all delay-300 duration-700 sm:grid-cols-4',
-              isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-            )}
-          >
-            {GITHUB_STAT_ITEMS.map((stat) => (
-              <div
-                key={stat.key}
-                className={cn(
-                  'group rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl transition-all duration-300 hover:scale-105 hover:bg-white/10 hover:shadow-lg',
-                  stat.hoverBorder,
-                  stat.hoverShadow
-                )}
-              >
-                <div
-                  className={cn(
-                    'mb-1 text-2xl font-bold transition-all duration-300 group-hover:scale-110 sm:text-3xl',
-                    stat.colorClass
-                  )}
-                >
-                  {githubStats[stat.key]}
-                </div>
-                <div className="text-xs text-gray-400 sm:text-sm">
-                  {stat.label}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Core Development Team */}
-      <section
-        ref={teamRef}
-        className="relative px-4 py-8 sm:px-6 sm:py-12 md:py-16 lg:px-8"
-      >
+      <MotionSection as="section" className="relative px-4 py-8 sm:px-6 sm:py-12 md:py-16 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="mb-12 text-center">
-            <h2
-              className={cn(
-                'mb-3 text-2xl font-extrabold text-white transition-all duration-700 sm:text-3xl md:text-4xl',
-                teamVisible
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-6 opacity-0'
-              )}
-            >
+            <h2 className="mb-3 text-2xl font-extrabold text-white sm:text-3xl md:text-4xl">
               Core Development Team
             </h2>
-            <p
-              className={cn(
-                'text-sm text-gray-400 transition-all delay-150 duration-700 sm:text-base',
-                teamVisible
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-4 opacity-0'
-              )}
-            >
+            <p className="text-sm text-gray-400 sm:text-base">
               The architects of our digital ecosystem
             </p>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <MotionStagger stagger={0.08} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {coreDevelopers.map((dev, index) => (
-              <div
-                key={dev.id}
-                style={{
-                  transitionDelay: teamVisible
-                    ? `${300 + index * 150}ms`
-                    : '0ms',
-                }}
-                className={cn(
-                  'transition-all duration-500',
-                  teamVisible
-                    ? 'translate-y-0 scale-100 opacity-100'
-                    : 'translate-y-6 scale-95 opacity-0'
-                )}
-              >
+              <MotionFadeIn key={dev.id} direction="up">
                 <DeveloperCard dev={dev} index={index} />
-              </div>
+              </MotionFadeIn>
             ))}
-          </div>
+          </MotionStagger>
         </div>
-      </section>
+      </MotionSection>
 
-      {/* Tech Stack Section */}
-      <section
-        ref={techRef}
-        className="relative px-4 py-8 sm:px-6 sm:py-12 md:py-16 lg:px-8"
-      >
+      <MotionSection as="section" className="relative px-4 py-8 sm:px-6 sm:py-12 md:py-16 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="mb-12 text-center">
-            <h2
-              className={cn(
-                'mb-3 text-2xl font-extrabold text-white transition-all duration-700 sm:text-3xl md:text-4xl',
-                techVisible
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-6 opacity-0'
-              )}
-            >
+            <h2 className="mb-3 text-2xl font-extrabold text-white sm:text-3xl md:text-4xl">
               Tech Stack
             </h2>
-            <p
-              className={cn(
-                'text-sm text-gray-400 transition-all delay-150 duration-700 sm:text-base',
-                techVisible
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-4 opacity-0'
-              )}
-            >
+            <p className="text-sm text-gray-400 sm:text-base">
               Technologies powering our platform
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <MotionStagger stagger={0.07} className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {TECH_CATEGORIES.map((category, index) => (
-              <div
-                key={category.key}
-                style={{
-                  transitionDelay: techVisible
-                    ? `${300 + index * 100}ms`
-                    : '0ms',
-                }}
-                className={cn(
-                  'transition-all duration-500',
-                  techVisible
-                    ? 'translate-y-0 scale-100 opacity-100'
-                    : 'translate-y-6 scale-95 opacity-0'
-                )}
-              >
+              <MotionFadeIn key={category.key} direction="up">
                 <TechStackCard
                   category={category}
                   items={techStack[category.key] || []}
                 />
-              </div>
+              </MotionFadeIn>
             ))}
-          </div>
+          </MotionStagger>
         </div>
-      </section>
+      </MotionSection>
 
-      {/* Contributors Section */}
-      <section
-        ref={contribRef}
-        className="relative px-4 py-8 sm:px-6 sm:py-12 md:py-16 lg:px-8"
-      >
+      <MotionSection as="section" className="relative px-4 py-8 sm:px-6 sm:py-12 md:py-16 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="mb-12 text-center">
-            <h2
-              className={cn(
-                'mb-3 text-2xl font-extrabold text-white transition-all duration-700 sm:text-3xl md:text-4xl',
-                contribVisible
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-6 opacity-0'
-              )}
-            >
+            <h2 className="mb-3 text-2xl font-extrabold text-white sm:text-3xl md:text-4xl">
               Contributors
             </h2>
-            <p
-              className={cn(
-                'text-sm text-gray-400 transition-all delay-150 duration-700 sm:text-base',
-                contribVisible
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-4 opacity-0'
-              )}
-            >
+            <p className="text-sm text-gray-400 sm:text-base">
               Special thanks to everyone who helped build this platform
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <MotionStagger stagger={0.06} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {contributors.map((contributor, index) => (
-              <div
-                key={contributor.id}
-                style={{
-                  transitionDelay: contribVisible
-                    ? `${300 + index * 80}ms`
-                    : '0ms',
-                }}
-                className={cn(
-                  'group hover:border-primary-500/30 hover:shadow-primary-500/10 rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl transition-all duration-500 hover:scale-[1.02] hover:bg-white/10 hover:shadow-lg',
-                  contribVisible
-                    ? 'translate-y-0 opacity-100'
-                    : 'translate-y-4 opacity-0'
-                )}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="mb-1 font-semibold text-white">
-                      {contributor.name}
-                    </h3>
-                    <p className="text-primary-400 mb-2 text-xs font-semibold">
-                      {contributor.role}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {contributor.contribution}
-                    </p>
+              <MotionFadeIn key={contributor.id} direction="up">
+                <div className="group hover:border-primary-500/30 hover:shadow-primary-500/10 rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl transition-all duration-500 hover:scale-[1.02] hover:bg-white/10 hover:shadow-lg">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="mb-1 font-semibold text-white">
+                        {contributor.name}
+                      </h3>
+                      <p className="text-primary-400 mb-2 text-xs font-semibold">
+                        {contributor.role}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {contributor.contribution}
+                      </p>
+                    </div>
+                    <SocialLinkButton
+                      href={contributor.github}
+                      icon={<GitHubIcon className="h-4 w-4" />}
+                    />
                   </div>
-                  <SocialLinkButton
-                    href={contributor.github}
-                    icon={<GitHubIcon className="h-4 w-4" />}
-                  />
                 </div>
-              </div>
+              </MotionFadeIn>
             ))}
-          </div>
+          </MotionStagger>
         </div>
-      </section>
+      </MotionSection>
 
-      {/* Development Timeline */}
-      <section
-        ref={timelineRef}
-        className="relative px-4 py-8 sm:px-6 sm:py-12 md:py-16 lg:px-8"
-      >
+      <MotionSection as="section" className="relative px-4 py-8 sm:px-6 sm:py-12 md:py-16 lg:px-8">
         <div className="mx-auto max-w-5xl">
           <div className="mb-12 text-center">
-            <h2
-              className={cn(
-                'mb-3 text-2xl font-extrabold text-white transition-all duration-700 sm:text-3xl md:text-4xl',
-                timelineVisible
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-6 opacity-0'
-              )}
-            >
+            <h2 className="mb-3 text-2xl font-extrabold text-white sm:text-3xl md:text-4xl">
               Development Timeline
             </h2>
-            <p
-              className={cn(
-                'text-sm text-gray-400 transition-all delay-150 duration-700 sm:text-base',
-                timelineVisible
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-4 opacity-0'
-              )}
-            >
+            <p className="text-sm text-gray-400 sm:text-base">
               Our journey of building this platform
             </p>
           </div>
@@ -644,48 +471,49 @@ export default function DevelopersClient({
             {/* Timeline line */}
             <div className="from-primary-500/50 via-secondary-500/50 absolute top-0 bottom-0 left-4 w-0.5 bg-linear-to-b to-purple-500/50 sm:left-1/2" />
 
-            <div className="space-y-8">
+            <MotionStagger stagger={0.1} className="space-y-8">
               {timeline.map((item, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    'relative flex items-center gap-4',
-                    index % 2 === 0 ? 'sm:flex-row' : 'sm:flex-row-reverse'
-                  )}
-                >
-                  <TimelineDot status={item.status} />
+                <MotionFadeIn key={index} direction="up">
+                  <div
+                    className={cn(
+                      'relative flex items-center gap-4',
+                      index % 2 === 0 ? 'sm:flex-row' : 'sm:flex-row-reverse'
+                    )}
+                  >
+                    <TimelineDot status={item.status} />
 
-                  <div className="ml-12 flex-1 sm:ml-0 sm:w-1/2">
-                    <div
-                      className={cn(
-                        'hover:border-primary-500/30 hover:shadow-primary-500/10 rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl transition-all duration-300 hover:bg-white/10 hover:shadow-lg',
-                        index % 2 === 0 ? 'sm:mr-8' : 'sm:ml-8'
-                      )}
-                    >
-                      <div className="mb-2 flex items-center gap-2">
-                        <span className="bg-primary-500/20 text-primary-300 rounded-full px-3 py-1 text-xs font-bold">
-                          {item.year}
-                        </span>
-                        {item.status === 'current' && (
-                          <span className="bg-secondary-500/20 text-secondary-300 rounded-full px-3 py-1 text-xs font-bold">
-                            Current
-                          </span>
+                    <div className="ml-12 flex-1 sm:ml-0 sm:w-1/2">
+                      <div
+                        className={cn(
+                          'hover:border-primary-500/30 hover:shadow-primary-500/10 rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl transition-all duration-300 hover:bg-white/10 hover:shadow-lg',
+                          index % 2 === 0 ? 'sm:mr-8' : 'sm:ml-8'
                         )}
+                      >
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="bg-primary-500/20 text-primary-300 rounded-full px-3 py-1 text-xs font-bold">
+                            {item.year}
+                          </span>
+                          {item.status === 'current' && (
+                            <span className="bg-secondary-500/20 text-secondary-300 rounded-full px-3 py-1 text-xs font-bold">
+                              Current
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="mb-2 text-lg font-bold text-white">
+                          {item.title}
+                        </h3>
+                        <p className="text-sm text-gray-400">
+                          {item.description}
+                        </p>
                       </div>
-                      <h3 className="mb-2 text-lg font-bold text-white">
-                        {item.title}
-                      </h3>
-                      <p className="text-sm text-gray-400">
-                        {item.description}
-                      </p>
                     </div>
                   </div>
-                </div>
+                </MotionFadeIn>
               ))}
-            </div>
+            </MotionStagger>
           </div>
         </div>
-      </section>
+      </MotionSection>
 
       <CTASection
         icon="💻"
@@ -702,6 +530,6 @@ export default function DevelopersClient({
       />
 
       <ScrollToTop />
-    </main>
+    </PageShell>
   );
 }

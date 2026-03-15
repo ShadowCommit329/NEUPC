@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import CTASection from '../_components/ui/CTASection';
 import PageShell from '../_components/ui/PageShell';
+import PageHero from '../_components/ui/PageHero';
 import dynamic from 'next/dynamic';
 const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
   ssr: false,
@@ -340,48 +341,15 @@ export default function ContactClient({
   return (
     <PageShell showBlobs>
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden px-4 py-14 text-center sm:px-6 sm:py-20 md:py-24 lg:px-8 lg:py-28">
-        {/* Decorative blobs */}
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="from-primary-500/10 absolute -top-16 -left-16 h-72 w-72 rounded-full bg-linear-to-br to-transparent blur-3xl" />
-          <div className="from-secondary-500/10 absolute -right-16 -bottom-16 h-72 w-72 rounded-full bg-linear-to-tl to-transparent blur-3xl" />
-        </div>
-
-        <motion.div
-          variants={staggerContainer(0.12, 0.1)}
-          initial="hidden"
-          animate="visible"
-          className="mx-auto max-w-3xl"
-        >
-          {/* Badge */}
-          <motion.div
-            variants={fadeUp}
-            className="bg-primary-500/10 text-primary-300 ring-primary-500/20 mb-5 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold ring-1 sm:text-sm"
-          >
-            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            {settings?.contact_page_badge || 'Contact Us'}
-          </motion.div>
-
-          {/* Title */}
-          <motion.h1
-            variants={fadeUp}
-            className="from-primary-300 to-secondary-300 mb-4 bg-linear-to-r via-white bg-clip-text text-3xl font-extrabold leading-tight text-transparent sm:text-4xl md:text-5xl lg:text-6xl"
-          >
-            {settings?.contact_page_title || 'Get in Touch'}
-          </motion.h1>
-
-          {/* Description */}
-          <motion.p
-            variants={fadeUp}
-            className="mx-auto max-w-2xl text-sm leading-relaxed text-gray-400 sm:text-base md:text-lg"
-          >
-            {settings?.contact_page_description ||
-              "Have questions, ideas, or collaboration proposals? We'd love to hear from you. Reach out and let's build something amazing together."}
-          </motion.p>
-        </motion.div>
-      </section>
+      <PageHero
+        badge={settings?.contact_page_badge || 'Contact Us'}
+        badgeIcon="✉️"
+        title={settings?.contact_page_title || 'Get in Touch'}
+        description={
+          settings?.contact_page_description ||
+          "Have questions, ideas, or collaboration proposals? We'd love to hear from you. Reach out and let's build something amazing together."
+        }
+      />
 
       {/* ── Main Contact Section ──────────────────────────────────────────── */}
       <section className="px-4 pb-12 sm:px-6 sm:pb-16 lg:px-8">

@@ -1,13 +1,14 @@
 /**
  * @file MotionCard — Animated card wrapper with entry, hover, and tap effects.
+ * Supports `prefers-reduced-motion` — disables hover/tap transforms.
  *
  * @module MotionCard
  */
 
 'use client';
 
-import { motion } from 'framer-motion';
-import { fadeUp, cardHover, buttonTap, viewportConfig } from './motion';
+import { motion, useReducedMotion } from 'framer-motion';
+import { fadeUp, fadeIn, cardHover, reducedCardHover, buttonTap, viewportConfig } from './motion';
 import { cn } from '@/app/_lib/utils';
 
 /**
@@ -30,6 +31,8 @@ export default function MotionCard({
   inView = true,
   ...rest
 }) {
+  const prefersReduced = useReducedMotion();
+
   const animateProps = inView
     ? {
         initial: 'hidden',
@@ -41,12 +44,21 @@ export default function MotionCard({
         animate: 'visible',
       };
 
+  // Use reduced variants when user prefers reduced motion
+  const entryVariant = prefersReduced
+    ? fadeIn
+    : (customVariants || fadeUp);
+
+  const hoverEffect = prefersReduced
+    ? reducedCardHover
+    : (hover || cardHover);
+
   return (
     <motion.div
-      variants={customVariants || fadeUp}
+      variants={entryVariant}
       {...animateProps}
-      whileHover={hover || cardHover}
-      whileTap={tapEffect ? buttonTap : undefined}
+      whileHover={hoverEffect}
+      whileTap={tapEffect && !prefersReduced ? buttonTap : undefined}
       className={cn(className)}
       {...rest}
     >

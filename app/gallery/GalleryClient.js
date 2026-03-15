@@ -14,9 +14,11 @@ const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
   ssr: false,
 });
 import EmptyState from '../_components/ui/EmptyState';
-import PageBackground from '../_components/ui/PageBackground';
 import PageShell from '../_components/ui/PageShell';
-import { useDelayedLoad, useScrollReveal } from '../_lib/hooks';
+import PageHero from '../_components/ui/PageHero';
+import MotionSection from '../_components/motion/MotionSection';
+import MotionFadeIn from '../_components/motion/MotionFadeIn';
+import { useDelayedLoad } from '../_lib/hooks';
 import { cn, driveImageUrl } from '../_lib/utils';
 import SafeImg from '../_components/ui/SafeImg';
 
@@ -217,7 +219,6 @@ export default function GalleryClient({
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedImage, setSelectedImage] = useState(null);
   const isLoaded = useDelayedLoad();
-  const [gridRef, gridVisible] = useScrollReveal({ threshold: 0.05 });
   const searchInputRef = useRef(null);
   const sortRef = useRef(null);
 
@@ -370,79 +371,19 @@ export default function GalleryClient({
   return (
     <PageShell>
       {/* Hero */}
-      <section className="relative overflow-hidden px-4 py-16 sm:px-6 sm:py-20 md:py-24 lg:px-8 lg:py-28">
-        <PageBackground />
-
-        <div className="relative mx-auto max-w-7xl text-center">
-          <div
-            className={cn(
-              'text-primary-300 ring-primary-500/20 bg-primary-500/10 mb-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold ring-1 transition-all duration-700 sm:text-sm',
-              isLoaded
-                ? 'translate-y-0 opacity-100'
-                : '-translate-y-4 opacity-0'
-            )}
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            {settings?.gallery_page_badge || 'Photo Gallery'}
-          </div>
-
-          <h1
-            className={cn(
-              'from-primary-300 to-secondary-300 mb-4 bg-linear-to-r via-white bg-clip-text text-3xl leading-tight font-extrabold text-transparent transition-all delay-100 duration-700 sm:text-4xl md:text-5xl lg:text-6xl',
-              isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-            )}
-          >
-            {settings?.gallery_page_title || 'Moments That Define Us'}
-          </h1>
-
-          <p
-            className={cn(
-              'mx-auto mb-10 max-w-3xl text-sm leading-relaxed text-gray-300 transition-all delay-200 duration-700 sm:text-base md:text-lg lg:text-xl',
-              isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-            )}
-          >
-            {settings?.gallery_page_description ||
-              'Capturing innovation, teamwork, and excellence at Netrokona University Programming Club. Every photo tells a story of growth, learning, and community.'}
-          </p>
-
-          {/* Stats */}
-          <div
-            className={cn(
-              'mx-auto grid max-w-5xl gap-4 transition-all delay-300 duration-700 sm:grid-cols-2 lg:grid-cols-4',
-              isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-            )}
-          >
-            {stats.map((stat) => (
-              <div
-                key={stat.id}
-                className="group hover:border-primary-500/30 hover:shadow-primary-500/10 relative overflow-hidden rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl transition-all duration-500 hover:scale-105 hover:bg-white/10 hover:shadow-xl"
-              >
-                <div className="from-primary-500/0 via-primary-500/5 to-secondary-500/0 absolute inset-0 bg-linear-to-br opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-                <div className="relative">
-                  <div className="group-hover:text-primary-300 mb-1 text-2xl font-bold text-white transition-all sm:text-3xl">
-                    {stat.value}
-                  </div>
-                  <div className="text-xs text-gray-400 transition-all group-hover:text-gray-300 sm:text-sm">
-                    {stat.label}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <PageHero
+        badge={settings?.gallery_page_badge || 'Photo Gallery'}
+        badgeIcon="📸"
+        title={settings?.gallery_page_title || 'Moments That Define Us'}
+        description={
+          settings?.gallery_page_description ||
+          'Capturing innovation, teamwork, and excellence at Netrokona University Programming Club. Every photo tells a story of growth, learning, and community.'
+        }
+        stats={stats.map((s) => ({
+          value: s.value,
+          label: s.label,
+        }))}
+      />
 
       {/* ── Search & Filter Bar ── */}
       <section className="relative px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -695,29 +636,13 @@ export default function GalleryClient({
       </section>
 
       {/* Gallery Grid */}
-      <section
-        ref={gridRef}
-        className="relative px-4 py-8 sm:px-6 sm:py-12 md:py-16 lg:px-8"
-      >
+      <MotionSection as="section" className="relative px-4 py-8 sm:px-6 sm:py-12 md:py-16 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
             {paginatedItems.map((item, index) => (
-              <div
-                key={item.id}
-                className={cn(
-                  'transition-all duration-700',
-                  gridVisible
-                    ? 'translate-y-0 opacity-100'
-                    : 'translate-y-8 opacity-0'
-                )}
-                style={{
-                  transitionDelay: gridVisible
-                    ? `${Math.min(index * 60, 600)}ms`
-                    : '0ms',
-                }}
-              >
+              <MotionFadeIn key={item.id} direction="up">
                 <GalleryCard item={item} onClick={setSelectedImage} />
-              </div>
+              </MotionFadeIn>
             ))}
           </div>
 
@@ -824,7 +749,7 @@ export default function GalleryClient({
             </div>
           )}
         </div>
-      </section>
+      </MotionSection>
 
       <CTASection
         icon="📸"
