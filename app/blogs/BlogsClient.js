@@ -94,10 +94,10 @@ function GridCard({ blog }) {
   const catColor = getBlogCategoryColor(blog.category);
 
   return (
-    <motion.div variants={fadeUp} className="touch-pan-y" whileHover={cardHover}>
+    <div>
       <Link
         href={`/blogs/${blog.slug || blog.id}`}
-        className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-white/3 transition-colors duration-300 hover:border-white/15 hover:shadow-xl hover:shadow-black/30"
+        className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-white/3 transition-all duration-300 hover:-translate-y-1 hover:border-white/15 hover:shadow-xl hover:shadow-black/30"
       >
         {/* Thumbnail */}
         <div className="relative h-44 overflow-hidden bg-white/5">
@@ -165,7 +165,7 @@ function GridCard({ blog }) {
           </div>
         </div>
       </Link>
-    </motion.div>
+    </div>
   );
 }
 
@@ -175,13 +175,10 @@ function ListCard({ blog }) {
   const catColor = getBlogCategoryColor(blog.category);
 
   return (
-    <motion.div
-      variants={fadeUp} className="touch-pan-y"
-      whileHover={{ y: -2, transition: { duration: 0.2 } }}
-    >
+    <div>
       <Link
         href={`/blogs/${blog.slug || blog.id}`}
-        className="group relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-white/8 bg-white/3 p-6 transition-colors duration-300 hover:border-white/15 hover:bg-white/5 sm:flex-row"
+        className="group relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-white/8 bg-white/3 p-6 transition-all duration-300 hover:-translate-y-1 hover:border-white/15 hover:bg-white/5 sm:flex-row"
       >
         {/* Thumbnail */}
         {blog.thumbnail && (
@@ -273,7 +270,7 @@ function ListCard({ blog }) {
           </svg>
         </div>
       </Link>
-    </motion.div>
+    </div>
   );
 }
 
@@ -494,29 +491,29 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
         {pageBlogs.length > 0 ? (
           <>
             {view === 'grid' ? (
-              <motion.div
-                className="touch-pan-y" variants={staggerContainer(0.07)}
-                initial="hidden"
-                whileInView="visible"
-                viewport={viewportConfig}
+              <div
+                style={{ touchAction: "pan-y" }} 
+                
+                
+                
                 className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
               >
                 {pageBlogs.map((blog) => (
                   <GridCard key={blog.id} blog={blog} />
                 ))}
-              </motion.div>
+              </div>
             ) : (
-              <motion.div
-                className="touch-pan-y" variants={staggerContainer(0.08)}
-                initial="hidden"
-                whileInView="visible"
-                viewport={viewportConfig}
+              <div
+                style={{ touchAction: "pan-y" }} 
+                
+                
+                
                 className="space-y-4"
               >
                 {pageBlogs.map((blog) => (
                   <ListCard key={blog.id} blog={blog} />
                 ))}
-              </motion.div>
+              </div>
             )}
 
             <InlinePagination
