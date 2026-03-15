@@ -7,6 +7,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useScrollLock } from '@/app/_lib/hooks';
 import {
   Calendar,
   MapPin,
@@ -28,6 +29,7 @@ import {
   CheckCircle2,
   Timer,
 } from 'lucide-react';
+import { driveImageUrl } from '@/app/_lib/utils';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const CATEGORY_META = {
@@ -138,8 +140,12 @@ function FeaturedBanner({ event, onOpen }) {
       {event.banner_image || event.cover_image ? (
         <div className="absolute inset-0">
           <img
-            src={event.banner_image || event.cover_image}
+            src={driveImageUrl(event.banner_image || event.cover_image)}
             alt={event.title}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/placeholder-event.svg';
+            }}
             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-linear-to-r from-black/85 via-black/60 to-black/20" />
@@ -237,8 +243,12 @@ function EventCard({ event, onOpen }) {
       <div className="relative h-40 overflow-hidden bg-white/4">
         {event.cover_image || event.banner_image ? (
           <img
-            src={event.cover_image || event.banner_image}
+            src={driveImageUrl(event.cover_image || event.banner_image)}
             alt={event.title}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/placeholder-event.svg';
+            }}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
@@ -334,6 +344,7 @@ function EventCard({ event, onOpen }) {
 
 // ─── Detail Modal ─────────────────────────────────────────────────────────────
 function EventModal({ event, onClose }) {
+  useScrollLock();
   if (!event) return null;
   const catMeta = CATEGORY_META[event.category] ?? CATEGORY_META.Other;
   const statusMeta = STATUS_META[event.status] ?? STATUS_META.upcoming;
@@ -361,8 +372,12 @@ function EventModal({ event, onClose }) {
         {(event.banner_image || event.cover_image) && (
           <div className="relative h-44 shrink-0 overflow-hidden sm:h-52">
             <img
-              src={event.banner_image || event.cover_image}
+              src={driveImageUrl(event.banner_image || event.cover_image)}
               alt={event.title}
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = '/placeholder-event.svg';
+              }}
               className="h-full w-full object-cover"
             />
             <div className="absolute inset-0 bg-linear-to-t from-[#0d0d0f] via-transparent to-transparent" />
@@ -458,9 +473,10 @@ function EventModal({ event, onClose }) {
               <p className="mb-2 text-xs font-semibold tracking-wider text-white/30 uppercase">
                 Details
               </p>
-              <p className="text-sm leading-relaxed whitespace-pre-line text-white/55">
-                {event.content}
-              </p>
+              <div
+                className="blog-content text-sm leading-relaxed text-white/55"
+                dangerouslySetInnerHTML={{ __html: event.content }}
+              />
             </div>
           )}
 
@@ -500,13 +516,6 @@ function EventModal({ event, onClose }) {
               discounts, and post-event recordings.
             </p>
             <div className="flex flex-wrap gap-2">
-              <a
-                href="/account/guest/membership-application"
-                className="flex items-center gap-2 rounded-xl bg-violet-500/20 px-4 py-2 text-sm font-medium text-violet-300 transition hover:bg-violet-500/30"
-              >
-                <Sparkles className="size-3.5" />
-                Apply for Membership
-              </a>
               {canRegister && event.registration_url && (
                 <a
                   href={event.registration_url}
@@ -621,13 +630,6 @@ export default function GuestEventsClient({ events }) {
             Explore workshops, contests & meetups hosted by NEUPC
           </p>
         </div>
-        <a
-          href="/account/guest/membership-application"
-          className="flex shrink-0 items-center gap-2 self-start rounded-xl border border-violet-400/25 bg-violet-500/12 px-4 py-2 text-sm font-medium text-violet-300 transition hover:bg-violet-500/20 sm:self-auto"
-        >
-          <Sparkles className="size-4" />
-          Become a Member
-        </a>
       </div>
 
       {/* ── Stats row ── */}
@@ -827,32 +829,7 @@ export default function GuestEventsClient({ events }) {
         </>
       )}
 
-      {/* ── Membership CTA banner ── */}
-      {events.length > 0 && (
-        <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-violet-400/15 bg-linear-to-r from-violet-500/8 via-transparent to-transparent p-6 sm:flex-row">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-violet-400/20 bg-violet-400/10">
-              <Trophy className="size-5 text-violet-400" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white/80">
-                Unlock full event access
-              </p>
-              <p className="text-xs text-white/40">
-                Members get priority registration, exclusive materials &
-                post-event recordings.
-              </p>
-            </div>
-          </div>
-          <a
-            href="/account/guest/membership-application"
-            className="flex shrink-0 items-center gap-2 rounded-xl bg-violet-500/20 px-5 py-2.5 text-sm font-medium text-violet-300 transition hover:bg-violet-500/30"
-          >
-            <Sparkles className="size-4" />
-            Apply for Membership
-          </a>
-        </div>
-      )}
+      {/* ── Membership CTA banner section removed ── */}
     </>
   );
 }

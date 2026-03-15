@@ -6,15 +6,20 @@
  * @access admin
  */
 
-import { getGalleryAdmin, getAllEvents } from '@/app/_lib/data-service';
+import {
+  getGalleryAdmin,
+  getAllEvents,
+  getAllEventGalleryAdmin,
+} from '@/app/_lib/data-service';
 import GalleryManagementClient from './_components/GalleryManagementClient';
 
 export const metadata = { title: 'Gallery | Admin | NEUPC' };
 
 export default async function AdminGalleryPage() {
-  const [{ items, stats }, allEvents] = await Promise.all([
+  const [{ items, stats }, allEvents, eventGalleryItems] = await Promise.all([
     getGalleryAdmin().catch(() => ({ items: [], stats: {} })),
     getAllEvents().catch(() => []),
+    getAllEventGalleryAdmin().catch(() => []),
   ]);
 
   const events = (allEvents ?? []).map((e) => ({ id: e.id, title: e.title }));
@@ -25,6 +30,7 @@ export default async function AdminGalleryPage() {
         initialItems={items}
         stats={stats}
         events={events}
+        eventGalleryItems={eventGalleryItems}
       />
     </div>
   );

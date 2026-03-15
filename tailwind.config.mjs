@@ -41,7 +41,9 @@ const config = {
 
       boxShadow: {
         glow: '0 0 20px rgba(8, 131, 149, 0.35)',
+        'glow-lg': '0 0 40px rgba(8, 131, 149, 0.25)',
         soft: '0 10px 25px rgba(0,0,0,0.08)',
+        glass: '0 8px 32px rgba(0,0,0,0.12)',
       },
 
       borderRadius: {
@@ -91,6 +93,10 @@ const config = {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-8px)' },
         },
+        'glow-pulse': {
+          '0%, 100%': { opacity: '0.4', transform: 'scale(1)' },
+          '50%': { opacity: '0.8', transform: 'scale(1.05)' },
+        },
       },
 
       animation: {
@@ -102,6 +108,7 @@ const config = {
         'slide-right': 'slide-right 0.6s ease-out both',
         'scale-in': 'scale-in 0.5s ease-out both',
         float: 'float 3s ease-in-out infinite',
+        'glow-pulse': 'glow-pulse 4s ease-in-out infinite',
       },
     },
   },

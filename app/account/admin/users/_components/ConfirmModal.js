@@ -7,6 +7,7 @@
 'use client';
 
 import { X, AlertCircle, Loader2 } from 'lucide-react';
+import { useScrollLock } from '@/app/_lib/hooks';
 
 export default function ConfirmModal({
   open,
@@ -18,6 +19,7 @@ export default function ConfirmModal({
   children,
   isPending,
 }) {
+  useScrollLock(open);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

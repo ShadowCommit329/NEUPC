@@ -15,7 +15,7 @@ import {
   approveMemberProfile,
   approveBudgetEntry,
 } from '@/app/_lib/data-service';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 // =============================================================================
 // HELPERS
@@ -27,7 +27,7 @@ async function requireAdvisor() {
   const roles = await getUserRoles(session.user.email);
   if (!roles.includes('advisor')) redirect('/account');
   const user = await getUserByEmail(session.user.email);
-  if (user?.account_status !== 'active' || !user?.is_active)
+  if (user?.account_status !== 'active' || !user?.is_online)
     redirect('/account');
   return user;
 }
@@ -37,6 +37,10 @@ function revalidateApprovals() {
   revalidatePath('/account/advisor/analytics');
   revalidatePath('/account/advisor/club-overview');
   revalidatePath('/account/advisor');
+  revalidatePath('/account/admin/users');
+  revalidatePath('/account/executive/members');
+  revalidatePath('/committee');
+  revalidateTag('committee');
 }
 
 // =============================================================================

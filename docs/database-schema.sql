@@ -1,6 +1,17 @@
 -- WARNING: This schema is for context only and is not meant to be run.
 -- Table order and constraints may not be valid for execution.
 
+CREATE TABLE public.account_messages (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  sender_id uuid NOT NULL,
+  is_admin boolean NOT NULL DEFAULT false,
+  message text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT account_messages_pkey PRIMARY KEY (id),
+  CONSTRAINT account_messages_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT account_messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.users(id)
+);
 CREATE TABLE public.achievements (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   title text NOT NULL,
@@ -17,6 +28,11 @@ CREATE TABLE public.achievements (
   created_by uuid,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  gallery_images jsonb DEFAULT '[]'::jsonb,
+  featured_photo jsonb,
+  platform text,
+  profile_url text,
+  is_featured boolean NOT NULL DEFAULT false,
   CONSTRAINT achievements_pkey PRIMARY KEY (id),
   CONSTRAINT achievements_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
 );
@@ -32,6 +48,24 @@ CREATE TABLE public.activity_logs (
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT activity_logs_pkey PRIMARY KEY (id),
   CONSTRAINT activity_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.admin_profiles (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  user_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  bio text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT admin_profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT admin_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.advisor_profiles (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  user_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  position text,
+  profile_link text,
+  department text DEFAULT 'Computer Science & Engineering'::text,
+  CONSTRAINT advisor_profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT teacher_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.blog_comments (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -55,7 +89,7 @@ CREATE TABLE public.blog_posts (
   content text NOT NULL,
   thumbnail text,
   author_id uuid NOT NULL,
-  category text CHECK (category = ANY (ARRAY['CP'::text, 'WebDev'::text, 'AI-ML'::text, 'Career'::text, 'News'::text, 'Tutorial'::text, 'Other'::text])),
+  category text CHECK (category = ANY (ARRAY['CP'::text, 'WebDev'::text, 'AI-ML'::text, 'Career'::text, 'News'::text, 'Tutorial'::text, 'Programming'::text, 'Other'::text])),
   tags ARRAY,
   read_time integer,
   views integer DEFAULT 0,
@@ -164,8 +198,8 @@ CREATE TABLE public.committee_members (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT committee_members_pkey PRIMARY KEY (id),
-  CONSTRAINT committee_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
-  CONSTRAINT committee_members_position_id_fkey FOREIGN KEY (position_id) REFERENCES public.committee_positions(id)
+  CONSTRAINT committee_members_position_id_fkey FOREIGN KEY (position_id) REFERENCES public.committee_positions(id),
+  CONSTRAINT committee_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.committee_positions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -300,6 +334,17 @@ CREATE TABLE public.event_organizers (
   CONSTRAINT event_organizers_event_id_fkey FOREIGN KEY (event_id) REFERENCES public.events(id),
   CONSTRAINT event_organizers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
+CREATE TABLE public.event_registration_members (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  registration_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  is_leader boolean NOT NULL DEFAULT false,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'accepted'::text, 'declined'::text])),
+  responded_at timestamp with time zone,
+  CONSTRAINT event_registration_members_pkey PRIMARY KEY (id),
+  CONSTRAINT event_registration_members_reg_fkey FOREIGN KEY (registration_id) REFERENCES public.event_registrations(id),
+  CONSTRAINT event_registration_members_user_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
 CREATE TABLE public.event_registrations (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   event_id uuid NOT NULL,
@@ -341,6 +386,10 @@ CREATE TABLE public.events (
   approved_at timestamp with time zone,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  eligibility text DEFAULT 'all'::text,
+  prerequisites text,
+  participation_type text DEFAULT 'individual'::text CHECK (participation_type = ANY (ARRAY['individual'::text, 'team'::text])),
+  team_size integer,
   CONSTRAINT events_pkey PRIMARY KEY (id),
   CONSTRAINT events_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id),
   CONSTRAINT events_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES public.users(id)
@@ -381,6 +430,19 @@ CREATE TABLE public.join_requests (
   CONSTRAINT join_requests_pkey PRIMARY KEY (id),
   CONSTRAINT join_requests_reviewed_by_fkey FOREIGN KEY (reviewed_by) REFERENCES public.users(id)
 );
+CREATE TABLE public.journey_items (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  year text NOT NULL,
+  event text NOT NULL,
+  icon text NOT NULL DEFAULT '🎯'::text,
+  description text,
+  display_order integer DEFAULT 0,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT journey_items_pkey PRIMARY KEY (id),
+  CONSTRAINT journey_items_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id)
+);
 CREATE TABLE public.member_achievements (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   achievement_id uuid NOT NULL,
@@ -394,7 +456,7 @@ CREATE TABLE public.member_profiles (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL UNIQUE,
   student_id text NOT NULL UNIQUE,
-  batch text NOT NULL,
+  academic_session text NOT NULL,
   department text NOT NULL,
   semester text,
   cgpa numeric,
@@ -414,8 +476,8 @@ CREATE TABLE public.member_profiles (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT member_profiles_pkey PRIMARY KEY (id),
-  CONSTRAINT member_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
-  CONSTRAINT member_profiles_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES public.users(id)
+  CONSTRAINT member_profiles_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES public.users(id),
+  CONSTRAINT member_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.member_progress (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -447,6 +509,14 @@ CREATE TABLE public.member_statistics (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT member_statistics_pkey PRIMARY KEY (id),
   CONSTRAINT member_statistics_member_id_fkey FOREIGN KEY (member_id) REFERENCES public.member_profiles(id)
+);
+CREATE TABLE public.mentor_profiles (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  user_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  bio text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT mentor_profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT mentor_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.mentorship_sessions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -507,6 +577,30 @@ CREATE TABLE public.notifications (
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT notifications_pkey PRIMARY KEY (id),
   CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.participation_records (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  contest_name text NOT NULL,
+  contest_url text,
+  category text,
+  year integer NOT NULL,
+  participation_date date,
+  result text,
+  is_team boolean NOT NULL DEFAULT false,
+  team_name text,
+  team_members jsonb DEFAULT '[]'::jsonb,
+  achievement_id uuid,
+  notes text,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  photos jsonb DEFAULT '[]'::jsonb,
+  featured_photo jsonb,
+  CONSTRAINT participation_records_pkey PRIMARY KEY (id),
+  CONSTRAINT participation_records_achievement_id_fkey FOREIGN KEY (achievement_id) REFERENCES public.achievements(id),
+  CONSTRAINT participation_records_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id),
+  CONSTRAINT participation_records_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.permissions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -595,16 +689,16 @@ CREATE TABLE public.user_roles (
   assigned_at timestamp with time zone DEFAULT now(),
   expires_at timestamp with time zone,
   CONSTRAINT user_roles_pkey PRIMARY KEY (id),
-  CONSTRAINT user_roles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
   CONSTRAINT user_roles_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id),
-  CONSTRAINT user_roles_assigned_by_fkey FOREIGN KEY (assigned_by) REFERENCES public.users(id)
+  CONSTRAINT user_roles_assigned_by_fkey FOREIGN KEY (assigned_by) REFERENCES public.users(id),
+  CONSTRAINT user_roles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.users (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   email text NOT NULL UNIQUE,
   full_name text NOT NULL,
   phone text,
-  avatar_url text,
+  avatar_url text DEFAULT 'https://robohash.org/30d749d7-64e1-4f5f-a781-c2d5c238e0f5.png?set=set4'::text,
   email_verified boolean DEFAULT false,
   verification_token text,
   reset_token text,
@@ -612,14 +706,15 @@ CREATE TABLE public.users (
   last_login timestamp with time zone DEFAULT now(),
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  provider text,
-  account_status text DEFAULT '''pending''::text'::text CHECK (account_status = ANY (ARRAY['active'::text, 'rejected'::text, 'pending'::text, 'suspended'::text, 'banned'::text, 'locked'::text])),
+  provider text DEFAULT 'google'::text,
+  account_status text NOT NULL DEFAULT 'inActive'::text CHECK (account_status = ANY (ARRAY['active'::text, 'inActive'::text, 'rejected'::text, 'pending'::text, 'suspended'::text, 'banned'::text, 'locked'::text])),
   status_changed_at timestamp with time zone,
-  status_changed_by uuid,
+  status_changed_by uuid DEFAULT '4d4f226e-3324-4680-936e-25c8e4aa41df'::uuid,
   suspension_expires_at timestamp with time zone,
   phone_verified boolean DEFAULT false,
   status_reason text,
-  is_active boolean DEFAULT false,
+  is_online boolean DEFAULT false,
+  last_seen timestamp with time zone,
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_status_changed_by_fkey FOREIGN KEY (status_changed_by) REFERENCES public.users(id)
 );

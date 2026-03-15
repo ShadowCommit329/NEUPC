@@ -9,7 +9,7 @@ import { auth } from '@/app/_lib/auth';
 import { redirect } from 'next/navigation';
 import { getUserRoles, getUserByEmail } from '@/app/_lib/data-service';
 import { supabaseAdmin } from '@/app/_lib/supabase';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { logActivity, generateSlug } from '@/app/_lib/helpers';
 import sanitizeHtml from 'sanitize-html';
 
@@ -24,7 +24,6 @@ const ALLOWED_BLOG_IMAGE_TYPES = [
   'image/webp',
   'image/gif',
 ];
-const MAX_BLOG_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 function sanitizeBlogHtml(html) {
   return sanitizeHtml(html || '', {
@@ -162,8 +161,11 @@ export async function execCreateEventAction(formData) {
     .single();
   if (error) return { error: error.message };
   await logActivity(user.id, 'exec_create_event', 'event', data.id, { title });
+  revalidateTag('events');
+  revalidateTag('homepage');
   revalidatePath('/account/executive/events/manage');
   revalidatePath('/events');
+  revalidatePath('/');
   return { success: true, id: data.id };
 }
 
@@ -222,8 +224,11 @@ export async function execUpdateEventAction(formData) {
     .eq('id', id);
   if (error) return { error: error.message };
   await logActivity(user.id, 'exec_update_event', 'event', id, { title });
+  revalidateTag('events');
+  revalidateTag('homepage');
   revalidatePath('/account/executive/events/manage');
   revalidatePath('/events');
+  revalidatePath('/');
   return { success: true };
 }
 
@@ -234,8 +239,11 @@ export async function execDeleteEventAction(formData) {
   const { error } = await supabaseAdmin.from('events').delete().eq('id', id);
   if (error) return { error: error.message };
   await logActivity(user.id, 'exec_delete_event', 'event', id, {});
+  revalidateTag('events');
+  revalidateTag('homepage');
   revalidatePath('/account/executive/events/manage');
   revalidatePath('/events');
+  revalidatePath('/');
   return { success: true };
 }
 
@@ -263,6 +271,10 @@ export async function execUpdateRegistrationAction(formData) {
     { status }
   );
   revalidatePath('/account/executive/registrations');
+  revalidatePath('/account/member/events');
+  revalidatePath('/account/member/participation');
+  revalidatePath('/account/guest/events');
+  revalidatePath('/account/guest/participation');
   return { success: true };
 }
 
@@ -277,6 +289,11 @@ export async function execMarkAttendedAction(formData) {
     .eq('id', id);
   if (error) return { error: error.message };
   revalidatePath('/account/executive/registrations');
+  revalidatePath('/account/member/events');
+  revalidatePath('/account/member/participation');
+  revalidatePath('/account/member/certificates');
+  revalidatePath('/account/guest/events');
+  revalidatePath('/account/guest/participation');
   return { success: true };
 }
 
@@ -318,6 +335,7 @@ export async function execCreateContestAction(formData) {
     title,
   });
   revalidatePath('/account/executive/contests/manage');
+  revalidatePath('/account/member/contests');
   return { success: true, id: data.id };
 }
 
@@ -351,6 +369,7 @@ export async function execUpdateContestAction(formData) {
   if (error) return { error: error.message };
   await logActivity(user.id, 'exec_update_contest', 'contest', id, { title });
   revalidatePath('/account/executive/contests/manage');
+  revalidatePath('/account/member/contests');
   return { success: true };
 }
 
@@ -362,6 +381,7 @@ export async function execDeleteContestAction(formData) {
   if (error) return { error: error.message };
   await logActivity(user.id, 'exec_delete_contest', 'contest', id, {});
   revalidatePath('/account/executive/contests/manage');
+  revalidatePath('/account/member/contests');
   return { success: true };
 }
 
@@ -409,8 +429,11 @@ export async function execCreateBlogAction(formData) {
     .single();
   if (error) return { error: error.message };
   await logActivity(user.id, 'exec_create_blog', 'blog', data.id, { title });
+  revalidateTag('blogs');
+  revalidateTag('homepage');
   revalidatePath('/account/executive/blogs/manage');
   revalidatePath('/blogs');
+  revalidatePath('/');
   return { success: true, id: data.id };
 }
 
@@ -463,8 +486,11 @@ export async function execUpdateBlogAction(formData) {
     .eq('id', id);
   if (error) return { error: error.message };
   await logActivity(user.id, 'exec_update_blog', 'blog', id, { title });
+  revalidateTag('blogs');
+  revalidateTag('homepage');
   revalidatePath('/account/executive/blogs/manage');
   revalidatePath('/blogs');
+  revalidatePath('/');
   return { success: true };
 }
 
@@ -478,8 +504,11 @@ export async function execDeleteBlogAction(formData) {
     .eq('id', id);
   if (error) return { error: error.message };
   await logActivity(user.id, 'exec_delete_blog', 'blog', id, {});
+  revalidateTag('blogs');
+  revalidateTag('homepage');
   revalidatePath('/account/executive/blogs/manage');
   revalidatePath('/blogs');
+  revalidatePath('/');
   return { success: true };
 }
 
@@ -489,9 +518,6 @@ export async function execUploadBlogImageAction(formData) {
   const file = formData.get('file');
   if (!file || !(file instanceof File) || file.size === 0) {
     return { error: 'No image provided.' };
-  }
-  if (file.size > MAX_BLOG_IMAGE_SIZE) {
-    return { error: 'Image too large. Maximum size is 5 MB.' };
   }
   if (!ALLOWED_BLOG_IMAGE_TYPES.includes(file.type)) {
     return { error: 'Image type not supported.' };
@@ -559,8 +585,14 @@ export async function execAddGalleryItemAction(formData) {
     .single();
   if (error) return { error: error.message };
   await logActivity(user.id, 'exec_add_gallery', 'gallery', data.id, { url });
+  revalidateTag('gallery');
+  revalidateTag('events');
+  revalidateTag('homepage');
   revalidatePath('/account/executive/gallery/manage');
+  revalidatePath('/account/admin/gallery');
   revalidatePath('/gallery');
+  revalidatePath('/events');
+  revalidatePath('/');
   return { success: true, id: data.id };
 }
 
@@ -592,8 +624,14 @@ export async function execBulkAddGalleryAction(formData) {
     )
     .select();
   if (error) return { error: error.message };
+  revalidateTag('gallery');
+  revalidateTag('events');
+  revalidateTag('homepage');
   revalidatePath('/account/executive/gallery/manage');
+  revalidatePath('/account/admin/gallery');
   revalidatePath('/gallery');
+  revalidatePath('/events');
+  revalidatePath('/');
   return { success: true, count: data.length };
 }
 
@@ -623,8 +661,14 @@ export async function execUpdateGalleryItemAction(formData) {
     })
     .eq('id', id);
   if (error) return { error: error.message };
+  revalidateTag('gallery');
+  revalidateTag('events');
+  revalidateTag('homepage');
   revalidatePath('/account/executive/gallery/manage');
+  revalidatePath('/account/admin/gallery');
   revalidatePath('/gallery');
+  revalidatePath('/events');
+  revalidatePath('/');
   return { success: true };
 }
 
@@ -637,8 +681,14 @@ export async function execDeleteGalleryItemAction(formData) {
     .delete()
     .eq('id', id);
   if (error) return { error: error.message };
+  revalidateTag('gallery');
+  revalidateTag('events');
+  revalidateTag('homepage');
   revalidatePath('/account/executive/gallery/manage');
+  revalidatePath('/account/admin/gallery');
   revalidatePath('/gallery');
+  revalidatePath('/events');
+  revalidatePath('/');
   return { success: true };
 }
 
@@ -677,7 +727,13 @@ export async function execCreateNoticeAction(formData) {
   await logActivity(user.id, 'exec_create_notice', 'notice', data.id, {
     title,
   });
+  revalidateTag('notices');
+  revalidateTag('homepage');
   revalidatePath('/account/executive/notices/create');
+  revalidatePath('/account/admin/notices');
+  revalidatePath('/notices');
+  revalidatePath('/account');
+  revalidatePath('/');
   return { success: true, id: data.id };
 }
 
@@ -710,7 +766,13 @@ export async function execUpdateNoticeAction(formData) {
     })
     .eq('id', id);
   if (error) return { error: error.message };
+  revalidateTag('notices');
+  revalidateTag('homepage');
   revalidatePath('/account/executive/notices/create');
+  revalidatePath('/account/admin/notices');
+  revalidatePath('/notices');
+  revalidatePath('/account');
+  revalidatePath('/');
   return { success: true };
 }
 
@@ -720,7 +782,13 @@ export async function execDeleteNoticeAction(formData) {
   if (!id) return { error: 'Notice ID is required.' };
   const { error } = await supabaseAdmin.from('notices').delete().eq('id', id);
   if (error) return { error: error.message };
+  revalidateTag('notices');
+  revalidateTag('homepage');
   revalidatePath('/account/executive/notices/create');
+  revalidatePath('/account/admin/notices');
+  revalidatePath('/notices');
+  revalidatePath('/account');
+  revalidatePath('/');
   return { success: true };
 }
 
@@ -744,6 +812,8 @@ export async function execApproveJoinRequestAction(formData) {
   if (error) return { error: error.message };
   await logActivity(executive.id, 'exec_approve_join', 'join_request', id, {});
   revalidatePath('/account/executive/members');
+  revalidatePath('/account/admin/users');
+  revalidatePath('/account/advisor/approvals');
   return { success: true };
 }
 
@@ -767,6 +837,8 @@ export async function execRejectJoinRequestAction(formData) {
     rejection_reason,
   });
   revalidatePath('/account/executive/members');
+  revalidatePath('/account/admin/users');
+  revalidatePath('/account/advisor/approvals');
   return { success: true };
 }
 
@@ -813,6 +885,7 @@ export async function execCreateCertificateAction(formData) {
     { title }
   );
   revalidatePath('/account/executive/certificates/generate');
+  revalidatePath('/account/member/certificates');
   return { success: true, id: data.id, certificate_number };
 }
 
@@ -864,6 +937,7 @@ export async function execBulkCreateCertificatesAction(formData) {
     .select();
   if (error) return { error: error.message };
   revalidatePath('/account/executive/certificates/generate');
+  revalidatePath('/account/member/certificates');
   return { success: true, count: data.length };
 }
 

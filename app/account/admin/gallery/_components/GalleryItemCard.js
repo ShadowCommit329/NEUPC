@@ -14,12 +14,19 @@ import {
   deleteGalleryItemAction,
 } from '@/app/_lib/gallery-actions';
 
-export default function GalleryItemCard({ item, onEdit }) {
+export default function GalleryItemCard({
+  item,
+  onEdit,
+  noFeatured = false,
+  deleteAction,
+}) {
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [featured, setFeatured] = useState(item.is_featured);
+  const [featured, setFeatured] = useState(item.is_featured ?? false);
   const [isPending, startTransition] = useTransition();
   const [imgError, setImgError] = useState(false);
+
+  const effectiveDeleteAction = deleteAction ?? deleteGalleryItemAction;
 
   const typeConf = getTypeConfig(item.type);
   const uploaderName = item.users?.full_name ?? 'Unknown';
@@ -50,7 +57,7 @@ export default function GalleryItemCard({ item, onEdit }) {
     setDeleting(true);
     const fd = new FormData();
     fd.set('id', item.id);
-    await deleteGalleryItemAction(fd);
+    await effectiveDeleteAction(fd);
     setDeleting(false);
   }
 
@@ -82,19 +89,21 @@ export default function GalleryItemCard({ item, onEdit }) {
           </div>
         )}
 
-        {/* Featured toggle (top-left) */}
-        <button
-          onClick={handleToggleFeatured}
-          disabled={isPending}
-          title={featured ? 'Unfeature' : 'Mark as featured'}
-          className={`absolute top-2 left-2 z-10 flex h-7 w-7 items-center justify-center rounded-full text-sm transition-all duration-150 ${
-            featured
-              ? 'scale-110 bg-amber-500 text-white shadow-md shadow-amber-500/40'
-              : 'bg-black/40 text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-amber-500/20 hover:text-amber-400'
-          }`}
-        >
-          ⭐
-        </button>
+        {/* Featured toggle (top-left) — hidden for event_gallery items */}
+        {!noFeatured && (
+          <button
+            onClick={handleToggleFeatured}
+            disabled={isPending}
+            title={featured ? 'Unfeature' : 'Mark as featured'}
+            className={`absolute top-2 left-2 z-10 flex h-7 w-7 items-center justify-center rounded-full text-sm transition-all duration-150 ${
+              featured
+                ? 'scale-110 bg-amber-500 text-white shadow-md shadow-amber-500/40'
+                : 'bg-black/40 text-slate-400 opacity-0 group-hover:opacity-100 hover:bg-amber-500/20 hover:text-amber-400'
+            }`}
+          >
+            ⭐
+          </button>
+        )}
 
         {/* Type badge (top-right) */}
         <span
@@ -143,7 +152,7 @@ export default function GalleryItemCard({ item, onEdit }) {
         <div className="flex items-center justify-between border-t border-slate-700/40 pt-1">
           <div className="min-w-0">
             <p className="truncate text-xs text-slate-500">{uploaderName}</p>
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-slate-600" suppressHydrationWarning>
               {formatRelativeDate(item.created_at)}
             </p>
           </div>

@@ -3,7 +3,10 @@
  * @module DevelopersPage
  */
 
-import { getDevelopersData } from '@/app/_lib/public-actions';
+import {
+  getDevelopersData,
+  getAllPublicSettings,
+} from '@/app/_lib/public-actions';
 import DevelopersClient from './DevelopersClient';
 import { buildMetadata } from '@/app/_lib/seo';
 import { BreadcrumbJsonLd } from '@/app/_components/ui/JsonLd';
@@ -24,7 +27,10 @@ export const metadata = buildMetadata({
 });
 
 export default async function Page() {
-  const data = await getDevelopersData();
+  const [data, settings] = await Promise.all([
+    getDevelopersData(),
+    getAllPublicSettings(),
+  ]);
 
   return (
     <>
@@ -37,6 +43,7 @@ export default async function Page() {
         techStack={data.techStack || {}}
         timeline={data.timeline || []}
         githubStats={data.githubStats || {}}
+        settings={settings}
       />
     </>
   );

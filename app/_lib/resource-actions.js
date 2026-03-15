@@ -6,10 +6,17 @@
 'use server';
 
 import { supabaseAdmin } from '@/app/_lib/supabase';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { requireAdmin, createLogger } from '@/app/_lib/helpers';
 
 const logActivity = createLogger('resource');
+
+function revalidateResources() {
+  revalidateTag('roadmaps');
+  revalidatePath('/account/admin/resources');
+  revalidatePath('/resources');
+  revalidatePath('/roadmaps');
+}
 
 // =============================================================================
 // CREATE RESOURCE
@@ -56,8 +63,7 @@ export async function createResourceAction(formData) {
   if (error) return { error: error.message };
 
   await logActivity(admin.id, 'resource_created', data.id, { title });
-  revalidatePath('/account/admin/resources');
-  revalidatePath('/resources');
+  revalidateResources();
   return { success: true, id: data.id };
 }
 
@@ -108,8 +114,7 @@ export async function updateResourceAction(formData) {
   if (error) return { error: error.message };
 
   await logActivity(admin.id, 'resource_updated', id, { title });
-  revalidatePath('/account/admin/resources');
-  revalidatePath('/resources');
+  revalidateResources();
   return { success: true };
 }
 
@@ -128,8 +133,7 @@ export async function deleteResourceAction(formData) {
   if (error) return { error: error.message };
 
   await logActivity(admin.id, 'resource_deleted', id, {});
-  revalidatePath('/account/admin/resources');
-  revalidatePath('/resources');
+  revalidateResources();
   return { success: true };
 }
 
@@ -157,8 +161,7 @@ export async function toggleResourceFeaturedAction(formData) {
     id,
     {}
   );
-  revalidatePath('/account/admin/resources');
-  revalidatePath('/resources');
+  revalidateResources();
   return { success: true };
 }
 
@@ -183,7 +186,6 @@ export async function toggleResourceFreeAction(formData) {
   await logActivity(admin.id, 'resource_access_toggled', id, {
     is_free: isFree,
   });
-  revalidatePath('/account/admin/resources');
-  revalidatePath('/resources');
+  revalidateResources();
   return { success: true };
 }

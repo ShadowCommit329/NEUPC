@@ -4,11 +4,17 @@
  * @module AdminAvatar
  */
 
+import { driveImageUrl } from '@/app/_lib/utils';
+
 export default function Avatar({ user }) {
-  if (user.avatar && user.avatar.startsWith('http')) {
+  const avatarSrc = driveImageUrl(user.avatar || '');
+  const isImageUrl =
+    avatarSrc &&
+    (avatarSrc.startsWith('http') || avatarSrc.startsWith('/api/image/'));
+  if (isImageUrl) {
     return (
       <img
-        src={user.avatar}
+        src={avatarSrc}
         alt={user.name}
         className="h-9 w-9 rounded-full object-cover ring-2 ring-white/10"
       />
@@ -25,7 +31,7 @@ export default function Avatar({ user }) {
   const color = colors[(user.name?.charCodeAt(0) || 0) % colors.length];
   return (
     <div
-      className={`flex h-9 w-9 items-center justify-center rounded-full bg-linear-to-br ${color} text-sm font-bold text-white ring-2 ring-white/10`}
+      className={`flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br ${color} text-sm font-bold text-white ring-2 ring-white/10`}
     >
       {user.avatar}
     </div>

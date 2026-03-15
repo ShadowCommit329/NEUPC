@@ -5,7 +5,7 @@
 
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { auth } from './auth';
 import { supabaseAdmin } from './supabase';
 import { getUserRoles, getUserByEmail } from './data-service';
@@ -20,7 +20,7 @@ async function requireActiveMember() {
 
   const user = await getUserByEmail(session.user.email);
   if (!user) throw new Error('User not found');
-  if (user.account_status !== 'active' || user.is_active === false)
+  if (user.account_status !== 'active' || user.is_online === false)
     throw new Error('Account not active');
 
   return user;
@@ -33,17 +33,10 @@ export async function updateMemberInfoAction(formData) {
 
     const full_name = sanitizeText(formData.get('full_name'), 100);
     const phone = sanitizeText(formData.get('phone'), 20) || null;
-    const avatar_url = formData.get('avatar_url')?.trim() || null;
-
-    // Validate avatar URL if provided
-    if (avatar_url && !isValidUrl(avatar_url)) {
-      return { error: 'Invalid avatar URL.' };
-    }
 
     const updates = { updated_at: new Date().toISOString() };
     if (full_name) updates.full_name = full_name;
     updates.phone = phone;
-    if (avatar_url !== null) updates.avatar_url = avatar_url;
 
     const { error } = await supabaseAdmin
       .from('users')
@@ -58,6 +51,8 @@ export async function updateMemberInfoAction(formData) {
     revalidatePath('/account/member/profile');
     revalidatePath('/account/member/settings');
     revalidatePath('/account');
+    revalidatePath('/committee');
+    revalidateTag('committee');
     return { success: true };
   } catch (err) {
     console.error('updateMemberInfoAction error:', err);
@@ -118,6 +113,9 @@ export async function updateMemberProfileAction(formData) {
     }
 
     revalidatePath('/account/member/profile');
+    revalidatePath('/account');
+    revalidatePath('/committee');
+    revalidateTag('committee');
     return { success: true };
   } catch (err) {
     console.error('updateMemberProfileAction error:', err);

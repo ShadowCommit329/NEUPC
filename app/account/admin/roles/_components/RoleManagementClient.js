@@ -18,6 +18,7 @@ import {
   Search,
   CheckCircle2,
   XCircle,
+  ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
 import RoleCard from './RoleCard';
@@ -113,6 +114,9 @@ export default function RoleManagementClient({
   // roleId – the role that was added or removed
   // action – 'assign' | 'remove'
   function handleUserAssigned(userId, roleId, action) {
+    // Resolve the role name for updating roleNames alongside roleIds
+    const roleName = roles.find((r) => r.id === roleId)?.name;
+
     // 1. Update the live users array so re-opening a modal shows fresh data
     setUsers((prev) =>
       prev.map((u) => {
@@ -128,7 +132,15 @@ export default function RoleManagementClient({
               ? currentIds
               : [...currentIds, roleId]
             : currentIds.filter((id) => id !== roleId);
-        return { ...u, roleIds: updatedIds };
+        const currentNames = Array.isArray(u.roleNames) ? u.roleNames : [];
+        const updatedNames = roleName
+          ? action === 'assign'
+            ? currentNames.includes(roleName)
+              ? currentNames
+              : [...currentNames, roleName]
+            : currentNames.filter((n) => n !== roleName)
+          : currentNames;
+        return { ...u, roleIds: updatedIds, roleNames: updatedNames };
       })
     );
 
@@ -157,23 +169,53 @@ export default function RoleManagementClient({
 
   return (
     <>
-      {/* ── Page Header ──────────────────────────────────── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-white sm:text-3xl">
-            <Shield className="h-7 w-7 text-purple-400" />
-            Role Management
-          </h1>
-          <p className="mt-1 text-sm text-gray-400">
-            Manage roles, permissions and access control
-          </p>
+      {/* ── Page Header ────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
+        <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-purple-500/10 blur-3xl" />
+        <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-blue-500/8 blur-3xl" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <nav className="mb-3 flex items-center gap-1.5 text-[11px] text-gray-500">
+              <Link
+                href="/account/admin"
+                className="transition-colors hover:text-gray-300"
+              >
+                Dashboard
+              </Link>
+              <ChevronRight className="h-3 w-3 text-gray-700" />
+              <span className="font-medium text-gray-400">Roles</span>
+            </nav>
+            <h1 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white sm:text-2xl">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/15 ring-1 ring-purple-500/25">
+                <Shield className="h-5 w-5 text-purple-400" />
+              </div>
+              Role Management
+            </h1>
+            <p className="mt-2 text-sm text-gray-500">
+              Manage roles, permissions and access control
+            </p>
+          </div>
+          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+            <Link
+              href="/account/admin/users"
+              className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2.5 text-xs font-medium text-blue-300 transition-all hover:border-blue-500/50 hover:bg-blue-500/20"
+            >
+              User Management
+            </Link>
+            <Link
+              href="/account/admin/applications"
+              className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-2.5 text-xs font-medium text-yellow-300 transition-all hover:border-yellow-500/50 hover:bg-yellow-500/20"
+            >
+              Applications
+            </Link>
+            <Link
+              href="/account/admin"
+              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+            >
+              ← Dashboard
+            </Link>
+          </div>
         </div>
-        <Link
-          href="/account/admin"
-          className="self-start rounded-xl bg-white/6 px-4 py-2 text-xs font-medium text-gray-400 transition-colors hover:bg-white/10 hover:text-white sm:self-auto"
-        >
-          ← Back to Dashboard
-        </Link>
       </div>
 
       {/* ── Stats ─────────────────────────────────────────── */}
@@ -424,6 +466,7 @@ export default function RoleManagementClient({
 
       {assignRole && (
         <AssignRoleModal
+          key={assignRole.id}
           role={roles.find((r) => r.id === assignRole.id) ?? assignRole}
           users={users}
           onClose={() => setAssignRole(null)}

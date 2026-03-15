@@ -1,248 +1,331 @@
 /**
- * @file Committee page client component.
- * Displays faculty advisor, core executives, department leads, and executive members.
+ * @file Committee page client component — professional minimal redesign.
+ * Displays faculty advisor, core executives, and executive members
+ * with a clean, modern, attractive layout.
+ *
+ * Design principles:
+ * - Minimal but premium: generous whitespace, refined typography
+ * - Subtle depth: layered backgrounds, soft glows, micro-animations
+ * - Clear hierarchy: advisor > core executives > executive members
+ * - Data-complete: session, dept, responsibilities all visible at a glance
  *
  * @module CommitteeClient
  */
 
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
 import CTASection from '../_components/ui/CTASection';
+import SectionHeader from '../_components/ui/SectionHeader';
 import dynamic from 'next/dynamic';
 const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
   ssr: false,
 });
 import PageBackground from '../_components/ui/PageBackground';
+import PageShell from '../_components/ui/PageShell';
 import { GitHubIcon, LinkedInIcon } from '../_components/ui/SocialIcons';
-import { useDelayedLoad, useScrollReveal } from '../_lib/hooks';
-import { cn, getInitials } from '../_lib/utils';
+import { useDelayedLoad, useScrollReveal, useStaggerReveal } from '../_lib/hooks';
+import { cn, driveImageUrl, getInitials } from '../_lib/utils';
 
 // ---------------------------------------------------------------------------
-// Constants & defaults
+// Fallback data
 // ---------------------------------------------------------------------------
 
-/** Default faculty advisor fallback */
-const DEFAULT_ADVISOR = {
-  name: 'Dr. Mohammad Rahman',
-  designation: 'Associate Professor, Department of CSE',
-  university: 'Netrokona University',
-  image: '/images/advisor.jpg',
-  message:
-    'The Programming Club aims to build problem solvers and innovators who can compete globally while contributing locally.',
-  linkedin: '#',
-};
+const DEFAULT_ADVISORS = [
+  {
+    id: 'default-advisor',
+    name: 'Dr. Mohammad Rahman',
+    position: 'Associate Professor',
+    designation: 'Faculty Advisor',
+    department: 'Department of CSE',
+    university: 'Netrokona University',
+    image: '/images/advisor.jpg',
+    message:
+      'The Programming Club aims to build problem solvers and innovators who can compete globally while contributing locally.',
+    linkedin: '#',
+    github: '',
+  },
+];
 
-/** Hero quick-stat items */
 const HERO_STATS = [
   {
     value: '15+',
     label: 'Committee Members',
-    borderColor: 'hover:border-primary-500/30',
-    shadowColor: 'hover:shadow-primary-500/10',
-    textColor: 'group-hover:text-primary-300',
+    accent: 'primary',
   },
   {
     value: '7',
     label: 'Departments',
-    borderColor: 'hover:border-secondary-500/30',
-    shadowColor: 'hover:shadow-secondary-500/10',
-    textColor: 'group-hover:text-secondary-300',
+    accent: 'secondary',
   },
   {
-    value: '1',
-    label: 'Year Term',
-    borderColor: 'hover:border-purple-500/30',
-    shadowColor: 'hover:shadow-purple-500/10',
-    textColor: 'group-hover:text-purple-300',
+    value: '2025-26',
+    label: 'Current Term',
+    accent: 'purple',
   },
 ];
 
-/** Department filter tabs */
-const FILTER_TABS = ['all', 'technical', 'events', 'media'];
-
 // ---------------------------------------------------------------------------
-// Sub-components
+// Tiny SVG icons (inline to avoid extra import overhead)
 // ---------------------------------------------------------------------------
 
-/**
- * Social link button.
- * @param {{ href: string, icon: React.ReactNode, hoverClasses?: string }} props
- */
-function SocialButton({
-  href,
-  icon,
-  hoverClasses = 'hover:border-primary-500/30 hover:bg-primary-500/10 hover:text-primary-300',
-}) {
-  if (!href) return null;
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={cn(
-        'flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-gray-400 transition-all',
-        hoverClasses
-      )}
-    >
-      {icon}
-    </a>
-  );
-}
+const BuildingIcon = ({ className }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 20 20"
+    fill="currentColor"
+    className={className}
+  >
+    <path
+      fillRule="evenodd"
+      d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2H4zm2 3a1 1 0 011-1h6a1 1 0 011 1v1a1 1 0 01-1 1H7a1 1 0 01-1-1V5zm0 4a1 1 0 011-1h2a1 1 0 110 2H7a1 1 0 01-1-1zm0 4a1 1 0 011-1h2a1 1 0 110 2H7a1 1 0 01-1-1zm6-4a1 1 0 011-1h.01a1 1 0 110 2H13a1 1 0 01-1-1zm0 4a1 1 0 011-1h.01a1 1 0 110 2H13a1 1 0 01-1-1z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+
+const CalendarIcon = ({ className }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 20 20"
+    fill="currentColor"
+    className={className}
+  >
+    <path
+      fillRule="evenodd"
+      d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+
+const TaskIcon = ({ className }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 20 20"
+    fill="currentColor"
+    className={className}
+  >
+    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+    <path
+      fillRule="evenodd"
+      d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm2 0a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1zm-2 4a1 1 0 100 2h.01a1 1 0 100-2H7zm2 0a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+
+const MailIcon = ({ className }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.6}
+    className={className}
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"
+    />
+  </svg>
+);
+
+const QuoteIcon = ({ className }) => (
+  <svg
+    viewBox="0 0 32 32"
+    fill="currentColor"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <path d="M10 8C6.686 8 4 10.686 4 14s2.686 6 6 6h.667C9.79 22.083 8.5 24.167 6 26h4c4-2.333 6-6 6-10 0-4.418-2.686-8-6-8zm16 0c-3.314 0-6 2.686-6 6s2.686 6 6 6h.667C25.79 22.083 24.5 24.167 22 26h4c4-2.333 6-6 6-10 0-4.418-2.686-8-6-8z" />
+  </svg>
+);
+
+// ---------------------------------------------------------------------------
+// Shared sub-components
+// ---------------------------------------------------------------------------
 
 /**
- * Social link with label (for exec cards).
- * @param {{ href: string, icon: React.ReactNode, label: string, hoverClasses?: string }} props
+ * Profile avatar with graceful fallback to initials.
  */
-function SocialButtonLabeled({
-  href,
-  icon,
-  label,
-  hoverClasses = 'hover:border-primary-500/30 hover:bg-primary-500/10 hover:text-primary-300',
-}) {
-  if (!href) return null;
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={cn(
-        'group/link flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-gray-400 transition-all',
-        hoverClasses
-      )}
-    >
-      {icon}
-      {label}
-    </a>
-  );
-}
+function ProfileAvatar({ name, image, sizeClass = 'h-16 w-16', textClass = 'text-lg', ringClass = '' }) {
+  const [errored, setErrored] = useState(false);
+  const showImg = Boolean(image) && !errored;
 
-/**
- * Avatar circle with initials.
- * @param {{ name: string, size?: string, borderColor?: string, bgGradient?: string, ringHover?: string }} props
- */
-function AvatarInitials({
-  name,
-  size = 'h-20 w-20',
-  textSize = 'text-2xl',
-  borderColor = 'border-secondary-500/30',
-  bgGradient = 'from-secondary-500/20 to-primary-500/20',
-  ringHover = 'group-hover:ring-secondary-500/20',
-}) {
   return (
-    <div className="relative">
-      <div
-        className={cn(
-          'bg-secondary-500/20 absolute inset-0 rounded-full blur-md'
-        )}
-      />
-      <div
-        className={cn(
-          'relative overflow-hidden rounded-full border-2 bg-linear-to-br ring-2 ring-white/5 transition-all duration-300 group-hover:ring-4',
-          size,
-          borderColor,
-          bgGradient,
-          ringHover
-        )}
-      >
-        <div
-          className={cn(
-            'flex h-full w-full items-center justify-center font-bold text-white',
-            textSize
-          )}
-        >
-          {getInitials(name)}
+    <div className={cn('relative overflow-hidden rounded-full', sizeClass, ringClass)}>
+      {showImg ? (
+        <Image
+          src={driveImageUrl(image)}
+          alt={name || 'Profile photo'}
+          fill
+          sizes="(max-width: 768px) 80px, 128px"
+          className="object-cover"
+          onError={() => setErrored(true)}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white/10 to-white/5">
+          <span className={cn('font-bold text-white', textClass)}>{getInitials(name)}</span>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
-/**
- * Core executive card.
- * @param {{ exec: object, index: number, isLoaded: boolean }} props
- */
-function CoreExecCard({ exec, index, isLoaded }) {
+/** Compact social icon pill */
+function SocialBtn({ href, icon, label, hoverCls = 'hover:text-blue-400 hover:border-blue-400/30' }) {
+  if (!href) return null;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={label}
+      className={cn(
+        'flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-500 transition-all duration-200',
+        hoverCls
+      )}
+    >
+      {icon}
+    </a>
+  );
+}
+
+/** Small metadata chip */
+function Chip({ icon, text, className }) {
+  if (!text) return null;
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/5 px-2.5 py-0.5 text-[11px] font-medium text-gray-400 transition-colors hover:text-gray-300',
+        className
+      )}
+    >
+      {icon && <span className="shrink-0 text-gray-500">{icon}</span>}
+      {text}
+    </span>
+  );
+}
+
+/** Expandable responsibility text */
+function Responsibility({ text }) {
+  const [open, setOpen] = useState(false);
+  if (!text?.trim()) return null;
+  const isLong = text.length > 90;
+  return (
+    <div className="mt-3 rounded-lg border border-white/6 bg-white/[0.025] px-3 py-2.5">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <TaskIcon className="h-3 w-3 text-primary-400/70" />
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-primary-400/80">
+            Responsibility
+          </span>
+        </div>
+        {isLong && (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="text-[10px] text-gray-500 transition-colors hover:text-primary-300"
+          >
+            {open ? 'less' : 'more'}
+          </button>
+        )}
+      </div>
+      <p
+        className={cn(
+          'text-[11px] leading-relaxed text-gray-400',
+          !open && isLong && 'line-clamp-2'
+        )}
+      >
+        {text}
+      </p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Section: Faculty Advisor Card
+// ---------------------------------------------------------------------------
+
+function AdvisorCard({ advisor, isLoaded, index }) {
   return (
     <div
       className={cn(
-        'group hover:border-primary-500/30 hover:shadow-primary-500/10 relative overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-white/5 to-transparent p-6 backdrop-blur-xl transition-all duration-700 hover:scale-[1.02] hover:shadow-2xl sm:p-8',
+        'group relative overflow-hidden rounded-2xl border border-white/8 bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-0 backdrop-blur-sm transition-all duration-700',
         isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
       )}
-      style={{ transitionDelay: `${(index + 1) * 150}ms` }}
+      style={{ transitionDelay: `${index * 100}ms` }}
     >
-      <div className="from-primary-500/20 to-secondary-500/20 absolute -top-20 -right-20 h-40 w-40 rounded-full bg-linear-to-br opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100" />
+      {/* Ambient glow on hover */}
+      <div className="pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full bg-primary-500/8 blur-2xl transition-opacity duration-500 opacity-0 group-hover:opacity-100" />
 
-      <div className="relative flex flex-col items-center text-center sm:flex-row sm:items-start sm:gap-6 sm:text-left">
-        {/* Avatar */}
-        <div className="relative mb-4 shrink-0 sm:mb-0">
-          <div className="bg-primary-500/20 absolute inset-0 rounded-full blur-lg" />
-          <div className="border-primary-500/30 from-primary-500/20 to-secondary-500/20 group-hover:ring-primary-500/20 relative h-24 w-24 overflow-hidden rounded-full border-4 bg-linear-to-br ring-4 ring-white/5 transition-all duration-300 group-hover:ring-8 sm:h-28 sm:w-28">
-            <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-white sm:text-4xl">
-              {getInitials(exec.name)}
-            </div>
-          </div>
-          <div className="border-primary-500/30 bg-primary-500/20 text-primary-200 absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full border px-3 py-1 text-[10px] font-bold tracking-wide whitespace-nowrap uppercase backdrop-blur-sm">
-            {exec.role}
+      <div className="flex flex-col items-center gap-8 p-6 sm:flex-row sm:items-start sm:p-8 md:p-10">
+        {/* Avatar column */}
+        <div className="relative shrink-0">
+          <div className="relative h-28 w-28 sm:h-32 sm:w-32 md:h-36 md:w-36">
+            {/* Decorative ring */}
+            <div className="absolute inset-0 rounded-full border-2 border-primary-500/20 transition-colors duration-300 group-hover:border-primary-500/40" />
+            {/* Outer blur halo */}
+            <div className="absolute -inset-2 rounded-full bg-primary-500/5 blur-md" />
+            <ProfileAvatar
+              name={advisor.name}
+              image={advisor.image}
+              sizeClass="h-full w-full absolute inset-0"
+              textClass="text-4xl"
+              ringClass=""
+            />
           </div>
         </div>
 
-        {/* Content */}
-        <div className="min-w-0 flex-1">
-          <h3 className="mb-1 text-xl font-bold text-white sm:text-2xl">
-            {exec.name}
-          </h3>
-          <p className="mb-1 text-xs text-gray-400 sm:text-sm">
-            {exec.batch} • Session {exec.session}
-          </p>
-          <p className="mb-3 text-sm text-gray-300">{exec.bio}</p>
+        {/* Content column */}
+        <div className="flex-1 min-w-0 text-center sm:text-left">
+          {/* Role badge */}
+          <span className="inline-flex items-center rounded-full bg-primary-500/10 px-3 py-1 text-xs font-semibold text-primary-300 ring-1 ring-primary-500/20">
+            Faculty Advisor
+          </span>
 
-          {/* Quote */}
-          <div className="border-primary-500/50 mb-4 rounded-lg border-l-4 bg-black/20 p-3">
-            <p className="text-xs text-gray-400 italic sm:text-sm">
-              &ldquo;{exec.quote}&rdquo;
-            </p>
+          <h3 className="mt-3 text-xl font-bold text-white sm:text-2xl">{advisor.name}</h3>
+
+          {/* Meta chips */}
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+            {advisor.position && (
+              <Chip icon={<TaskIcon className="h-3 w-3" />} text={advisor.position} />
+            )}
+            {advisor.department && (
+              <Chip icon={<BuildingIcon className="h-3 w-3" />} text={advisor.department} />
+            )}
           </div>
 
-          {/* Achievements */}
-          {exec.achievements?.length > 0 && (
-            <div className="mb-4 flex flex-wrap gap-2">
-              {exec.achievements.map((achievement, idx) => (
-                <span
-                  key={idx}
-                  className="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2.5 py-1 text-[10px] font-semibold text-green-300 ring-1 ring-green-500/20 sm:text-xs"
-                >
-                  <svg
-                    className="h-3 w-3"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  {achievement}
-                </span>
-              ))}
+          <p className="mt-1.5 text-[11px] font-medium uppercase tracking-widest text-gray-600">
+            {advisor.university}
+          </p>
+
+          {/* Quote */}
+          {advisor.message && (
+            <div className="relative mt-5 rounded-xl border border-white/6 bg-white/[0.02] px-5 py-4">
+              <QuoteIcon className="absolute top-3 left-4 h-4 w-4 text-primary-500/30" />
+              <p className="pl-2 text-sm leading-relaxed text-gray-400 italic">
+                {advisor.message}
+              </p>
             </div>
           )}
 
           {/* Social links */}
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:justify-start">
-            <SocialButtonLabeled
-              href={exec.linkedin}
+          <div className="mt-5 flex items-center justify-center gap-2 sm:justify-start">
+            <SocialBtn
+              href={advisor.linkedin}
               icon={<LinkedInIcon className="h-4 w-4" />}
               label="LinkedIn"
+              hoverCls="hover:text-blue-400 hover:border-blue-400/30"
             />
-            <SocialButtonLabeled
-              href={exec.github}
+            <SocialBtn
+              href={advisor.github}
               icon={<GitHubIcon className="h-4 w-4" />}
               label="GitHub"
-              hoverClasses="hover:border-secondary-500/30 hover:bg-secondary-500/10 hover:text-secondary-300"
+              hoverCls="hover:text-white hover:border-white/20"
             />
           </div>
         </div>
@@ -251,420 +334,457 @@ function CoreExecCard({ exec, index, isLoaded }) {
   );
 }
 
-/**
- * Department lead card.
- * @param {{ lead: object, index: number }} props
- */
-function LeadCard({ lead, index }) {
-  return (
-    <div className="group hover:border-secondary-500/30 hover:shadow-secondary-500/10 relative overflow-hidden rounded-xl border border-white/10 bg-linear-to-br from-white/5 to-transparent p-5 backdrop-blur-xl transition-all duration-500 hover:scale-[1.03] hover:shadow-xl sm:p-6">
-      <div className="mb-4 flex justify-center">
-        <AvatarInitials name={lead.name} />
-      </div>
-      <div className="text-center">
-        <h3 className="mb-1 text-lg font-bold text-white">{lead.name}</h3>
-        <p className="text-primary-300 mb-1 text-sm font-medium">{lead.role}</p>
-        <p className="mb-3 text-xs text-gray-400">{lead.batch}</p>
-        <p className="mb-4 text-sm leading-relaxed text-gray-300">{lead.bio}</p>
+// ---------------------------------------------------------------------------
+// Section: Core Executive Card (medium prominence)
+// ---------------------------------------------------------------------------
 
-        {/* Responsibility badge */}
-        <div className="mb-4 rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-3">
-          <div className="mb-1 text-[10px] font-semibold tracking-wide text-yellow-400 uppercase">
-            Responsibility
+function CoreExecCard({ exec, index, isLoaded }) {
+  return (
+    <div
+      className={cn(
+        'group relative flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-gradient-to-b from-white/[0.04] to-white/[0.02] p-6 backdrop-blur-sm transition-all duration-700 hover:border-white/15 hover:shadow-lg hover:shadow-black/20',
+        isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+      )}
+      style={{ transitionDelay: `${(index + 1) * 100}ms` }}
+    >
+      {/* Ambient accent */}
+      <div className="pointer-events-none absolute top-0 right-0 h-32 w-32 rounded-full bg-primary-500/5 blur-2xl transition-opacity duration-500 opacity-0 group-hover:opacity-100" />
+
+      {/* Top: Avatar + Identity */}
+      <div className="flex items-start gap-5">
+        {/* Avatar */}
+        <div className="relative shrink-0">
+          <div className="relative h-16 w-16 sm:h-20 sm:w-20">
+            <div className="absolute inset-0 rounded-full border border-primary-500/20 transition-colors duration-300 group-hover:border-primary-500/40" />
+            <ProfileAvatar
+              name={exec.name}
+              image={exec.image}
+              sizeClass="h-full w-full absolute inset-0"
+              textClass="text-xl"
+              ringClass=""
+            />
           </div>
-          <p className="text-xs text-yellow-200">{lead.responsibility}</p>
         </div>
 
-        <div className="flex justify-center gap-2">
-          <SocialButton
-            href={lead.linkedin}
-            icon={<LinkedInIcon className="h-4 w-4" />}
-          />
-          <SocialButton
-            href={lead.github}
-            icon={<GitHubIcon className="h-4 w-4" />}
-            hoverClasses="hover:border-secondary-500/30 hover:bg-secondary-500/10 hover:text-secondary-300"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Executive member compact card.
- * @param {{ member: object, index: number }} props
- */
-function MemberCard({ member, index }) {
-  return (
-    <div className="group relative overflow-hidden rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl transition-all duration-500 hover:scale-110 hover:border-purple-500/30 hover:bg-white/10 hover:shadow-lg hover:shadow-purple-500/20">
-      <div className="mb-3 flex justify-center">
-        <div className="relative h-16 w-16 overflow-hidden rounded-full border-2 border-purple-500/30 bg-linear-to-br from-purple-500/20 to-pink-500/20 ring-2 ring-white/5 transition-all duration-300 group-hover:ring-4 group-hover:ring-purple-500/20">
-          <div className="flex h-full w-full items-center justify-center text-xl font-bold text-white">
-            {getInitials(member.name)}
+        {/* Name + role */}
+        <div className="min-w-0 flex-1 pt-0.5">
+          <h3 className="truncate text-base font-bold text-white sm:text-lg">{exec.name}</h3>
+          <span className="mt-1 inline-flex items-center rounded-md bg-primary-500/10 px-2 py-0.5 text-xs font-semibold text-primary-300 ring-1 ring-primary-500/20">
+            {exec.role}
+          </span>
+          {/* Dept + session chips */}
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <Chip icon={<BuildingIcon className="h-3 w-3" />} text={exec.department} />
+            <Chip icon={<CalendarIcon className="h-3 w-3" />} text={exec.academicSession} />
           </div>
         </div>
       </div>
-      <div className="text-center">
-        <h3 className="mb-1 text-sm font-bold text-white">{member.name}</h3>
-        <p className="mb-2 text-xs text-gray-400">{member.batch}</p>
-        <div className="max-h-0 overflow-hidden transition-all duration-500 group-hover:max-h-24">
-          <p className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/10 px-2 py-1.5 text-xs font-medium text-purple-300 shadow-lg">
-            {member.responsibility}
-          </p>
-        </div>
+
+      {/* Divider */}
+      <div className="my-4 h-px bg-white/6" />
+
+      {/* Bio */}
+      {exec.bio && (
+        <p className="text-sm leading-relaxed text-gray-400 line-clamp-3">{exec.bio}</p>
+      )}
+
+      {/* Responsibility */}
+      <Responsibility text={exec.responsibility} />
+
+      {/* Social links */}
+      <div className="mt-auto pt-4 flex items-center gap-2">
+        <SocialBtn
+          href={exec.linkedin}
+          icon={<LinkedInIcon className="h-3.5 w-3.5" />}
+          label="LinkedIn"
+          hoverCls="hover:text-blue-400 hover:border-blue-400/30"
+        />
+        <SocialBtn
+          href={exec.github}
+          icon={<GitHubIcon className="h-3.5 w-3.5" />}
+          label="GitHub"
+          hoverCls="hover:text-white hover:border-white/20"
+        />
+        {exec.email && (
+          <SocialBtn
+            href={`mailto:${exec.email}`}
+            icon={<MailIcon className="h-3.5 w-3.5" />}
+            label="Email"
+            hoverCls="hover:text-emerald-400 hover:border-emerald-400/30"
+          />
+        )}
       </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Main component
+// Section: Executive Member Card (compact)
 // ---------------------------------------------------------------------------
 
-/**
- * Committee page client component.
- *
- * @param {{ facultyAdvisor?: object, coreExecutives?: Array, departmentLeads?: Array, executiveMembers?: Array }} props
- */
+function MemberCard({ member, isVisible, index }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasResponsibility = member.responsibility?.trim();
+  const isLong = hasResponsibility && member.responsibility.length > 100;
+
+  return (
+    <div
+      className={cn(
+        'group relative flex w-full items-start gap-4 overflow-hidden rounded-2xl border border-white/8 bg-[#0e1525] p-4 transition-all duration-500 hover:border-primary-500/25 hover:bg-[#111929] hover:shadow-lg hover:shadow-black/30',
+        isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+      )}
+      style={{ transitionDelay: isVisible ? `${index * 50}ms` : '0ms' }}
+    >
+      {/* Left accent bar */}
+      <div className="absolute left-0 top-4 bottom-4 w-[3px] rounded-full bg-primary-500/0 transition-all duration-500 group-hover:bg-primary-500/60" />
+
+      {/* Avatar */}
+      <div className="relative h-12 w-12 shrink-0 sm:h-14 sm:w-14">
+        <div className="absolute inset-0 rounded-full border border-white/10 transition-colors duration-300 group-hover:border-primary-500/40" />
+        <ProfileAvatar
+          name={member.name}
+          image={member.image}
+          sizeClass="h-full w-full absolute inset-0"
+          textClass="text-sm"
+          ringClass=""
+        />
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        {/* Top row: name + role + socials */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-bold text-white leading-tight sm:text-base">
+              {member.name}
+            </h3>
+            <span className="mt-1 inline-flex items-center rounded bg-primary-500/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-primary-300 ring-1 ring-primary-500/20">
+              {member.role}
+            </span>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <SocialBtn
+              href={member.linkedin}
+              icon={<LinkedInIcon className="h-3 w-3" />}
+              label="LinkedIn"
+              hoverCls="hover:text-blue-400 hover:border-blue-400/30 h-7 w-7"
+            />
+            <SocialBtn
+              href={member.github}
+              icon={<GitHubIcon className="h-3 w-3" />}
+              label="GitHub"
+              hoverCls="hover:text-white hover:border-white/20 h-7 w-7"
+            />
+          </div>
+        </div>
+
+        {/* Chips */}
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <Chip
+            icon={<BuildingIcon className="h-2.5 w-2.5" />}
+            text={member.department}
+            className="px-2 py-0.5 text-[10px]"
+          />
+          <Chip
+            icon={<CalendarIcon className="h-2.5 w-2.5" />}
+            text={member.academicSession}
+            className="px-2 py-0.5 text-[10px]"
+          />
+        </div>
+
+        {/* Responsibility — always visible */}
+        {hasResponsibility && (
+          <div className="mt-3">
+            <p className={cn('text-[11px] leading-relaxed text-gray-400', !expanded && isLong && 'line-clamp-2')}>
+              {member.responsibility}
+            </p>
+            {isLong && (
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                className="mt-1 text-[10px] font-medium text-primary-400/70 transition-colors hover:text-primary-300"
+              >
+                {expanded ? '↑ less' : '↓ more'}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// Hero stat card
+// ---------------------------------------------------------------------------
+
+const ACCENT_CLASSES = {
+  primary: {
+    bg: 'from-primary-500/10 to-primary-500/5',
+    border: 'border-primary-500/20 group-hover:border-primary-500/40',
+    text: 'text-primary-300',
+    glow: 'hover:shadow-primary-500/10',
+  },
+  secondary: {
+    bg: 'from-secondary-500/10 to-secondary-500/5',
+    border: 'border-secondary-500/20 group-hover:border-secondary-500/40',
+    text: 'text-secondary-300',
+    glow: 'hover:shadow-secondary-500/10',
+  },
+  purple: {
+    bg: 'from-purple-500/10 to-purple-500/5',
+    border: 'border-purple-500/20 group-hover:border-purple-500/40',
+    text: 'text-purple-300',
+    glow: 'hover:shadow-purple-500/10',
+  },
+};
+
+function StatCard({ stat }) {
+  const acc = ACCENT_CLASSES[stat.accent] || ACCENT_CLASSES.primary;
+  return (
+    <div
+      className={cn(
+        'group relative overflow-hidden rounded-xl border bg-gradient-to-b px-4 py-4 transition-all duration-300 hover:shadow-lg',
+        acc.bg,
+        acc.border,
+        acc.glow
+      )}
+    >
+      <div className={cn('whitespace-nowrap text-xl font-bold tabular-nums sm:text-2xl', acc.text)}>
+        {stat.value}
+      </div>
+      <div className="mt-0.5 text-xs text-gray-500 transition-colors group-hover:text-gray-400">
+        {stat.label}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Empty state
+// ---------------------------------------------------------------------------
+
+function EmptySlot({ message }) {
+  return (
+    <div className="rounded-xl border border-white/6 bg-white/[0.02] py-12 text-center text-sm text-gray-600">
+      {message}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Decorative divider
+// ---------------------------------------------------------------------------
+
+function SectionDivider() {
+  return (
+    <div className="mx-auto my-2 flex items-center gap-4 max-w-xs">
+      <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/10" />
+      <div className="h-1 w-1 rounded-full bg-white/20" />
+      <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/10" />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main export
+// ---------------------------------------------------------------------------
+
 export default function CommitteeClient({
-  facultyAdvisor: propAdvisor = null,
+  facultyAdvisors: propAdvisors = [],
   coreExecutives: propCore = [],
-  departmentLeads: propLeads = [],
   executiveMembers: propExecs = [],
+  heroStats: propHeroStats = [],
+  settings = {},
 }) {
-  const [activeFilter, setActiveFilter] = useState('all');
   const isLoaded = useDelayedLoad();
-  const [leadsRef, leadsVisible] = useScrollReveal({ threshold: 0.05 });
-  const [membersRef, membersVisible] = useScrollReveal({ threshold: 0.05 });
+  const [advisorRef, advisorVisible] = useScrollReveal({ threshold: 0.05 });
+  const [coreRef, coreVisible] = useScrollReveal({ threshold: 0.05 });
+  const { ref: membersRef, isVisible: membersVisible } = useStaggerReveal({ threshold: 0.05 });
 
-  // --- Data normalization ---
-  const facultyAdvisor = propAdvisor || DEFAULT_ADVISOR;
+  const facultyAdvisors = propAdvisors.length > 0 ? propAdvisors : DEFAULT_ADVISORS;
   const coreExecutives = propCore;
-  const departmentLeads = propLeads;
   const executiveMembers = propExecs;
-
-  const filteredLeads =
-    activeFilter === 'all'
-      ? departmentLeads
-      : departmentLeads.filter(
-          (lead) => lead.department.toLowerCase() === activeFilter
-        );
+  const heroStats = propHeroStats.length > 0 ? propHeroStats : HERO_STATS;
 
   return (
-    <main className="min-h-screen bg-linear-to-b from-gray-900 via-black to-gray-900">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 md:py-28">
+    <PageShell>
+      {/* ── Hero ──────────────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden pt-28 pb-20 md:pt-36 md:pb-24">
         <PageBackground variant="absolute" />
 
+        {/* Radial top-center glow */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 -top-20 mx-auto h-72 w-full max-w-lg rounded-full bg-primary-500/6 blur-3xl"
+        />
+
         <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-4xl text-center">
+          <div className="mx-auto max-w-2xl text-center">
+            {/* Eyebrow badge */}
             <div
               className={cn(
-                'bg-primary-500/10 text-primary-300 ring-primary-500/20 mb-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold ring-1 transition-all duration-700 sm:text-sm',
-                isLoaded
-                  ? 'translate-y-0 opacity-100'
-                  : '-translate-y-4 opacity-0'
+                'mb-5 inline-flex items-center gap-2 rounded-full border border-primary-500/20 bg-primary-500/8 px-4 py-1.5 text-xs font-semibold tracking-wider text-primary-300 uppercase transition-all duration-700',
+                isLoaded ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'
               )}
             >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-              Leadership Team 2025-2026
+              <span className="h-1.5 w-1.5 rounded-full bg-primary-400 animate-pulse" />
+              {settings?.committee_page_badge || 'Leadership Team 2025–26'}
             </div>
 
+            {/* Headline */}
             <h1
               className={cn(
-                'mb-4 text-3xl leading-tight font-extrabold text-white transition-all delay-100 duration-700 sm:text-4xl md:text-5xl lg:text-6xl',
-                isLoaded
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-4 opacity-0'
+                'text-4xl font-bold tracking-tight text-white transition-all delay-100 duration-700 sm:text-5xl md:text-6xl',
+                isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
               )}
             >
-              Meet the Committee
+              {settings?.committee_page_title || (
+                <>
+                  Meet the{' '}
+                  <span className="bg-gradient-to-r from-primary-400 to-secondary-400 bg-clip-text text-transparent">
+                    Committee
+                  </span>
+                </>
+              )}
             </h1>
 
+            {/* Subtitle */}
             <p
               className={cn(
-                'mx-auto mb-8 max-w-3xl text-sm leading-relaxed text-gray-300 transition-all delay-200 duration-700 sm:text-base md:text-lg lg:text-xl',
-                isLoaded
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-4 opacity-0'
+                'mx-auto mt-5 max-w-xl text-sm leading-relaxed text-gray-400 transition-all delay-200 duration-700 sm:text-base',
+                isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
               )}
             >
-              The dedicated team leading the Netrokona University Programming
-              Club towards excellence in competitive programming and software
-              development.
+              {settings?.committee_page_description ||
+                'The dedicated team leading the Netrokona University Programming Club towards excellence in competitive programming and software development.'}
             </p>
 
-            {/* Quick Stats */}
+            {/* Stats row */}
             <div
               className={cn(
-                'mx-auto grid max-w-4xl gap-4 transition-all delay-300 duration-700 sm:grid-cols-3',
-                isLoaded
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-4 opacity-0'
+                'mx-auto mt-10 grid max-w-lg gap-3 sm:grid-cols-3 sm:max-w-2xl transition-all delay-300 duration-700',
+                isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
               )}
             >
-              {HERO_STATS.map((stat) => (
-                <div
-                  key={stat.label}
-                  className={cn(
-                    'group rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl transition-all duration-300 hover:scale-105 hover:bg-white/10 hover:shadow-xl',
-                    stat.borderColor,
-                    stat.shadowColor
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'mb-1 text-2xl font-bold text-white transition-all sm:text-3xl',
-                      stat.textColor
-                    )}
-                  >
-                    {stat.value}
-                  </div>
-                  <div className="text-xs text-gray-400 transition-all group-hover:text-gray-300 sm:text-sm">
-                    {stat.label}
-                  </div>
-                </div>
+              {heroStats.map((stat) => (
+                <StatCard key={stat.label} stat={stat} />
               ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Faculty Advisor Section */}
-      <section className="relative px-4 py-8 sm:px-6 sm:py-12 md:py-16 lg:px-8">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-8 text-center md:mb-10">
-            <h2 className="mb-3 text-2xl font-extrabold text-white sm:text-3xl md:text-4xl">
-              Faculty Advisor
-            </h2>
-            <p className="text-sm text-gray-400 sm:text-base">
-              Guiding our vision with expertise and experience
-            </p>
-          </div>
-
-          <div
+      {/* ── Faculty Advisors ──────────────────────────────────────────── */}
+      <section ref={advisorRef} className="relative px-4 py-14 sm:px-6 md:py-20 lg:px-8">
+        <div className="mx-auto max-w-4xl">
+          <SectionHeader
+            badge="Guidance"
+            title="Faculty Advisor"
+            subtitle="Providing expertise and mentorship to our club's journey"
+            lineClassName="to-primary-500/40"
+            titleClassName="from-white via-gray-100 to-gray-300"
             className={cn(
-              'group hover:border-primary-500/30 hover:shadow-primary-500/10 relative overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-white/5 to-transparent p-6 backdrop-blur-xl transition-all duration-700 hover:scale-[1.01] hover:shadow-2xl sm:p-8 lg:p-10',
-              isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+              'transition-all duration-700',
+              advisorVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
             )}
-          >
-            <div className="flex flex-col items-center gap-6 md:flex-row md:items-start md:gap-8">
-              {/* Avatar */}
-              <div className="relative shrink-0">
-                <div className="bg-primary-500/20 absolute inset-0 rounded-full blur-xl" />
-                <div className="border-primary-500/30 from-primary-500/20 to-secondary-500/20 relative h-32 w-32 overflow-hidden rounded-full border-4 bg-linear-to-br sm:h-40 sm:w-40 lg:h-48 lg:w-48">
-                  <div className="flex h-full w-full items-center justify-center text-5xl font-bold text-white sm:text-6xl lg:text-7xl">
-                    {getInitials(facultyAdvisor.name)}
-                  </div>
-                </div>
-              </div>
+          />
 
-              {/* Content */}
-              <div className="flex-1 text-center md:text-left">
-                <h3 className="mb-2 text-xl font-bold text-white sm:text-2xl lg:text-3xl">
-                  {facultyAdvisor.name}
-                </h3>
-                <p className="text-primary-300 mb-1 text-sm font-medium sm:text-base">
-                  {facultyAdvisor.designation}
-                </p>
-                <p className="mb-4 text-xs text-gray-400 sm:text-sm">
-                  {facultyAdvisor.university}
-                </p>
-
-                <div className="mb-6 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 sm:p-5">
-                  <div className="mb-2 flex items-center justify-center gap-2 text-xs font-semibold tracking-wide text-blue-300 uppercase sm:text-sm md:justify-start">
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-                      />
-                    </svg>
-                    Message
-                  </div>
-                  <p className="text-sm leading-relaxed text-gray-300 italic sm:text-base">
-                    &ldquo;{facultyAdvisor.message}&rdquo;
-                  </p>
-                </div>
-
-                <a
-                  href={facultyAdvisor.linkedin}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="border-primary-500/30 bg-primary-500/10 text-primary-300 hover:border-primary-500/50 hover:bg-primary-500/20 inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition-all hover:scale-105"
-                >
-                  <LinkedInIcon className="h-5 w-5" />
-                  Connect on LinkedIn
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Core Executive Panel */}
-      <section className="relative px-4 py-8 sm:px-6 sm:py-12 md:py-16 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-8 text-center md:mb-10 lg:mb-12">
-            <h2 className="mb-3 text-2xl font-extrabold text-white sm:text-3xl md:text-4xl lg:text-5xl">
-              Core Executive Panel
-            </h2>
-            <p className="text-sm text-gray-400 sm:text-base md:text-lg">
-              The leadership driving our club&apos;s vision and mission
-            </p>
-          </div>
-
-          <div className="grid gap-6 sm:gap-8 md:grid-cols-2">
-            {coreExecutives.map((exec, index) => (
-              <CoreExecCard
-                key={exec.id}
-                exec={exec}
-                index={index}
-                isLoaded={isLoaded}
+          <div className="space-y-4">
+            {facultyAdvisors.map((advisor, i) => (
+              <AdvisorCard
+                key={advisor.id || i}
+                advisor={advisor}
+                isLoaded={advisorVisible}
+                index={i}
               />
             ))}
           </div>
         </div>
       </section>
 
-      {/* Department Leads */}
-      <section
-        ref={leadsRef}
-        className="relative px-4 py-8 sm:px-6 sm:py-12 md:py-16 lg:px-8"
-      >
-        <div className="mx-auto max-w-7xl">
-          <div
-            className={cn(
-              'mb-8 text-center transition-all duration-700 md:mb-10',
-              leadsVisible
-                ? 'translate-y-0 opacity-100'
-                : 'translate-y-6 opacity-0'
-            )}
-          >
-            <h2 className="mb-3 text-2xl font-extrabold text-white sm:text-3xl md:text-4xl">
-              Department Leads
-            </h2>
-            <p className="text-sm text-gray-400 sm:text-base">
-              Specialized teams driving excellence in their domains
-            </p>
-          </div>
+      <SectionDivider />
 
-          {/* Filter Tabs */}
-          <div className="mb-8 flex justify-center">
-            <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 p-1.5 backdrop-blur-xl sm:gap-3 sm:p-2">
-              {FILTER_TABS.map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setActiveFilter(filter)}
-                  className={cn(
-                    'rounded-full px-4 py-2 text-xs font-semibold capitalize transition-all duration-300 sm:px-6 sm:py-2.5 sm:text-sm',
-                    activeFilter === filter
-                      ? 'from-primary-500/40 to-secondary-500/40 bg-linear-to-r text-white shadow-lg'
-                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                  )}
-                >
-                  {filter === 'all' ? 'All Teams' : filter}
-                </button>
+      {/* ── Core Executive Panel ──────────────────────────────────────── */}
+      <section ref={coreRef} className="relative px-4 py-14 sm:px-6 md:py-20 lg:px-8">
+        <div className="mx-auto max-w-5xl">
+          <SectionHeader
+            badge="Leadership"
+            title="Core Executive Panel"
+            subtitle="The leadership driving our club's vision and mission"
+            lineClassName="to-secondary-500/40"
+            titleClassName="from-white via-gray-100 to-gray-300"
+            className={cn(
+              'transition-all duration-700',
+              coreVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
+            )}
+          />
+
+          {coreExecutives.length > 0 ? (
+            <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
+              {coreExecutives.map((exec, i) => (
+                <CoreExecCard
+                  key={exec.id}
+                  exec={exec}
+                  index={i}
+                  isLoaded={coreVisible}
+                />
               ))}
             </div>
-          </div>
-
-          <div className="grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
-            {filteredLeads.map((lead, index) => (
-              <div
-                key={lead.id}
-                className={cn(
-                  'transition-all duration-700',
-                  leadsVisible
-                    ? 'translate-y-0 opacity-100'
-                    : 'translate-y-8 opacity-0'
-                )}
-                style={{
-                  transitionDelay: leadsVisible
-                    ? `${200 + index * 100}ms`
-                    : '0ms',
-                }}
-              >
-                <LeadCard lead={lead} index={index} />
-              </div>
-            ))}
-          </div>
+          ) : (
+            <EmptySlot message="Core executive members will appear here once positions are assigned." />
+          )}
         </div>
       </section>
 
-      {/* Executive Members */}
-      <section
-        ref={membersRef}
-        className="relative px-4 py-8 sm:px-6 sm:py-12 md:py-16 lg:px-8"
-      >
-        <div className="mx-auto max-w-7xl">
-          <div
+      <SectionDivider />
+
+      {/* ── Executive Members ─────────────────────────────────────────── */}
+      <section ref={membersRef} className="relative px-4 py-14 sm:px-6 md:py-20 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <SectionHeader
+            badge="Team"
+            title="Executive Members"
+            subtitle="Supporting the club's operations and initiatives"
+            lineClassName="to-white/20"
+            titleClassName="from-white via-gray-100 to-gray-300"
             className={cn(
-              'mb-8 text-center transition-all duration-700 md:mb-10',
-              membersVisible
-                ? 'translate-y-0 opacity-100'
-                : 'translate-y-6 opacity-0'
+              'transition-all duration-700',
+              membersVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
             )}
-          >
-            <h2 className="mb-3 text-2xl font-extrabold text-white sm:text-3xl md:text-4xl">
-              Executive Members
-            </h2>
-            <p className="text-sm text-gray-400 sm:text-base">
-              Supporting the club&apos;s operations and initiatives
-            </p>
-          </div>
+          />
 
-          <div className="grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
-            {executiveMembers.map((member, index) => (
-              <div
-                key={member.id}
-                className={cn(
-                  'transition-all duration-700',
-                  membersVisible
-                    ? 'translate-y-0 opacity-100'
-                    : 'translate-y-8 opacity-0'
-                )}
-                style={{
-                  transitionDelay: membersVisible
-                    ? `${200 + index * 80}ms`
-                    : '0ms',
-                }}
-              >
-                <MemberCard member={member} index={index} />
-              </div>
-            ))}
-          </div>
+          {executiveMembers.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {executiveMembers.map((member, i) => (
+                <MemberCard
+                  key={member.id}
+                  member={member}
+                  isVisible={membersVisible}
+                  index={i}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptySlot message="Additional executive members will appear here once assigned." />
+          )}
         </div>
       </section>
 
+      {/* ── CTA ───────────────────────────────────────────────────────── */}
       <CTASection
         icon="🎯"
-        title="Want to Lead with Us?"
-        description="Applications for the next committee term open soon. Be part of shaping the future of programming at Netrokona University."
+        title={settings?.committee_page_cta_title || 'Want to Lead with Us?'}
+        description={
+          settings?.committee_page_cta_description ||
+          'Applications for the next committee term open soon. Be part of shaping the future of programming at Netrokona University.'
+        }
         primaryAction={{ label: 'Apply for Leadership', href: '/join' }}
         secondaryAction={{ label: 'Contact Committee', href: '/contact' }}
       />
 
       <ScrollToTop />
-    </main>
+    </PageShell>
   );
 }

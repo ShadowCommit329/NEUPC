@@ -13,9 +13,14 @@ import MembershipApplicationClient from './MembershipApplicationClient';
 export const metadata = { title: 'Apply for Membership | Guest | NEUPC' };
 
 export default async function GuestMembershipApplicationPage() {
-  const { session, user } = await requireRole('guest', {
-    checkIsActive: false,
-  });
+  // Only users with actual roles (not guests) and active status can apply for membership
+  const { session, user } = await requireRole([
+    'member',
+    'mentor',
+    'advisor',
+    'executive',
+    'admin',
+  ]);
 
   const joinRequests = await getJoinRequestByEmail(session.user.email).catch(
     () => []

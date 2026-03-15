@@ -26,6 +26,7 @@ import {
   execUploadBlogImageAction,
 } from '@/app/_lib/executive-actions';
 import RichTextEditor from '@/app/_components/ui/RichTextEditor';
+import { useScrollLock } from '@/app/_lib/hooks';
 
 const STATUS_CONFIG = {
   draft: {
@@ -43,7 +44,8 @@ const STATUS_CONFIG = {
 };
 
 const CATEGORIES = [
-  'CP',
+  'Competitive Programming',
+  'Programming',
   'WebDev',
   'AI-ML',
   'Career',
@@ -56,6 +58,7 @@ function BlogModal({ blog, onClose, onSuccess }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const isEdit = !!blog?.id;
+  useScrollLock();
   const [content, setContent] = useState(blog?.content || '');
   const [autoReadTime, setAutoReadTime] = useState('');
 
@@ -263,6 +266,7 @@ export default function ManageBlogsClient({ initialBlogs }) {
   const [deleteId, setDeleteId] = useState(null);
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState(null);
+  useScrollLock(!!deleteId);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });

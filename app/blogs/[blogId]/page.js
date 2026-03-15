@@ -8,6 +8,8 @@ import {
   getPublicBlogBySlug,
   getPublicBlogsByCategory,
 } from '@/app/_lib/public-actions';
+import { getBlogComments, getUserByEmail } from '@/app/_lib/data-service';
+import { auth } from '@/app/_lib/auth';
 import { ArticleJsonLd, BreadcrumbJsonLd } from '@/app/_components/ui/JsonLd';
 import BlogDetailClient from './BlogDetailClient';
 import { buildArticleMetadata } from '@/app/_lib/seo';
@@ -44,6 +46,21 @@ export default async function Page({ params }) {
     relatedBlogs = [];
   }
 
+  // Fetch comments and current user in parallel
+  const session = await auth();
+  const [initialComments, currentUser] = await Promise.all([
+    getBlogComments(blog.id).catch(() => []),
+    session?.user?.email
+      ? getUserByEmail(session.user.email)
+          .then((u) =>
+            u
+              ? { id: u.id, full_name: u.full_name, avatar_url: u.avatar_url }
+              : null
+          )
+          .catch(() => null)
+      : Promise.resolve(null),
+  ]);
+
   return (
     <>
       <ArticleJsonLd article={blog} />
@@ -54,7 +71,12 @@ export default async function Page({ params }) {
           { name: blog.title },
         ]}
       />
-      <BlogDetailClient blog={blog} relatedBlogs={relatedBlogs} />
+      <BlogDetailClient
+        blog={blog}
+        relatedBlogs={relatedBlogs}
+        initialComments={initialComments}
+        currentUser={currentUser}
+      />
     </>
   );
 }

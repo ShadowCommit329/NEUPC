@@ -182,25 +182,6 @@ function fmtNum(n) {
   return String(n);
 }
 
-// Parse content JSONB into a list of stages
-function parseContent(content) {
-  if (!content) return [];
-  if (Array.isArray(content)) {
-    // Already an array — check if items are stages or flat steps
-    if (content[0]?.items) return content; // stages format
-    // Flat list of steps — wrap in single stage
-    return [{ id: 'main', title: 'Steps', items: content }];
-  }
-  if (typeof content === 'object') {
-    if (content.stages && Array.isArray(content.stages)) return content.stages;
-    if (content.steps && Array.isArray(content.steps))
-      return [{ id: 'main', title: 'Learning Path', items: content.steps }];
-    if (content.items && Array.isArray(content.items))
-      return [{ id: 'main', title: 'Topics', items: content.items }];
-  }
-  return [];
-}
-
 // Count total checkable items across all stages
 function countItems(stages) {
   return stages.reduce((sum, s) => sum + (s.items?.length ?? 0), 0);
@@ -221,15 +202,11 @@ function Stat({ icon: Icon, value, label, color }) {
 function RoadmapCard({ roadmap, onOpen, userId }) {
   const dc = diffConf(roadmap.difficulty);
   const CatIcon = getCategoryIcon(roadmap.category);
-  const stages = parseContent(roadmap.content);
-  const total = countItems(stages);
 
-  const [pct, setPct] = useState(0);
-  useEffect(() => {
-    if (!total) return;
-    const done = loadProgress(userId, roadmap.id);
-    setPct(Math.round((done.size / total) * 100));
-  }, [userId, roadmap.id, total]);
+  // Progress tracking — currently content is HTML-based (not structured JSON stages),
+  // so there are no individual checkable items. Set to 0 until stage-based content is restored.
+  const total = 0;
+  const pct = 0;
 
   return (
     <button
@@ -490,22 +467,17 @@ function StageSection({ stage, stageIndex, progress, onToggle, totalStages }) {
 function RoadmapDetail({ roadmap, userId, onBack }) {
   const dc = diffConf(roadmap.difficulty);
   const CatIcon = getCategoryIcon(roadmap.category);
-  const stages = useMemo(
-    () => parseContent(roadmap.content),
-    [roadmap.content]
-  );
-  const total = countItems(stages);
+  // No stages parsing with HTML content
+  const stages = [];
+  const total = 0;
 
-  const [progress, setProgress] = useState(() =>
-    loadProgress(userId, roadmap.id)
-  );
+  const [progress, setProgress] = useState(new Set());
 
   const doneCount = useMemo(() => {
-    // re-compute
     return [...progress].length;
   }, [progress]);
 
-  const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+  const pct = 0;
 
   const toggle = useCallback(
     (key) => {
@@ -675,8 +647,26 @@ function RoadmapDetail({ roadmap, userId, onBack }) {
         )}
       </div>
 
-      {/* Stages */}
-      {stages.length > 0 ? (
+      {/* Content */}
+      {roadmap.content ? (
+        <div className="space-y-3">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-white">
+            <BookOpen className="h-5 w-5 text-blue-400" />
+            Learning Guide
+          </h2>
+          <div className="rounded-2xl border border-white/8 bg-white/3 p-6 backdrop-blur-sm sm:p-8">
+            <div
+              className="blog-content prose prose-invert max-w-none prose-headings:text-white prose-h2:text-xl prose-h2:font-bold prose-h2:mt-8 prose-h2:mb-3 prose-h3:text-lg prose-h3:font-semibold prose-h3:mt-6 prose-h3:mb-2 prose-p:text-gray-300 prose-p:leading-relaxed prose-a:text-blue-400 prose-a:underline hover:prose-a:text-blue-300 prose-strong:text-white prose-li:text-gray-300 prose-li:marker:text-gray-600 prose-ul:space-y-1.5 prose-ol:space-y-1.5 prose-code:text-blue-300 prose-code:bg-white/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-pre:bg-white/5 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-lg prose-pre:p-4 prose-blockquote:border-l-4 prose-blockquote:border-blue-500 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-400 prose-hr:border-white/10 prose-table:border-collapse prose-table:w-full prose-tr:border-b prose-tr:border-white/10 prose-th:text-left prose-th:font-semibold prose-th:text-white prose-th:py-2 prose-th:px-3 prose-th:bg-white/5 prose-td:text-gray-300 prose-td:py-2 prose-td:px-3"
+              dangerouslySetInnerHTML={{
+                __html:
+                  typeof roadmap.content === 'string'
+                    ? roadmap.content
+                    : (roadmap.content?.html ?? ''),
+              }}
+            />
+          </div>
+        </div>
+      ) : stages.length > 0 ? (
         <div className="space-y-3">
           {stages.map((stage, si) => (
             <StageSection
@@ -746,10 +736,7 @@ export default function MemberRoadmapClient({ roadmaps, userId }) {
   }, [roadmaps, catFilter, diffFilter, search]);
 
   const featured = roadmaps.filter((r) => r.is_featured);
-  const totalTopics = roadmaps.reduce(
-    (s, r) => s + countItems(parseContent(r.content)),
-    0
-  );
+  const totalTopics = roadmaps.length; // Count of roadmaps
 
   return (
     <div className="space-y-6">

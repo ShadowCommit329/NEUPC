@@ -4,23 +4,15 @@
  */
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
-import { updateUser, getUserRoles } from '@/app/_lib/data-service';
+import { requireApiAuth, isAuthError } from '@/app/_lib/api-guard';
+import { updateUser } from '@/app/_lib/data-service';
 
 export async function PUT(request, { params }) {
   try {
-    const session = await auth();
+    const authResult = await requireApiAuth('admin');
+    if (isAuthError(authResult)) return authResult;
 
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
-
-    const userRoles = await getUserRoles(session.user.email);
-    if (!userRoles.includes('admin')) {
-      return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
-    }
-
-    const adminId = session.user.id;
+    const adminId = authResult.user.id;
     const { userId } = params;
     const { fullName, email, role } = await request.json();
 

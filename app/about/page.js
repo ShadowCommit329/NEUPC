@@ -4,7 +4,12 @@
  */
 
 import AboutClient from './AboutClient';
-import { getAboutData } from '@/app/_lib/public-actions';
+import {
+  getAboutData,
+  getAllPublicSettings,
+  getPublicFeaturedGallery,
+  getPublicCommittee,
+} from '@/app/_lib/public-actions';
 import { buildMetadata } from '@/app/_lib/seo';
 import { AboutPageJsonLd, BreadcrumbJsonLd } from '@/app/_components/ui/JsonLd';
 
@@ -23,6 +28,20 @@ export const metadata = buildMetadata({
 });
 
 export default async function Page() {
-  const aboutData = await getAboutData();
-  return <AboutClient data={aboutData} />;
+  const [aboutData, settings, galleryImages, committeeData] = await Promise.all(
+    [
+      getAboutData(),
+      getAllPublicSettings(),
+      getPublicFeaturedGallery().catch(() => []),
+      getPublicCommittee().catch(() => ({ members: [], positions: [] })),
+    ]
+  );
+  return (
+    <AboutClient
+      data={aboutData}
+      settings={settings}
+      galleryImages={galleryImages}
+      committeeMembers={committeeData.members}
+    />
+  );
 }

@@ -1,42 +1,36 @@
-/**
- * @file Next.js Proxy (Vercel Edge Runtime)
- * @module Proxy
- *
- * Runs at the edge before every matched request.
- * Handles authentication redirects for protected routes.
- *
- * @see https://nextjs.org/docs/app/building-your-application/routing/middleware
- */
-
-import { auth } from '@/app/_lib/auth';
 import { NextResponse } from 'next/server';
+import { auth } from '@/app/_lib/auth';
+
+// Paths that require authentication
+const protectedPrefixes = ['/account'];
 
 export default auth((req) => {
-  const { nextUrl, auth: session } = req;
-  const isLoggedIn = !!session?.user;
-  const pathname = nextUrl.pathname;
+  const { nextUrl } = req;
+  const isLoggedIn = !!req.auth;
+  const isProtectedPath = protectedPrefixes.some((prefix) =>
+    nextUrl.pathname.startsWith(prefix)
+  );
 
-  // Redirect unauthenticated users trying to access /account/*
-  if (!isLoggedIn && pathname.startsWith('/account')) {
+  if (isProtectedPath && !isLoggedIn) {
     const loginUrl = new URL('/login', nextUrl.origin);
-    loginUrl.searchParams.set('callbackUrl', pathname);
+    // Optionally preserve the intended destination
+    loginUrl.searchParams.set('callbackUrl', nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
-  }
-
-  // Prevent authenticated users from hitting /login
-  if (isLoggedIn && pathname === '/login') {
-    return NextResponse.redirect(new URL('/account', nextUrl.origin));
   }
 
   return NextResponse.next();
 });
 
+// Matcher to optimize middleware execution
 export const config = {
   matcher: [
-    // Only run middleware on routes that need auth checks.
-    // This avoids unnecessary edge invocations on static assets,
-    // API auth callbacks, and Next.js internals.
-    '/account/:path*',
-    '/login',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };

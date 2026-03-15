@@ -11,6 +11,7 @@ export const ACHIEVEMENT_CATEGORIES = [
   'Hackathon',
   'ICPC',
   'IUPC',
+  'NCPC',
   'Web Development',
   'AI / ML',
   'Research',
@@ -38,6 +39,10 @@ export const CATEGORY_CONFIG = {
   IUPC: {
     emoji: '🥇',
     color: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  },
+  NCPC: {
+    emoji: '🌏',
+    color: 'bg-lime-500/20 text-lime-400 border-lime-500/30',
   },
   'Web Development': {
     emoji: '🌐',
@@ -85,6 +90,23 @@ export function getCategoryConfig(category) {
     }
   );
 }
+
+// ─── Contest Platforms ──────────────────────────────────────────────────────
+
+export const CONTEST_PLATFORMS = [
+  'Codeforces',
+  'Vjudge',
+  'AtCoder',
+  'LeetCode',
+  'CodeChef',
+  'HackerRank',
+  'HackerEarth',
+  'Toph',
+  'SPOJ',
+  'Kaggle',
+  'Devpost',
+  'Other',
+];
 
 // ─── Result / Position ────────────────────────────────────────────────────────
 

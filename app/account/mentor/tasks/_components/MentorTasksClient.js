@@ -25,6 +25,7 @@ import {
   updateWeeklyTaskAction,
   deleteWeeklyTaskAction,
 } from '@/app/_lib/mentor-actions';
+import { useScrollLock } from '@/app/_lib/hooks';
 
 const DIFFICULTY_COLORS = {
   easy: 'bg-green-500/20 text-green-400 border-green-500/30',
@@ -34,6 +35,7 @@ const DIFFICULTY_COLORS = {
 
 function TaskModal({ task, onClose, mentorId }) {
   const isEdit = !!task;
+  useScrollLock();
   const [links, setLinks] = useState(task?.problem_links || ['']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

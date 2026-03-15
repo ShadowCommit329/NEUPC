@@ -69,3 +69,43 @@ export function getInitials(name) {
     .toUpperCase()
     .slice(0, 2);
 }
+
+/**
+ * Normalize an image URL to go through our proxy.
+ *
+ * - `/api/image/…` URLs pass through unchanged.
+ * - Legacy `lh3.googleusercontent.com/d/{id}` URLs → `/api/image/{id}`.
+ * - Local paths (`/placeholder-event.svg`, etc.) pass through unchanged.
+ * - Any other external URL (lh3 /gg/, fbcdn, etc.) → `/api/image/proxy?url=…`.
+ *
+ * @param {string} url - Image URL
+ * @returns {string} Normalized URL safe for `<img src>`
+ */
+export function driveImageUrl(url) {
+  if (!url) return '';
+  // Already using our proxy
+  if (url.startsWith('/api/image/')) return url;
+  // Local/relative paths — pass through
+  if (url.startsWith('/')) return url;
+  // Legacy lh3 /d/{fileId} → direct proxy
+  const m = url.match(/lh3\.googleusercontent\.com\/d\/([^/?&]+)/);
+  if (m) return `/api/image/${m[1]}`;
+  // Any other external URL → proxy it
+  if (/^https?:\/\//i.test(url)) {
+    return `/api/image/proxy?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
+/**
+ * Generate a fallback avatar URL using RoboHash based on identifier.
+ * Used as a fallback when primary avatar images fail to load.
+ *
+ * @param {string} identifier - User ID, name, or email for consistent avatar
+ * @returns {string} RoboHash avatar URL
+ */
+export function getFallbackAvatarUrl(identifier) {
+  if (!identifier) return 'https://robohash.org/default?set=set4&size=200x200';
+  const hash = identifier.replace(/[^a-z0-9]/gi, '').slice(0, 20) || 'default';
+  return `https://robohash.org/${hash}?set=set4&size=200x200`;
+}

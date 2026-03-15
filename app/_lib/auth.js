@@ -12,6 +12,34 @@ import {
   getUserRoles,
   updateUser,
 } from './data-service';
+import { uploadAvatarFromUrl } from './avatar-actions';
+
+async function withTimeout(
+  promise,
+  { timeoutMs = 7000, fallbackValue = null, operation = 'operation' } = {}
+) {
+  const TIMEOUT = Symbol('timeout');
+  let timeoutId;
+
+  try {
+    const timeoutPromise = new Promise((resolve) => {
+      timeoutId = setTimeout(() => resolve(TIMEOUT), timeoutMs);
+    });
+
+    const result = await Promise.race([promise, timeoutPromise]);
+    if (result === TIMEOUT) {
+      console.warn(`Auth ${operation} timed out after ${timeoutMs}ms`);
+      return fallbackValue;
+    }
+
+    return result;
+  } catch (error) {
+    console.error(`Auth ${operation} failed:`, error);
+    return fallbackValue;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
 
 const authConfig = {
   providers: [
@@ -47,7 +75,9 @@ const authConfig = {
               .join('')
               .toUpperCase() || '?';
 
-          const avatarValue = user.image || initials;
+          // Use initials as default; we'll try to upload the Google
+          // avatar to Drive after the user record exists.
+          const avatarValue = initials;
 
           await createUser({
             email: user.email,
@@ -55,15 +85,57 @@ const authConfig = {
             avatar_url: avatarValue,
             email_verified: true,
             account_status: 'pending',
-            status_reason: 'Pending approval',
-            is_active: false,
+            status_reason: 'initial sign up',
+            is_online: false,
             provider: account?.provider || 'google',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           });
+
+          // Now that the user record exists, try uploading the Google
+          // profile image to Google Drive "avatars" folder.
+          if (user.image) {
+            try {
+              const newUser = await getUserByEmail(user.email);
+              if (newUser) {
+                const driveUrl = await uploadAvatarFromUrl(
+                  user.image,
+                  newUser.id
+                );
+                if (driveUrl) {
+                  await updateUser(newUser.id, {
+                    avatar_url: driveUrl,
+                    updated_at: new Date().toISOString(),
+                  });
+                }
+              }
+            } catch (avatarErr) {
+              // Non-critical: avatar will show initials until user uploads one
+              console.error(
+                'Failed to upload Google avatar to Drive:',
+                avatarErr
+              );
+            }
+          }
         } else {
+          // Only set is_online for users with non-blocked account status.
+          // Suspended/banned/locked/rejected users must NOT be reactivated on login.
+          const blockedStatuses = [
+            'inActive',
+            'inactive',
+            'pending',
+            'suspended',
+            'banned',
+            'blocked',
+            'locked',
+            'rejected',
+          ];
+          const isBlocked = blockedStatuses.includes(
+            existingUser.account_status
+          );
+
           await updateUser(existingUser.id, {
-            is_active: true,
+            ...(isBlocked ? {} : { is_online: true }),
             last_login: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           });
@@ -86,7 +158,7 @@ const authConfig = {
           const dbUser = await getUserByEmail(token.email);
           if (dbUser) {
             await updateUser(dbUser.id, {
-              is_active: false,
+              is_online: false,
               updated_at: new Date().toISOString(),
             });
           }
@@ -105,26 +177,49 @@ const authConfig = {
         // But also fetch actual user from DB to get their real ID in case they were created before this fix
         if (session.user.email) {
           try {
-            const dbUser = await getUserByEmail(session.user.email);
+            const dbUser = await withTimeout(
+              getUserByEmail(session.user.email),
+              {
+                timeoutMs: 7000,
+                fallbackValue: null,
+                operation: 'getUserByEmail',
+              }
+            );
             if (dbUser) {
               session.user.id = dbUser.id; // Use database ID
+              session.user.avatar_url = dbUser.avatar_url || null;
+              // Keep image aligned with DB source of truth for legacy consumers.
+              session.user.image =
+                dbUser.avatar_url || session.user.image || null;
             } else {
               session.user.id = token.sub; // Fallback to token.sub for new users
             }
 
-            const userRoles = await getUserRoles(session.user.email);
-            session.user.role = userRoles[0] || 'guest';
+            const userRoles = await withTimeout(
+              getUserRoles(session.user.email),
+              {
+                timeoutMs: 7000,
+                fallbackValue: [],
+                operation: 'getUserRoles',
+              }
+            );
+            // Store the full roles array for multi-role support
+            session.user.roles = userRoles?.length > 0 ? userRoles : [];
+            // Keep .role as the primary role for backward compatibility
+            session.user.role = userRoles?.[0] || null;
           } catch (error) {
             console.error(
               'Error fetching user info in session callback:',
               error
             );
             session.user.id = token.sub;
-            session.user.role = 'guest';
+            session.user.role = null;
+            session.user.roles = [];
           }
         } else {
           session.user.id = token.sub;
-          session.user.role = 'guest';
+          session.user.role = null;
+          session.user.roles = [];
         }
       }
       return session;

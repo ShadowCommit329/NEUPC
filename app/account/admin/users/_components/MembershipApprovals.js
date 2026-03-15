@@ -33,6 +33,7 @@ export default function MembershipApprovals({
       } else {
         setItemsPerPage(9); // Desktop: 9 items
       }
+      setCurrentPage(1);
     };
 
     handleResize();
@@ -40,20 +41,15 @@ export default function MembershipApprovals({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  if (!membershipUsers || membershipUsers.length === 0) {
-    return null;
-  }
-
   const totalPages = Math.ceil(membershipUsers.length / itemsPerPage);
   const startIdx = (currentPage - 1) * itemsPerPage;
   const endIdx = startIdx + itemsPerPage;
   const currentUsers = membershipUsers.slice(startIdx, endIdx);
   const hasPagination = membershipUsers.length > itemsPerPage;
 
-  // Reset to page 1 when itemsPerPage changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [itemsPerPage]);
+  if (!membershipUsers || membershipUsers.length === 0) {
+    return null;
+  }
 
   const handlePrevPage = () => {
     setCurrentPage((prev) => Math.max(prev - 1, 1));
@@ -89,8 +85,8 @@ export default function MembershipApprovals({
                   {user.studentId && (
                     <p className="text-xs text-gray-600">{user.studentId}</p>
                   )}
-                  {user.batch && (
-                    <p className="text-xs text-gray-600">Batch {user.batch}</p>
+                  {user.session && (
+                    <p className="text-xs text-gray-600">Session {user.session}</p>
                   )}
                   {user.appliedAt && (
                     <p className="mt-1 text-xs text-gray-600">

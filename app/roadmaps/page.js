@@ -3,7 +3,10 @@
  * @module RoadmapsPage
  */
 
-import { getPublicRoadmaps } from '@/app/_lib/public-actions';
+import {
+  getPublicRoadmaps,
+  getAllPublicSettings,
+} from '@/app/_lib/public-actions';
 import RoadmapsClient from './RoadmapsClient';
 import { buildMetadata } from '@/app/_lib/seo';
 import {
@@ -27,7 +30,10 @@ export const metadata = buildMetadata({
 });
 
 export default async function Page() {
-  const roadmaps = await getPublicRoadmaps();
+  const [roadmaps, settings] = await Promise.all([
+    getPublicRoadmaps(),
+    getAllPublicSettings(),
+  ]);
 
   return (
     <>
@@ -39,7 +45,7 @@ export default async function Page() {
       <BreadcrumbJsonLd
         items={[{ name: 'Home', url: '/' }, { name: 'Roadmaps' }]}
       />
-      <RoadmapsClient roadmaps={roadmaps} />
+      <RoadmapsClient roadmaps={roadmaps} settings={settings} />
     </>
   );
 }

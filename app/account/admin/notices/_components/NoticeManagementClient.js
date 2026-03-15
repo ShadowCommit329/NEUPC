@@ -19,6 +19,8 @@ import {
 } from './noticeConfig';
 import NoticeRow from './NoticeRow';
 import NoticeFormModal from './NoticeFormModal';
+import { Bell, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 
 function StatCard({ card }) {
   return (
@@ -80,24 +82,53 @@ export default function NoticeManagementClient({ initialNotices, stats }) {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">
-            📋 Notice Management
-          </h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Manage, pin, and schedule notices for club members.
-          </p>
+      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
+        <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-sky-500/10 blur-3xl" />
+        <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-cyan-500/8 blur-3xl" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <nav className="mb-3 flex items-center gap-1.5 text-[11px] text-gray-500">
+              <Link
+                href="/account/admin"
+                className="transition-colors hover:text-gray-300"
+              >
+                Dashboard
+              </Link>
+              <ChevronRight className="h-3 w-3 text-gray-700" />
+              <span className="font-medium text-gray-400">Notices</span>
+            </nav>
+            <h1 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white sm:text-2xl">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/15 ring-1 ring-sky-500/25">
+                <Bell className="h-5 w-5 text-sky-400" />
+              </div>
+              Notice Management
+            </h1>
+            <p className="mt-2 text-sm text-gray-500">
+              Manage, pin, and schedule notices for club members.
+            </p>
+          </div>
+          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+            <Link
+              href="/account/admin"
+              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+            >
+              ← Dashboard
+            </Link>
+            <button
+              onClick={() => setAddOpen(true)}
+              className="group flex items-center gap-2 rounded-xl bg-sky-600 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-sky-900/30 transition-all hover:-translate-y-0.5 hover:bg-sky-500 hover:shadow-xl hover:shadow-sky-900/40"
+            >
+              <svg
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-3.5 w-3.5"
+              >
+                <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
+              </svg>
+              Post Notice
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setAddOpen(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-sky-900/30 transition-colors hover:bg-sky-700"
-        >
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-            <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
-          </svg>
-          Post Notice
-        </button>
       </div>
 
       {/* Stat cards */}

@@ -20,22 +20,25 @@ export default function SectionBackground({
 }) {
   const orbs = {
     default: {
-      topLeft: 'from-primary-500/20 to-secondary-500/20 -top-40 -left-40',
+      topLeft:
+        'from-primary-500/10 to-secondary-500/10 -top-24 -left-24 sm:-top-48 sm:-left-48',
       bottomRight:
-        'from-secondary-500/20 to-primary-500/20 -right-40 -bottom-40',
-      overlay: 'from-primary-500/10 via-secondary-500/10 to-primary-500/10',
+        'from-secondary-500/10 to-primary-500/10 -right-24 -bottom-24 sm:-right-48 sm:-bottom-48',
+      overlay: 'from-primary-500/5 via-secondary-500/5 to-primary-500/5',
     },
     warm: {
-      topLeft: 'from-yellow-500/20 to-primary-500/20 -top-40 -left-40',
+      topLeft:
+        'from-yellow-500/10 to-primary-500/10 -top-24 -left-24 sm:-top-48 sm:-left-48',
       bottomRight:
-        'from-secondary-500/20 to-yellow-500/20 -right-40 -bottom-40',
-      overlay: 'from-primary-500/10 via-secondary-500/10 to-primary-500/10',
+        'from-secondary-500/10 to-yellow-500/10 -right-24 -bottom-24 sm:-right-48 sm:-bottom-48',
+      overlay: 'from-primary-500/5 via-secondary-500/5 to-primary-500/5',
     },
     accent: {
-      topLeft: 'from-primary-500/30 to-secondary-500/30 -top-40 -left-40',
+      topLeft:
+        'from-primary-500/15 to-secondary-500/15 -top-24 -left-24 sm:-top-48 sm:-left-48',
       bottomRight:
-        'from-secondary-500/30 to-primary-500/30 -right-40 -bottom-40',
-      overlay: 'from-primary-500/10 via-secondary-500/10 to-primary-500/10',
+        'from-secondary-500/15 to-primary-500/15 -right-24 -bottom-24 sm:-right-48 sm:-bottom-48',
+      overlay: 'from-primary-500/5 via-secondary-500/5 to-primary-500/5',
     },
   };
 
@@ -44,25 +47,25 @@ export default function SectionBackground({
   return (
     <div className={cn('pointer-events-none absolute inset-0', className)}>
       {/* Subtle gradient overlay */}
-      <div className="absolute inset-0 bg-linear-to-b from-transparent via-black/20 to-transparent" />
+      <div className="absolute inset-0 bg-linear-to-b from-transparent via-black/30 to-transparent" />
       <div
         className={cn(
-          'absolute inset-0 bg-linear-to-br opacity-30',
+          'absolute inset-0 bg-linear-to-br opacity-20',
           config.overlay
         )}
       />
 
-      {/* Decorative blur orbs */}
+      {/* Decorative blur orbs — softer and larger */}
       <div
         className={cn(
-          'absolute h-96 w-96 rounded-full bg-linear-to-br blur-3xl',
+          'absolute h-64 w-64 rounded-full bg-linear-to-br blur-[100px] sm:h-96 sm:w-96 md:h-125 md:w-125',
           config.topLeft,
           animated && 'animate-pulse'
         )}
       />
       <div
         className={cn(
-          'absolute h-96 w-96 rounded-full bg-linear-to-br blur-3xl',
+          'absolute h-64 w-64 rounded-full bg-linear-to-br blur-[100px] sm:h-96 sm:w-96 md:h-125 md:w-125',
           config.bottomRight,
           animated && 'animation-delay-2000 animate-pulse'
         )}

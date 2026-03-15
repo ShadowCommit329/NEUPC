@@ -34,10 +34,12 @@ import {
   Trophy,
   Zap,
 } from 'lucide-react';
+import Link from 'next/link';
 import {
   registerForEventAction,
   cancelEventRegistrationAction,
 } from '@/app/_lib/member-events-actions';
+import { driveImageUrl } from '@/app/_lib/utils';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -225,9 +227,10 @@ function Flash({ msg }) {
 
 // ─── RSVP Button ──────────────────────────────────────────────────────────────
 
-function RSVPButton({ event, regStatus, userId, onDone, compact }) {
+function RSVPButton({ event, regStatus, userId, onDone, compact, isTeamLeader }) {
   const [pending, startTransition] = useTransition();
   const isRegistered = regStatus && regStatus !== 'cancelled';
+  const isTeamEvent = event.participation_type === 'team';
   const isFull =
     event.max_participants &&
     (event.registration_count ?? 0) >= event.max_participants &&
@@ -262,6 +265,8 @@ function RSVPButton({ event, regStatus, userId, onDone, compact }) {
   };
 
   if (isRegistered) {
+    // Only team leaders (or individual registrants) can cancel
+    const canCancel = !isClosed && isTeamLeader !== false;
     return (
       <div className="flex gap-2">
         <div
@@ -271,7 +276,7 @@ function RSVPButton({ event, regStatus, userId, onDone, compact }) {
         >
           <CheckCircle2 className="h-3.5 w-3.5" /> Registered
         </div>
-        {!isClosed && (
+        {canCancel && (
           <button
             onClick={handleCancel}
             disabled={pending}
@@ -306,6 +311,22 @@ function RSVPButton({ event, regStatus, userId, onDone, compact }) {
         Closed
       </div>
     );
+
+  // Team events require the full team builder — link to event page
+  if (isTeamEvent) {
+    const slug = event.slug || event.id;
+    return (
+      <Link
+        href={`/events/${slug}`}
+        className={`flex items-center gap-1.5 rounded-xl border border-blue-500/30 bg-blue-500/15 px-3 py-2 text-xs font-semibold text-blue-300 transition-all hover:bg-blue-500/25 ${
+          compact ? '' : 'w-full justify-center'
+        }`}
+      >
+        <Users className="h-3.5 w-3.5" />
+        {compact ? 'Team' : 'Register Team →'}
+      </Link>
+    );
+  }
 
   return (
     <button
@@ -359,7 +380,7 @@ function Countdown({ targetIso }) {
 
 // ─── Featured Event Hero ──────────────────────────────────────────────────────
 
-function FeaturedHero({ event, regStatus, userId, onFlash }) {
+function FeaturedHero({ event, regInfo, userId, onFlash }) {
   const cs = catStyle(event.category);
   const ss = STATUS_STYLES[event.status] || STATUS_STYLES.upcoming;
 
@@ -368,8 +389,12 @@ function FeaturedHero({ event, regStatus, userId, onFlash }) {
       {/* Background image or gradient */}
       {event.cover_image ? (
         <img
-          src={event.cover_image}
+          src={driveImageUrl(event.cover_image)}
           alt=""
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = '/placeholder-event.svg';
+          }}
           className="absolute inset-0 h-full w-full object-cover opacity-20"
         />
       ) : null}
@@ -436,10 +461,11 @@ function FeaturedHero({ event, regStatus, userId, onFlash }) {
         <div className="mt-6 flex flex-wrap gap-3">
           <RSVPButton
             event={event}
-            regStatus={regStatus}
+            regStatus={regInfo?.status}
             userId={userId}
             onDone={onFlash}
             compact={false}
+            isTeamLeader={regInfo?.isTeamLeader}
           />
           {event.external_url && (
             <a
@@ -459,7 +485,7 @@ function FeaturedHero({ event, regStatus, userId, onFlash }) {
 
 // ─── Event Card ───────────────────────────────────────────────────────────────
 
-function EventCard({ event, regStatus, userId, onFlash }) {
+function EventCard({ event, regInfo, userId, onFlash }) {
   const cs = catStyle(event.category);
   const ss = STATUS_STYLES[event.status] || STATUS_STYLES.upcoming;
   const registeredCount = event.registration_count ?? 0;
@@ -474,8 +500,12 @@ function EventCard({ event, regStatus, userId, onFlash }) {
       <div className="relative h-36 overflow-hidden bg-linear-to-br from-gray-800 to-gray-900">
         {event.cover_image && (
           <img
-            src={event.cover_image}
+            src={driveImageUrl(event.cover_image)}
             alt=""
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/placeholder-event.svg';
+            }}
             className="h-full w-full object-cover opacity-70 transition-transform duration-500 group-hover:scale-105"
           />
         )}
@@ -572,10 +602,11 @@ function EventCard({ event, regStatus, userId, onFlash }) {
         <div className="mt-3.5">
           <RSVPButton
             event={event}
-            regStatus={regStatus}
+            regStatus={regInfo?.status}
             userId={userId}
             onDone={onFlash}
             compact={false}
+            isTeamLeader={regInfo?.isTeamLeader}
           />
         </div>
       </div>
@@ -591,6 +622,7 @@ function MyRegRow({ reg, userId, onFlash }) {
   const rs = REG_STATUS_STYLES[reg.status] || REG_STATUS_STYLES.registered;
   const ss = STATUS_STYLES[event.status] || STATUS_STYLES.upcoming;
   const isPastEvent = isPast(event.start_date);
+  const isLeader = reg.isTeamLeader !== false;
 
   return (
     <div className="flex items-center gap-3 rounded-xl border border-white/6 bg-white/2 px-4 py-3 transition-colors hover:bg-white/4">
@@ -607,9 +639,16 @@ function MyRegRow({ reg, userId, onFlash }) {
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-gray-200">
-          {event.title}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="truncate text-sm font-semibold text-gray-200">
+            {event.title}
+          </p>
+          {reg.team_name && (
+            <span className="shrink-0 rounded-md bg-white/8 px-1.5 py-0.5 text-[9px] text-gray-500">
+              {isLeader ? 'Team Leader' : 'Team Member'}
+            </span>
+          )}
+        </div>
         <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[10px] text-gray-600">
           <span className="flex items-center gap-0.5">
             <Calendar className="h-2.5 w-2.5" />
@@ -620,6 +659,11 @@ function MyRegRow({ reg, userId, onFlash }) {
           >
             {ss.label}
           </span>
+          {reg.team_name && (
+            <span className="text-gray-600">
+              Team: {reg.team_name}
+            </span>
+          )}
         </div>
       </div>
 
@@ -629,13 +673,14 @@ function MyRegRow({ reg, userId, onFlash }) {
         >
           {rs.label}
         </span>
-        {reg.status === 'registered' && !isPastEvent && (
+        {reg.status === 'registered' && !isPastEvent && isLeader && (
           <RSVPButton
             event={event}
             regStatus={reg.status}
             userId={userId}
             onDone={onFlash}
             compact={true}
+            isTeamLeader={reg.isTeamLeader}
           />
         )}
       </div>
@@ -662,11 +707,13 @@ export default function MemberEventsClient({
     return () => clearTimeout(id);
   }, [flash]);
 
-  // Build a lookup: eventId → regStatus
+  // Build a lookup: eventId → { status, isTeamLeader }
   const regMap = useMemo(() => {
     const m = {};
     for (const r of myRegistrations) {
-      if (r.event_id) m[r.event_id] = r.status;
+      if (r.event_id) {
+        m[r.event_id] = { status: r.status, isTeamLeader: r.isTeamLeader };
+      }
     }
     return m;
   }, [myRegistrations]);
@@ -856,7 +903,7 @@ export default function MemberEventsClient({
       {activeTab === 'upcoming' && featuredEvent && (
         <FeaturedHero
           event={featuredEvent}
-          regStatus={regMap[featuredEvent.id]}
+          regInfo={regMap[featuredEvent.id]}
           userId={userId}
           onFlash={setFlash}
         />
@@ -895,7 +942,7 @@ export default function MemberEventsClient({
                 <EventCard
                   key={event.id}
                   event={event}
-                  regStatus={regMap[event.id]}
+                  regInfo={regMap[event.id]}
                   userId={userId}
                   onFlash={setFlash}
                 />

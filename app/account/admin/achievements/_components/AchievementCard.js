@@ -12,23 +12,48 @@ import {
   TYPE_CONFIG,
   formatDate,
 } from './achievementConfig';
-import { deleteAchievementAction } from '@/app/_lib/achievement-actions';
+import {
+  deleteAchievementAction,
+  toggleAchievementFeaturedAction,
+} from '@/app/_lib/achievement-actions';
 
 export default function AchievementCard({
   achievement,
   onEdit,
   onManageMembers,
+  onManageGallery,
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isFeatured, setIsFeatured] = useState(
+    achievement?.is_featured ?? false
+  );
+  const [featuredPending, setFeaturedPending] = useState(false);
   const [, startTransition] = useTransition();
 
-  const catConf = getCategoryConfig(achievement.category);
+  const cats = achievement.category
+    ? achievement.category
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+  const catConf = getCategoryConfig(cats[0] ?? null);
   const typeConf = achievement.is_team
     ? TYPE_CONFIG.team
     : TYPE_CONFIG.individual;
   const memberCount = achievement.member_achievements?.length ?? 0;
   const creatorName = achievement.users?.full_name ?? 'Admin';
+
+  async function handleToggleFeatured(e) {
+    e.stopPropagation();
+    setFeaturedPending(true);
+    const fd = new FormData();
+    fd.set('id', achievement.id);
+    fd.set('featured', String(!isFeatured));
+    const res = await toggleAchievementFeaturedAction(fd);
+    setFeaturedPending(false);
+    if (!res?.error) setIsFeatured((f) => !f);
+  }
 
   async function handleDelete(e) {
     e.stopPropagation();
@@ -42,9 +67,61 @@ export default function AchievementCard({
   }
 
   return (
-    <div className="group overflow-hidden rounded-xl border border-slate-700/50 bg-slate-800/60 transition-all duration-200 hover:border-amber-500/30 hover:shadow-lg hover:shadow-amber-900/10">
+    <div
+      className={`group relative overflow-hidden rounded-xl border bg-slate-800/60 transition-all duration-200 hover:shadow-lg ${isFeatured ? 'border-amber-500/50 hover:shadow-amber-900/20' : 'border-slate-700/50 hover:border-amber-500/30 hover:shadow-amber-900/10'}`}
+    >
       {/* Top accent bar */}
-      <div className="h-1 bg-linear-to-r from-amber-500/60 via-yellow-500/40 to-transparent" />
+      <div
+        className={`h-1 bg-linear-to-r ${isFeatured ? 'from-amber-400 via-yellow-400 to-amber-300/60' : 'from-amber-500/60 via-yellow-500/40 to-transparent'}`}
+      />
+
+      {/* Featured star button */}
+      <button
+        onClick={handleToggleFeatured}
+        disabled={featuredPending}
+        title={isFeatured ? 'Remove from featured' : 'Mark as featured'}
+        className={`absolute top-3 right-3 z-10 flex h-7 w-7 items-center justify-center rounded-lg border transition-all ${
+          isFeatured
+            ? 'border-amber-400/60 bg-amber-400/20 text-amber-300'
+            : 'border-transparent bg-transparent text-slate-600 opacity-0 group-hover:opacity-100 hover:border-amber-400/30 hover:bg-amber-400/10 hover:text-amber-400'
+        }`}
+      >
+        {featuredPending ? (
+          <svg
+            className="h-3.5 w-3.5 animate-spin"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8z"
+            />
+          </svg>
+        ) : (
+          <svg
+            viewBox="0 0 20 20"
+            fill={isFeatured ? 'currentColor' : 'none'}
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className="h-3.5 w-3.5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+            />
+          </svg>
+        )}
+      </button>
 
       <div className="space-y-3 p-4">
         {/* ── Header row ──────────────────────────────────────────────── */}
@@ -58,8 +135,8 @@ export default function AchievementCard({
             </p>
           </div>
 
-          {/* Year badge */}
-          <span className="shrink-0 rounded-lg border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-xs font-bold text-amber-400">
+          {/* Year badge — right-padded to leave room for the star button */}
+          <span className="mr-6 shrink-0 rounded-lg border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-xs font-bold text-amber-400">
             {achievement.year}
           </span>
         </div>
@@ -76,13 +153,21 @@ export default function AchievementCard({
           </span>
         </div>
 
-        {/* ── Category ────────────────────────────────────────────────── */}
-        {achievement.category && (
-          <span
-            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${catConf.color}`}
-          >
-            {catConf.emoji} {achievement.category}
-          </span>
+        {/* ── Categories ─────────────────────────────────────────────── */}
+        {cats.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {cats.map((cat) => {
+              const conf = getCategoryConfig(cat);
+              return (
+                <span
+                  key={cat}
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${conf.color}`}
+                >
+                  {conf.emoji} {cat}
+                </span>
+              );
+            })}
+          </div>
         )}
 
         {/* ── Team name (if team) ─────────────────────────────────────── */}
@@ -133,6 +218,28 @@ export default function AchievementCard({
           </div>
 
           <div className="flex items-center gap-1">
+            {/* Gallery button */}
+            <button
+              onClick={() => onManageGallery(achievement)}
+              title="Manage gallery photos"
+              className="relative flex items-center gap-1 rounded-lg border border-transparent p-1.5 text-slate-400 transition-colors hover:border-sky-500/20 hover:bg-sky-500/10 hover:text-sky-400"
+            >
+              <svg
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-3.5 w-3.5"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M1 5.25A2.25 2.25 0 013.25 3h13.5A2.25 2.25 0 0119 5.25v9.5A2.25 2.25 0 0116.75 17H3.25A2.25 2.25 0 011 14.75v-9.5zm1.5 5.81v3.69c0 .414.336.75.75.75h13.5a.75.75 0 00.75-.75v-2.69l-2.22-2.219a.75.75 0 00-1.06 0l-1.91 1.909.47.47a.75.75 0 11-1.06 1.06L6.53 8.091a.75.75 0 00-1.06 0l-3 3.001zm9-3.56a.75.75 0 00-.75.75.75.75 0 00.75.75.75.75 0 00.75-.75.75.75 0 00-.75-.75z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              {achievement.gallery_images?.length > 0 && (
+                <span className="absolute top-0.5 right-0.5 h-1.5 w-1.5 rounded-full bg-sky-400" />
+              )}
+            </button>
+
             {/* Members button */}
             <button
               onClick={() => onManageMembers(achievement)}
@@ -208,6 +315,26 @@ export default function AchievementCard({
             )}
           </div>
         </div>
+
+        {/* Platform badge */}
+        {achievement.platform && (
+          <div className="flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-xs font-medium text-sky-400">
+              🖥️ {achievement.platform}
+            </span>
+            {achievement.profile_url && (
+              <a
+                href={achievement.profile_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs text-slate-500 underline underline-offset-2 transition-colors hover:text-sky-400"
+              >
+                Profile ↗
+              </a>
+            )}
+          </div>
+        )}
 
         {/* Contest URL link */}
         {achievement.contest_url && (

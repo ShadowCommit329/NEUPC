@@ -60,7 +60,7 @@ export default function MentorProfileClient({ user, memberProfile }) {
       label: 'Student ID',
       value: memberProfile?.student_id || '—',
     },
-    { icon: User, label: 'Batch', value: memberProfile?.batch || '—' },
+    { icon: User, label: 'Session', value: memberProfile?.session || '—' },
     {
       icon: User,
       label: 'Department',

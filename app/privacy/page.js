@@ -56,7 +56,7 @@ export default function PrivacyPage() {
                 </li>
                 <li>
                   <strong className="text-white">Profile Data:</strong>{' '}
-                  Department, batch, bio, and social links (GitHub, LinkedIn)
+                  Department, session, bio, and social links (GitHub, LinkedIn)
                   that you voluntarily provide.
                 </li>
                 <li>

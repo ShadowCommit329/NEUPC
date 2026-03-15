@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { updateMentorshipStatusAction } from '@/app/_lib/mentor-actions';
+import { useScrollLock } from '@/app/_lib/hooks';
 
 const STATUS_COLORS = {
   active: 'bg-green-500/20 text-green-400 border-green-500/30',
@@ -29,17 +30,19 @@ export default function AssignedMembersClient({ mentorships = [], mentorId }) {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedMentorship, setSelectedMentorship] = useState(null);
+  useScrollLock(!!selectedMentorship);
   const [isUpdating, setIsUpdating] = useState(false);
   const [message, setMessage] = useState(null);
 
   const filtered = mentorships.filter((m) => {
     const mentee = m['users!mentorships_mentee_id_fkey'] || m.users;
     const name = mentee?.full_name?.toLowerCase() || '';
-    const batch = mentee?.member_profiles?.batch?.toLowerCase() || '';
+    const sessionValue =
+      mentee?.member_profiles?.academic_session?.toLowerCase() || '';
     const matchSearch =
       !search ||
       name.includes(search.toLowerCase()) ||
-      batch.includes(search.toLowerCase());
+      sessionValue.includes(search.toLowerCase());
     const matchStatus = filterStatus === 'all' || m.status === filterStatus;
     return matchSearch && matchStatus;
   });
@@ -102,7 +105,7 @@ export default function AssignedMembersClient({ mentorships = [], mentorId }) {
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by name or batch…"
+            placeholder="Search by name or session…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pr-3 pl-9 text-sm text-white placeholder-gray-500 focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 focus:outline-none"
@@ -151,9 +154,9 @@ export default function AssignedMembersClient({ mentorships = [], mentorId }) {
                       <h3 className="font-semibold text-white">
                         {mentee?.full_name || 'Unknown'}
                       </h3>
-                      {profile?.batch && (
+                      {profile?.academic_session && (
                         <p className="text-xs text-gray-400">
-                          Batch {profile.batch}
+                          Session {profile.academic_session}
                         </p>
                       )}
                     </div>
@@ -242,7 +245,8 @@ export default function AssignedMembersClient({ mentorships = [], mentorId }) {
                       </p>
                       {profile?.student_id && (
                         <p className="text-xs text-gray-400">
-                          ID: {profile.student_id} | Batch {profile.batch}
+                          ID: {profile.student_id} | Session{' '}
+                          {profile.academic_session}
                         </p>
                       )}
                     </div>

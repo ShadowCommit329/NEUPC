@@ -373,7 +373,7 @@ function MemberProfilesList({ profiles, searchQuery, onReview }) {
                 <div className="mt-1 flex flex-wrap gap-3 text-sm text-gray-400">
                   <span>{profile.student_id}</span>
                   <span>•</span>
-                  <span>{profile.batch}</span>
+                  <span>{profile.session}</span>
                   <span>•</span>
                   <span>{profile.department}</span>
                 </div>
@@ -519,7 +519,7 @@ function ReviewModal({
               <DetailRow label="Name" value={item.users?.full_name} />
               <DetailRow label="Email" value={item.users?.email} />
               <DetailRow label="Student ID" value={item.student_id} />
-              <DetailRow label="Batch" value={item.batch} />
+              <DetailRow label="Session" value={item.session} />
               <DetailRow label="Department" value={item.department} />
             </div>
           )}

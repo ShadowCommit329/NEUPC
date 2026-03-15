@@ -14,15 +14,13 @@ import Blogs from './_components/sections/Blogs';
 import Join from './_components/sections/Join';
 import Wave from './_components/ui/Wave';
 import ScrollToTop from './_components/ui/ScrollToTop';
-import SectionHeader from './_components/ui/SectionHeader';
-import SectionBackground from './_components/ui/SectionBackground';
 import ScrollReveal from './_components/ui/ScrollReveal';
 import { OrganizationJsonLd, WebsiteJsonLd } from './_components/ui/JsonLd';
 import { getHomePageData } from './_lib/public-actions';
 import { buildMetadata } from './_lib/seo';
 
 export const metadata = buildMetadata({
-  title: 'Home',
+  title: 'NEUPC - Netrokona University Programming Club',
   description:
     'NEUPC — Netrokona University Programming Club. Join our community for competitive programming, workshops, mentorship, and ICPC preparation at Netrokona University, Bangladesh.',
   pathname: '/',
@@ -40,40 +38,40 @@ export const metadata = buildMetadata({
 function BackgroundOverlays() {
   return (
     <>
-      {/* Base gradient for text contrast */}
-      <div className="fixed inset-0 -z-10 bg-linear-to-b from-black/50 via-black/30 to-black/60" />
+      {/* Deep dark base layer */}
+      <div className="fixed inset-0 -z-10 bg-black/75" />
 
-      {/* Radial vignette — draws focus to center */}
+      {/* Vertical gradient for depth */}
+      <div className="fixed inset-0 -z-10 bg-linear-to-b from-black/85 via-black/60 to-black/90" />
+
+      {/* Radial vignette — cinematic focus */}
       <div
         className="fixed inset-0 -z-10"
         style={{
           background:
-            'radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.2) 40%, rgba(0,0,0,0.7) 100%)',
+            'radial-gradient(ellipse 80% 50% at 50% 50%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.9) 100%)',
         }}
       />
 
-      {/* Diagonal color accent */}
-      <div className="fixed inset-0 -z-10 bg-linear-to-br from-blue-900/20 via-transparent to-purple-900/20" />
+      {/* Subtle color grading — deep teal/blue tint */}
+      <div className="fixed inset-0 -z-10 bg-linear-to-br from-blue-950/20 via-black/10 to-teal-950/15" />
 
-      {/* Inset shadow vignette */}
-      <div className="fixed inset-0 -z-10 shadow-[inset_0_0_100px_rgba(0,0,0,0.5)]" />
+      {/* Corner vignette shadow */}
+      <div className="fixed inset-0 -z-10 shadow-[inset_0_0_200px_rgba(0,0,0,0.6)]" />
 
-      {/* Dot grid pattern */}
+      {/* Subtle dot grid — refined */}
       <div
-        className="fixed inset-0 -z-10 opacity-30"
+        className="fixed inset-0 -z-10 opacity-[0.08]"
         style={{
           backgroundImage:
-            'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)',
-          backgroundSize: '30px 30px',
+            'radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
         }}
       />
 
-      {/* Color wash accent */}
-      <div className="fixed inset-0 -z-10 bg-linear-to-tr from-blue-600/10 via-transparent to-purple-600/10 opacity-50" />
-
-      {/* Noise texture */}
+      {/* Film grain — barely visible for texture */}
       <div
-        className="fixed inset-0 -z-10 opacity-20"
+        className="fixed inset-0 -z-10 opacity-[0.06]"
         style={{
           backgroundImage:
             "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E\")",
@@ -85,8 +83,20 @@ function BackgroundOverlays() {
 
 // ─── Homepage ───────────────────────────────────────────────────────────────
 export default async function HomePage() {
-  const { hero, about, events, achievements, blogs, stats, joinBenefits } =
-    await getHomePageData();
+  const {
+    hero,
+    about,
+    events,
+    featuredEvents,
+    recentEvents,
+    achievements,
+    participations,
+    featuredBlogs,
+    recentBlogs,
+    stats,
+    joinBenefits,
+    settings,
+  } = await getHomePageData();
 
   return (
     <main className="relative min-h-screen">
@@ -98,53 +108,57 @@ export default async function HomePage() {
       <Image
         src={bg_img}
         placeholder="blur"
-        quality={80}
+        quality={75}
         sizes="100vw"
         className="fixed inset-0 -z-10 h-full w-full object-cover object-top"
-        alt="NEUPC Background"
+        alt={settings?.site_name || 'NEUPC'}
+        priority
       />
       <BackgroundOverlays />
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
-      <Hero data={hero} />
+      <Hero data={hero} settings={settings} />
       <Wave />
 
       {/* ── About ───────────────────────────────────────────────────── */}
-      <div className="relative overflow-x-clip pt-16 pb-4 sm:pt-20 md:pt-24 md:pb-6">
-        <SectionBackground />
-        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
-          <SectionHeader
-            badgeIcon="🎓"
-            badge="Who We Are"
-            title="About NEUPC"
-            subtitle="Building a Strong Programming Community at Netrokona University"
-          />
-        </div>
-        <About data={about} />
-      </div>
+      <About data={about} settings={settings} />
       <Wave />
 
       {/* ── Events ──────────────────────────────────────────────────── */}
-      <ScrollReveal animation="fade-up" duration={800}>
-        <Events events={events} />
+      <ScrollReveal animation="fade-up" duration={900}>
+        <Events
+          events={events}
+          featuredEvents={featuredEvents}
+          recentEvents={recentEvents}
+          settings={settings}
+        />
       </ScrollReveal>
       <Wave />
 
       {/* ── Achievements ────────────────────────────────────────────── */}
-      <ScrollReveal animation="fade-up" duration={800}>
-        <Achievements achievements={achievements} stats={stats} />
+      <ScrollReveal animation="fade-up" duration={900}>
+        <Achievements
+          achievements={achievements}
+          participations={participations}
+          stats={stats}
+          settings={settings}
+        />
       </ScrollReveal>
       <Wave />
 
       {/* ── Blogs ───────────────────────────────────────────────────── */}
-      <ScrollReveal animation="fade-up" duration={800}>
-        <Blogs blogs={blogs} />
+      <ScrollReveal animation="fade-up" duration={900}>
+        <Blogs
+          featuredBlogs={featuredBlogs}
+          recentBlogs={recentBlogs}
+          settings={settings}
+        />
       </ScrollReveal>
       <Wave />
 
       {/* ── Join ────────────────────────────────────────────────────── */}
-      <ScrollReveal animation="scale-up" duration={800}>
-        <Join benefits={joinBenefits} />
+      <ScrollReveal animation="scale-up" duration={900}>
+        <Join benefits={joinBenefits} settings={settings} />
       </ScrollReveal>
       <Wave />
 

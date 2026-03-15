@@ -9,15 +9,24 @@
 import {
   getAchievementsAdmin,
   getUsersForSelector,
+  getParticipationRecordsAdmin,
+  getJourneyItemsAdmin,
 } from '@/app/_lib/data-service';
 import AchievementManagementClient from './_components/AchievementManagementClient';
 
 export const metadata = { title: 'Achievements | Admin | NEUPC' };
 
 export default async function AdminAchievementsPage() {
-  const [{ achievements, stats }, users] = await Promise.all([
+  const [
+    { achievements, stats },
+    users,
+    participations,
+    journey,
+  ] = await Promise.all([
     getAchievementsAdmin().catch(() => ({ achievements: [], stats: {} })),
     getUsersForSelector().catch(() => []),
+    getParticipationRecordsAdmin().catch(() => []),
+    getJourneyItemsAdmin().catch(() => []),
   ]);
 
   return (
@@ -26,6 +35,8 @@ export default async function AdminAchievementsPage() {
         initialAchievements={achievements}
         stats={stats}
         users={users}
+        initialParticipations={participations}
+        initialJourney={journey}
       />
     </div>
   );

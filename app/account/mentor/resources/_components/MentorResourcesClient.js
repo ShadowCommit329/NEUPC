@@ -20,6 +20,7 @@ import {
   createResourceAction,
   deleteResourceAction,
 } from '@/app/_lib/mentor-actions';
+import { useScrollLock } from '@/app/_lib/hooks';
 
 const TYPE_COLORS = {
   article: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
@@ -39,6 +40,7 @@ const DIFFICULTY_COLORS = {
 
 function ResourceModal({ onClose, mentorId }) {
   const [loading, setLoading] = useState(false);
+  useScrollLock();
   const [error, setError] = useState(null);
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');

@@ -39,10 +39,13 @@ export default function Modal({
     };
 
     document.addEventListener('keydown', handleEscape);
+    // Lock both html and body to cover all browser scroll roots
+    document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
+      document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
     };
   }, [isOpen, onClose]);
@@ -65,7 +68,7 @@ export default function Modal({
     <div
       ref={overlayRef}
       onClick={handleBackdropClick}
-      className="animate-fade-in fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      className="animate-fade-in fixed inset-0 z-100 flex items-start justify-center overflow-y-auto bg-black/60 p-4 py-6 backdrop-blur-sm sm:items-center sm:py-10"
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? 'modal-title' : undefined}
@@ -94,7 +97,7 @@ export default function Modal({
         )}
 
         {/* Body */}
-        <div className="scrollbar-hide max-h-[70vh] overflow-y-auto px-6 py-4">
+        <div className="overflow-auto px-6 py-4">
           {children}
         </div>
       </div>

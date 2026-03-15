@@ -9,7 +9,7 @@ import { revalidatePath } from 'next/cache';
 import { auth } from './auth';
 import { supabaseAdmin } from './supabase';
 import { getUserRoles, getUserByEmail } from './data-service';
-import { sanitizeText, isValidUrl } from './validation';
+import { sanitizeText } from './validation';
 
 async function requireActiveGuest() {
   const session = await auth();
@@ -32,17 +32,10 @@ export async function updateGuestInfoAction(formData) {
 
     const full_name = sanitizeText(formData.get('full_name'), 100);
     const phone = sanitizeText(formData.get('phone'), 20) || null;
-    const avatar_url = formData.get('avatar_url')?.trim() || null;
-
-    // Validate avatar URL if provided
-    if (avatar_url && !isValidUrl(avatar_url)) {
-      return { error: 'Invalid avatar URL.' };
-    }
 
     const updates = { updated_at: new Date().toISOString() };
     if (full_name) updates.full_name = full_name;
     updates.phone = phone;
-    if (avatar_url !== null) updates.avatar_url = avatar_url;
 
     const { error } = await supabaseAdmin
       .from('users')

@@ -29,21 +29,21 @@ const getCachedUserRoles = cache(async (email) => {
  *
  * @param {string|string[]} requiredRole - Role(s) required to access the page.
  *   Pass a single role string or an array (user needs at least one).
- * @param {object} [options] - Additional options.
- * @param {boolean} [options.checkIsActive=true] - Whether to check is_active flag.
- *   Set to false for guest role (guests only need account_status === 'active').
  * @returns {Promise<{session: object, user: object, userRoles: string[]}>}
  */
-export async function requireRole(requiredRole, options = {}) {
-  const { checkIsActive = true } = options;
-
+export async function requireRole(requiredRole) {
   const session = await auth();
   if (!session?.user?.email) {
     redirect('/login');
   }
 
   const email = session.user.email;
-  const userRoles = await getCachedUserRoles(email);
+  let userRoles = [];
+  try {
+    userRoles = await getCachedUserRoles(email);
+  } catch {
+    redirect('/account');
+  }
 
   // Support single role or array of roles
   const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
@@ -53,13 +53,17 @@ export async function requireRole(requiredRole, options = {}) {
     redirect('/account');
   }
 
-  const user = await getCachedUserByEmail(email);
-
-  if (user?.account_status !== 'active') {
+  let user = null;
+  try {
+    user = await getCachedUserByEmail(email);
+  } catch {
     redirect('/account');
   }
 
-  if (checkIsActive && !user?.is_active) {
+  // Only account_status gates access — is_online is a heartbeat/presence flag,
+  // not a security gate. Checking it here would kick users out immediately
+  // after login before the first heartbeat fires.
+  if (user?.account_status !== 'active') {
     redirect('/account');
   }
 
@@ -80,8 +84,8 @@ export async function requireAuth() {
 
   const email = session.user.email;
   const [user, userRoles] = await Promise.all([
-    getCachedUserByEmail(email),
-    getCachedUserRoles(email),
+    getCachedUserByEmail(email).catch(() => null),
+    getCachedUserRoles(email).catch(() => []),
   ]);
 
   return { session, user, userRoles };

@@ -6,7 +6,7 @@
 'use server';
 
 import { supabaseAdmin } from './supabase';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { requireActionSession } from './action-guard';
 
 /** Increment the upvote count for a resource (authenticated users only). */
@@ -46,5 +46,7 @@ export async function upvoteResourceAction(resourceId) {
     return { error: 'Failed to upvote resource.' };
   }
   revalidatePath('/account/member/resources');
+  revalidateTag('roadmaps');
+  revalidatePath('/roadmaps');
   return { success: true, newCount: (resource.upvotes ?? 0) + 1 };
 }

@@ -40,6 +40,7 @@ import {
   joinContestAction,
   leaveContestAction,
 } from '@/app/_lib/member-contests-actions';
+import { useScrollLock } from '@/app/_lib/hooks';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -612,6 +613,7 @@ function MyParticipationRow({ par, userId, onFlash }) {
 // ─── Leaderboard Modal ────────────────────────────────────────────────────────
 
 function LeaderboardModal({ contest, participants, userId, onClose }) {
+  useScrollLock();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
       <div className="w-full max-w-lg rounded-2xl border border-white/12 bg-gray-950 shadow-2xl">

@@ -35,6 +35,7 @@ import {
   resetApplicationAction,
   deleteApplicationAction,
 } from '@/app/_lib/application-actions';
+import { useScrollLock } from '@/app/_lib/hooks';
 
 function InfoItem({ icon: Icon, label, value, mono, href, copyable }) {
   const [copied, setCopied] = useState(false);
@@ -98,6 +99,7 @@ export default function ApplicationDetailModal({
   onDeleted,
 }) {
   const [isPending, startTransition] = useTransition();
+  useScrollLock();
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectionReason, setRejectionReason] = useState(
     request.rejection_reason || ''
@@ -305,7 +307,7 @@ export default function ApplicationDetailModal({
               />
               <InfoItem
                 icon={CalendarDays}
-                label="Batch"
+                label="Session"
                 value={request.batch}
               />
               <InfoItem

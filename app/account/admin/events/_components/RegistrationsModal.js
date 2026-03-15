@@ -19,12 +19,18 @@ import {
   ExternalLink,
   UserCheck,
   Mail,
+  Ban,
+  CalendarCheck,
+  CalendarX,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   getStatusConfig,
   getCategoryConfig,
   formatEventDate,
 } from './eventConfig';
+import { useScrollLock } from '@/app/_lib/hooks';
+import { getFallbackAvatarUrl } from '@/app/_lib/utils';
 
 // ─── registration status config ───────────────────────────────────────────────
 
@@ -74,12 +80,22 @@ function Avatar({ name, src, size = 8 }) {
       .slice(0, 2)
       .join('')
       .toUpperCase() ?? '?';
+  const fallbackSrc = getFallbackAvatarUrl(name || 'user');
+  
   return (
     <div
       className={`flex h-${size} w-${size} shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-xs font-bold text-gray-300`}
     >
       {src ? (
-        <img src={src} alt={name} className="h-full w-full object-cover" />
+        <img 
+          src={src} 
+          alt={name} 
+          className="h-full w-full object-cover"
+          onError={(e) => {
+            // Fallback to robohash if primary image fails
+            e.target.src = fallbackSrc;
+          }}
+        />
       ) : (
         <span style={{ fontSize: size < 10 ? '10px' : '12px' }}>
           {initials}
@@ -89,14 +105,37 @@ function Avatar({ name, src, size = 8 }) {
   );
 }
 
+// ─── action button ────────────────────────────────────────────────────────────
+
+function ActionBtn({ icon: Icon, label, colorClass, loading, onClick, disabled, title }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={loading || disabled}
+      title={title}
+      className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-semibold transition-colors disabled:opacity-40 ${colorClass}`}
+    >
+      {loading ? (
+        <Loader2 className="h-3 w-3 animate-spin" />
+      ) : (
+        <Icon className="h-3 w-3" />
+      )}
+      {label}
+    </button>
+  );
+}
+
 // ─── main component ───────────────────────────────────────────────────────────
 
 export default function RegistrationsModal({ event, onClose }) {
   const [registrations, setRegistrations] = useState([]);
+  useScrollLock();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [actionPending, setActionPending] = useState(null); // registrationId being acted on
+  const [actionError, setActionError] = useState(null);
 
   const sc = getStatusConfig(event.status);
   const cc = getCategoryConfig(event.category);
@@ -126,14 +165,49 @@ export default function RegistrationsModal({ event, onClose }) {
     fetchRegistrations();
   }, [event.id]);
 
+  // ── update registration status ────────────────────────────────────────────
+  async function updateStatus(registrationId, status) {
+    setActionPending(registrationId);
+    setActionError(null);
+    try {
+      const res = await fetch(
+        `/api/admin/events/${event.id}/registrations/${registrationId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Failed to update.');
+      // Optimistically update local state
+      setRegistrations((prev) =>
+        prev.map((r) =>
+          r.id === registrationId
+            ? { ...r, status: data.status, attended: data.attended }
+            : r
+        )
+      );
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setActionPending(null);
+    }
+  }
+
   // filter
   const filtered = registrations.filter((r) => {
     const name = r.users?.full_name ?? '';
     const email = r.users?.email ?? '';
+    const teamMembers = (r.team_member_details ?? [])
+      .map((m) => `${m.full_name ?? ''} ${m.email ?? ''}`)
+      .join(' ');
     const matchSearch =
       !search ||
       name.toLowerCase().includes(search.toLowerCase()) ||
-      email.toLowerCase().includes(search.toLowerCase());
+      email.toLowerCase().includes(search.toLowerCase()) ||
+      (r.team_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      teamMembers.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === 'all' || r.status === filterStatus;
     return matchSearch && matchStatus;
   });
@@ -147,12 +221,13 @@ export default function RegistrationsModal({ event, onClose }) {
   // CSV export
   function exportCSV() {
     const rows = [
-      ['Name', 'Email', 'Status', 'Team Name', 'Registered At'],
+      ['Name', 'Email', 'Status', 'Team Name', 'Team Members', 'Registered At'],
       ...registrations.map((r) => [
         r.users?.full_name ?? '',
         r.users?.email ?? '',
         r.status,
         r.team_name ?? '',
+        (r.team_member_details ?? []).map((m) => m.full_name).join('; '),
         r.registered_at ? new Date(r.registered_at).toISOString() : '',
       ]),
     ];
@@ -259,6 +334,19 @@ export default function RegistrationsModal({ event, onClose }) {
             </button>
           </div>
 
+          {/* action error */}
+          {actionError && (
+            <div className="flex items-center justify-between rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-xs text-red-400">
+              <span>{actionError}</span>
+              <button
+                onClick={() => setActionError(null)}
+                className="ml-2 shrink-0 text-red-400 hover:text-red-300"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* status filter tabs */}
           <div className="flex gap-1 overflow-x-auto">
             {STATUS_TABS.map((tab) => (
@@ -308,7 +396,7 @@ export default function RegistrationsModal({ event, onClose }) {
                   return (
                     <div
                       key={reg.id}
-                      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/3"
+                      className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-white/3"
                     >
                       <Avatar name={user?.full_name} src={user?.avatar_url} />
                       <div className="min-w-0 flex-1">
@@ -341,6 +429,126 @@ export default function RegistrationsModal({ event, onClose }) {
                               }
                             )}
                           </p>
+                        )}
+                        {/* Team members list with acceptance badges */}
+                        {reg.team_member_details &&
+                          reg.team_member_details.length > 0 && (
+                            <div className="mt-2 space-y-1.5 border-t border-white/6 pt-2">
+                              <p className="text-[10px] font-semibold tracking-wide text-gray-500 uppercase">
+                                Team Members ({reg.team_member_details.length})
+                              </p>
+                              {reg.team_member_details.map((m) => {
+                                const acc = (reg.member_acceptances ?? []).find(
+                                  (a) => a.user_id === m.id,
+                                );
+                                const st = acc?.status ?? 'pending';
+                                const stColor =
+                                  st === 'accepted'
+                                    ? 'text-emerald-400'
+                                    : st === 'declined'
+                                      ? 'text-red-400'
+                                      : 'text-yellow-400';
+                                return (
+                                  <div
+                                    key={m.id}
+                                    className="flex items-center justify-between gap-1.5"
+                                  >
+                                    <div className="flex items-center gap-1.5">
+                                      <Avatar
+                                        name={m.full_name}
+                                        src={m.avatar_url}
+                                        size={5}
+                                      />
+                                      <span className="text-xs text-gray-400">
+                                        {m.full_name}
+                                      </span>
+                                      {acc?.is_leader && (
+                                        <span className="text-[10px] text-gray-600">
+                                          leader
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span
+                                      className={`shrink-0 text-[10px] font-semibold ${stColor}`}
+                                    >
+                                      {st === 'accepted' ? '✓' : st === 'declined' ? '✕' : '⏳'}{' '}
+                                      {st.charAt(0).toUpperCase() + st.slice(1)}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                        {/* Admin action buttons */}
+                        {reg.status !== 'cancelled' && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {/* Confirm */}
+                            {reg.status === 'registered' && (() => {
+                              const nonLeaders = (reg.member_acceptances ?? []).filter(a => !a.is_leader);
+                              const pendingCount = nonLeaders.filter(a => a.status === 'pending').length;
+                              const declinedCount = nonLeaders.filter(a => a.status === 'declined').length;
+                              const allAccepted = pendingCount === 0 && declinedCount === 0;
+                              const disableTitle = pendingCount > 0
+                                ? `${pendingCount} member(s) haven't accepted yet`
+                                : declinedCount > 0
+                                  ? `${declinedCount} member(s) declined`
+                                  : undefined;
+                              return (
+                                <ActionBtn
+                                  icon={ShieldCheck}
+                                  label={allAccepted ? 'Confirm' : `Waiting (${pendingCount + declinedCount})`}
+                                  colorClass="bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
+                                  loading={actionPending === reg.id}
+                                  disabled={nonLeaders.length > 0 && !allAccepted}
+                                  title={disableTitle}
+                                  onClick={() => updateStatus(reg.id, 'confirmed')}
+                                />
+                              );
+                            })()}
+                            {/* Mark Attended */}
+                            {reg.status === 'confirmed' && (
+                              <ActionBtn
+                                icon={CalendarCheck}
+                                label="Attended"
+                                colorClass="bg-purple-500/15 text-purple-400 hover:bg-purple-500/25"
+                                loading={actionPending === reg.id}
+                                onClick={() => updateStatus(reg.id, 'attended')}
+                              />
+                            )}
+                            {/* Undo Attend */}
+                            {reg.status === 'attended' && (
+                              <ActionBtn
+                                icon={CalendarX}
+                                label="Undo Attend"
+                                colorClass="bg-yellow-500/15 text-yellow-400 hover:bg-yellow-500/25"
+                                loading={actionPending === reg.id}
+                                onClick={() =>
+                                  updateStatus(reg.id, 'confirmed')
+                                }
+                              />
+                            )}
+                            {/* Cancel */}
+                            <ActionBtn
+                              icon={Ban}
+                              label="Cancel"
+                              colorClass="bg-red-500/15 text-red-400 hover:bg-red-500/25"
+                              loading={actionPending === reg.id}
+                              onClick={() => updateStatus(reg.id, 'cancelled')}
+                            />
+                          </div>
+                        )}
+                        {/* Re-register cancelled */}
+                        {reg.status === 'cancelled' && (
+                          <div className="mt-2">
+                            <ActionBtn
+                              icon={UserCheck}
+                              label="Re-register"
+                              colorClass="bg-blue-500/15 text-blue-400 hover:bg-blue-500/25"
+                              loading={actionPending === reg.id}
+                              onClick={() => updateStatus(reg.id, 'registered')}
+                            />
+                          </div>
                         )}
                       </div>
                       <div className="flex flex-col items-end gap-1.5">

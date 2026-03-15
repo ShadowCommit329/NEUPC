@@ -3,7 +3,10 @@
  * @module EventsPage
  */
 
-import { getPublicEvents } from '@/app/_lib/public-actions';
+import {
+  getPublicEvents,
+  getAllPublicSettings,
+} from '@/app/_lib/public-actions';
 import EventsClient from './EventsClient';
 import { buildMetadata } from '@/app/_lib/seo';
 import {
@@ -27,7 +30,10 @@ export const metadata = buildMetadata({
 });
 
 export default async function EventsPage() {
-  const events = await getPublicEvents();
+  const [events, settings] = await Promise.all([
+    getPublicEvents(),
+    getAllPublicSettings(),
+  ]);
 
   return (
     <>
@@ -39,7 +45,7 @@ export default async function EventsPage() {
       <BreadcrumbJsonLd
         items={[{ name: 'Home', url: '/' }, { name: 'Events' }]}
       />
-      <EventsClient events={events} />
+      <EventsClient events={events} settings={settings} />
     </>
   );
 }

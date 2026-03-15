@@ -60,7 +60,6 @@ export async function GET(request) {
 
 export async function PUT(request) {
   try {
-    // Auth check — only admins can update status reasons
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json(
@@ -69,15 +68,14 @@ export async function PUT(request) {
       );
     }
 
+    const callerUser = await getUserByEmail(session.user.email);
+    if (!callerUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     const { getUserRoles } = await import('@/app/_lib/data-service');
     const userRoles = await getUserRoles(session.user.email);
-
-    if (!userRoles.includes('admin')) {
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
+    const isAdmin = userRoles.includes('admin');
 
     const body = await request.json();
     const userId = body.userId;
@@ -87,6 +85,15 @@ export async function PUT(request) {
       return NextResponse.json(
         { error: 'User ID and reason are required' },
         { status: 400 }
+      );
+    }
+
+    // Non-admins can only update their own status reason
+    const isSelf = callerUser.id === userId;
+    if (!isAdmin && !isSelf) {
+      return NextResponse.json(
+        { error: 'You can only update your own message' },
+        { status: 403 }
       );
     }
 
@@ -101,13 +108,11 @@ export async function PUT(request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const adminUser = await getUserByEmail(session.user.email);
-
     const { data, error } = await supabaseAdmin
       .from('users')
       .update({
         status_reason: reason,
-        status_changed_by: adminUser?.id || null,
+        status_changed_by: callerUser.id,
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId)
@@ -121,8 +126,10 @@ export async function PUT(request) {
       );
     }
 
-    revalidatePath('/account');
-    revalidatePath('/account/admin/users');
+    // Revalidate with 'layout' type to bust the full route segment cache,
+    // not just the leaf page — ensures both user and admin see fresh data.
+    revalidatePath('/account', 'layout');
+    revalidatePath('/account/admin/users', 'layout');
 
     return NextResponse.json({
       reason: data?.[0]?.status_reason || reason,

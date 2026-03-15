@@ -10,8 +10,6 @@
 import Link from 'next/link';
 import {
   Gift,
-  Sparkles,
-  ArrowRight,
   ChevronRight,
   Trophy,
   BookOpen,
@@ -66,14 +64,7 @@ export default function MembershipBenefitsBanner({ benefits }) {
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <Link
-            href="/join"
-            className="group inline-flex items-center gap-2 rounded-xl bg-linear-to-r from-purple-600 to-pink-600 px-6 py-3 font-bold text-white shadow-xl shadow-purple-500/30 transition-all duration-300 hover:scale-105 hover:shadow-purple-500/50"
-          >
-            <Sparkles className="h-5 w-5" />
-            <span>Apply for Membership</span>
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Link>
-          <Link
+
             href="/about"
             className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3 font-semibold text-white transition-all hover:bg-white/10"
           >

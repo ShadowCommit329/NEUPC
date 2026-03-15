@@ -20,6 +20,12 @@ export const STATUS_CONFIG = {
     ring: 'ring-emerald-400/30',
     dot: 'bg-emerald-400',
   },
+  Inactive: {
+    color: 'text-gray-400',
+    bg: 'bg-gray-400/10',
+    ring: 'ring-gray-400/30',
+    dot: 'bg-gray-400',
+  },
   Pending: {
     color: 'text-amber-400',
     bg: 'bg-amber-400/10',
@@ -37,6 +43,12 @@ export const STATUS_CONFIG = {
     bg: 'bg-red-400/10',
     ring: 'ring-red-400/30',
     dot: 'bg-red-400',
+  },
+  Blocked: {
+    color: 'text-rose-400',
+    bg: 'bg-rose-400/10',
+    ring: 'ring-rose-400/30',
+    dot: 'bg-rose-400',
   },
   Locked: {
     color: 'text-purple-400',
@@ -93,6 +105,14 @@ export const MODAL_CONFIG = {
       'Locks the account for security reasons. The user cannot sign in.',
     danger: true,
     showReason: true,
+  },
+  email: {
+    title: 'Send Custom Email',
+    description: 'Compose and send a direct email to this user via platform.',
+    danger: false,
+    showReason: false, // Disable the default reason field
+    showEmailSubject: true,
+    showEmailBody: true,
   },
   edit: {
     title: 'Edit User',

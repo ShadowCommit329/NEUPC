@@ -23,9 +23,9 @@ export default function JoinButton({
   className = '',
   children,
 }) {
-  const isMember = useIsMember();
+  const isLoggedIn = useIsMember();
 
-  if (isMember) return null;
+  if (isLoggedIn) return null;
 
   return (
     <Link href={href} className={className}>

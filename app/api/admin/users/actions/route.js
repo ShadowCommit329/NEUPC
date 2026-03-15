@@ -4,35 +4,34 @@
  */
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
+import { requireApiAuth, isAuthError } from '@/app/_lib/api-guard';
 import {
   suspendUser,
   activateUser,
   banUser,
   deleteUser,
   approveMember,
-  getUserRoles,
 } from '@/app/_lib/data-service';
 
 export async function POST(request) {
   try {
-    const session = await auth();
+    const authResult = await requireApiAuth('admin');
+    if (isAuthError(authResult)) return authResult;
 
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
-
-    const userRoles = await getUserRoles(session.user.email);
-    if (!userRoles.includes('admin')) {
-      return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
-    }
-
-    const adminId = session.user.id;
+    const adminId = authResult.user.id;
     const { action, userId, reason } = await request.json();
 
     if (!action || !userId) {
       return NextResponse.json(
         { error: 'Missing action or userId' },
+        { status: 400 }
+      );
+    }
+
+    // Prevent admin from performing destructive actions on themselves
+    if (['suspend', 'ban', 'delete'].includes(action) && adminId === userId) {
+      return NextResponse.json(
+        { error: 'You cannot perform this action on your own account' },
         { status: 400 }
       );
     }

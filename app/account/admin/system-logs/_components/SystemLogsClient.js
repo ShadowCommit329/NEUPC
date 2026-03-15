@@ -36,6 +36,7 @@ import {
   Layers,
   TrendingUp,
 } from 'lucide-react';
+import Link from 'next/link';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -550,24 +551,47 @@ export default function SystemLogsClient({ data }) {
 
   return (
     <>
-      {/* ── Page Header ────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">
-            System Logs
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Full platform activity audit trail
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/3 px-3 py-2 text-[11px] text-gray-600">
-            <RefreshCw className="h-3 w-3" />
-            {timeAgo(generatedAt)}
+      {/* ── Page Header ──────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
+        <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-slate-500/10 blur-3xl" />
+        <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-blue-500/8 blur-3xl" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <nav className="mb-3 flex items-center gap-1.5 text-[11px] text-gray-500">
+              <Link
+                href="/account/admin"
+                className="transition-colors hover:text-gray-300"
+              >
+                Dashboard
+              </Link>
+              <ChevronRight className="h-3 w-3 text-gray-700" />
+              <span className="font-medium text-gray-400">System Logs</span>
+            </nav>
+            <h1 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white sm:text-2xl">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-500/15 ring-1 ring-slate-500/25">
+                <ClipboardList className="h-5 w-5 text-slate-400" />
+              </div>
+              System Logs
+            </h1>
+            <p className="mt-2 text-sm text-gray-500">
+              Full platform activity audit trail
+              <span className="ml-1.5 inline-flex items-center gap-1 text-gray-600">
+                <BarChart3 className="h-3 w-3" />
+                {overview.totalLoaded.toLocaleString()} entries loaded
+              </span>
+            </p>
           </div>
-          <div className="flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/3 px-3 py-2 text-[11px] text-gray-500">
-            <ClipboardList className="h-3.5 w-3.5" />
-            {overview.totalLoaded.toLocaleString()} loaded
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <Link
+              href="/account/admin"
+              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+            >
+              ← Dashboard
+            </Link>
+            <div className="flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 text-[11px] text-gray-600">
+              <RefreshCw className="h-3 w-3" />
+              {timeAgo(generatedAt)}
+            </div>
           </div>
         </div>
       </div>

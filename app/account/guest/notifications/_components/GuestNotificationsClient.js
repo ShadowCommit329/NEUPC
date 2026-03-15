@@ -7,6 +7,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useScrollLock } from '@/app/_lib/hooks';
 import {
   Bell,
   BellOff,
@@ -263,6 +264,7 @@ function NoticeCard({ notice, isRead, onRead, onOpen }) {
 
 // ─── Detail Modal ─────────────────────────────────────────────────────────────
 function NoticeModal({ notice, onClose }) {
+  useScrollLock(!!notice);
   if (!notice) return null;
   const pm = PRIORITY_META[notice.priority] ?? PRIORITY_META.low;
   const tm = TYPE_META[notice.notice_type] ?? TYPE_META.general;
@@ -718,13 +720,6 @@ export default function GuestNotificationsClient({ notices }) {
           <p className="text-xs text-white/35">
             Members receive targeted, role-specific notifications.
           </p>
-          <a
-            href="/account/guest/membership-application"
-            className="flex shrink-0 items-center gap-2 rounded-xl bg-violet-500/18 px-4 py-2 text-sm font-medium text-violet-300 transition hover:bg-violet-500/28"
-          >
-            <Sparkles className="size-3.5" />
-            Apply Now
-          </a>
         </div>
       </div>
     </>

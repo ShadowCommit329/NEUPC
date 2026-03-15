@@ -81,7 +81,7 @@ export default function TermsPage() {
                   You are responsible for all activity under your account.
                 </li>
                 <li>
-                  Provide accurate profile information (name, batch,
+                  Provide accurate profile information (name, session,
                   department).
                 </li>
                 <li>Do not share your session or impersonate other members.</li>

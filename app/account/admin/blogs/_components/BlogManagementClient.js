@@ -33,9 +33,10 @@ import {
   Trash2,
   Loader2,
   ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import BlogCard from './BlogCard';
-import BlogFormModal from './BlogFormModal';
+import BlogFormPanel from './BlogFormPanel';
 import CommentsModal from './CommentsModal';
 import {
   getStatusConfig,
@@ -50,21 +51,37 @@ import {
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 
-function StatCard({ icon: Icon, label, value, colorClass, sub }) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  colorClass,
+  sub,
+  accentGradient,
+}) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/4 px-4 py-3.5 backdrop-blur-sm">
+    <div className="group relative flex items-center gap-3 overflow-hidden rounded-xl border border-white/6 bg-[#161b22] px-4 py-3.5 transition-all hover:border-white/10 hover:bg-[#1c2128]">
+      {accentGradient && (
+        <div
+          className={`pointer-events-none absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100 ${accentGradient}`}
+        />
+      )}
       <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${colorClass}`}
+        className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${colorClass}`}
       >
-        <Icon className="h-5 w-5" />
+        <Icon className="h-4 w-4" />
       </div>
-      <div className="min-w-0">
-        <p className="text-xl leading-none font-bold text-white tabular-nums">
+      <div className="relative min-w-0">
+        <p className="font-mono text-lg leading-none font-bold text-white tabular-nums">
           {value}
         </p>
-        <p className="mt-1 truncate text-xs text-gray-500">{label}</p>
+        <p className="mt-1 truncate font-mono text-[10px] text-gray-600">
+          {label}
+        </p>
         {sub && (
-          <p className="mt-0.5 truncate text-[10px] text-gray-600">{sub}</p>
+          <p className="mt-0.5 truncate font-mono text-[9px] text-amber-500/70">
+            {sub}
+          </p>
         )}
       </div>
     </div>
@@ -210,31 +227,50 @@ export default function BlogManagementClient({ initialPosts, stats }) {
     <>
       <div className="space-y-6">
         {/* ── Header ────────────────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="flex items-center gap-2.5 text-xl font-bold text-white sm:text-2xl">
-              <BookOpen className="h-6 w-6 text-blue-400 sm:h-7 sm:w-7" />
-              Blog Management
-            </h1>
-            <p className="mt-1 text-sm text-gray-500">
-              {live.total} post{live.total !== 1 ? 's' : ''} · {live.published}{' '}
-              published · {live.totalViews.toLocaleString()} total views
-            </p>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <Link
-              href="/account/admin"
-              className="rounded-xl bg-white/6 px-4 py-2.5 text-xs font-medium text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-            >
-              ← Dashboard
-            </Link>
-            <button
-              onClick={() => setFormModal({ mode: 'create' })}
-              className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white transition-all hover:bg-blue-500 active:scale-95"
-            >
-              <PlusCircle className="h-3.5 w-3.5" />
-              New Post
-            </button>
+        <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
+          {/* decorative orbs */}
+          <div className="pointer-events-none absolute -top-20 -right-20 h-64 w-64 rounded-full bg-blue-500/6 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-12 -left-12 h-48 w-48 rounded-full bg-violet-500/5 blur-3xl" />
+
+          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <nav className="mb-2 flex items-center gap-1.5 text-xs text-gray-500">
+                <Link
+                  href="/account/admin"
+                  className="transition-colors hover:text-gray-300"
+                >
+                  Dashboard
+                </Link>
+                <ChevronRight className="h-3 w-3" />
+                <span className="text-gray-400">Blog Management</span>
+              </nav>
+              <h1 className="flex items-center gap-3 text-xl font-bold text-white sm:text-2xl">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/20 ring-1 ring-blue-500/30">
+                  <BookOpen className="h-5 w-5 text-blue-400" />
+                </div>
+                Blog Management
+              </h1>
+              <p className="mt-1.5 text-sm text-gray-500">
+                {live.total} post{live.total !== 1 ? 's' : ''} ·{' '}
+                {live.published} published · {live.totalViews.toLocaleString()}{' '}
+                total views
+              </p>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <Link
+                href="/account/admin"
+                className="rounded-xl bg-white/6 px-4 py-2.5 text-xs font-medium text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                ← Dashboard
+              </Link>
+              <button
+                onClick={() => setFormModal({ mode: 'create' })}
+                className="group flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white transition-all hover:bg-blue-500 active:scale-95"
+              >
+                <PlusCircle className="h-3.5 w-3.5 transition-transform group-hover:rotate-90" />
+                New Post
+              </button>
+            </div>
           </div>
         </div>
 
@@ -245,24 +281,28 @@ export default function BlogManagementClient({ initialPosts, stats }) {
             label="Total Posts"
             value={live.total}
             colorClass="bg-gray-700/50 text-gray-300"
+            accentGradient="bg-linear-to-br from-gray-500/5 to-transparent"
           />
           <StatCard
             icon={CheckCircle2}
             label="Published"
             value={live.published}
             colorClass="bg-emerald-500/15 text-emerald-400"
+            accentGradient="bg-linear-to-br from-emerald-500/8 to-transparent"
           />
           <StatCard
             icon={FileEdit}
             label="Drafts"
             value={live.draft}
             colorClass="bg-gray-600/20 text-gray-400"
+            accentGradient="bg-linear-to-br from-gray-500/6 to-transparent"
           />
           <StatCard
             icon={Star}
             label="Featured"
             value={live.featured}
             colorClass="bg-amber-500/15 text-amber-400"
+            accentGradient="bg-linear-to-br from-amber-500/8 to-transparent"
           />
           <StatCard
             icon={Eye}
@@ -273,12 +313,14 @@ export default function BlogManagementClient({ initialPosts, stats }) {
                 : live.totalViews
             }
             colorClass="bg-blue-500/15 text-blue-400"
+            accentGradient="bg-linear-to-br from-blue-500/8 to-transparent"
           />
           <StatCard
             icon={MessageSquare}
             label="Comments"
             value={live.totalComments}
             colorClass="bg-violet-500/15 text-violet-400"
+            accentGradient="bg-linear-to-br from-violet-500/8 to-transparent"
             sub={
               live.pendingComments > 0
                 ? `${live.pendingComments} pending`
@@ -450,73 +492,78 @@ export default function BlogManagementClient({ initialPosts, stats }) {
           />
         ) : viewMode === 'table' ? (
           /* ── Table View ──────────────────────────────────────────────── */
-          <div className="overflow-x-auto rounded-2xl border border-white/8">
-            <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto rounded-xl border border-white/8 bg-[#0d1117]">
+            <table className="w-full text-left font-mono text-xs">
               <thead>
-                <tr className="border-b border-white/8 bg-white/4">
-                  <th className="px-4 py-3 font-semibold text-gray-400">
-                    Post
+                <tr className="border-b border-white/6 bg-[#161b22]">
+                  <th className="w-8 px-3 py-3 text-center font-medium text-gray-700">
+                    #
                   </th>
-                  <th className="hidden px-4 py-3 font-semibold text-gray-400 md:table-cell">
-                    Author
+                  <th className="px-4 py-3 font-medium text-gray-500">post</th>
+                  <th className="hidden px-4 py-3 font-medium text-gray-500 md:table-cell">
+                    author
                   </th>
-                  <th className="px-4 py-3 font-semibold text-gray-400">
-                    Status
+                  <th className="px-4 py-3 font-medium text-gray-500">
+                    status
                   </th>
-                  <th className="hidden px-4 py-3 font-semibold text-gray-400 lg:table-cell">
-                    Category
+                  <th className="hidden px-4 py-3 font-medium text-gray-500 lg:table-cell">
+                    category
                   </th>
-                  <th className="px-4 py-3 text-right font-semibold text-gray-400">
-                    Views
+                  <th className="px-4 py-3 text-right font-medium text-gray-500">
+                    views
                   </th>
-                  <th className="hidden px-4 py-3 text-right font-semibold text-gray-400 sm:table-cell">
-                    Likes
+                  <th className="hidden px-4 py-3 text-right font-medium text-gray-500 sm:table-cell">
+                    likes
                   </th>
-                  <th className="hidden px-4 py-3 text-right font-semibold text-gray-400 sm:table-cell">
-                    Comments
+                  <th className="hidden px-4 py-3 text-right font-medium text-gray-500 sm:table-cell">
+                    comments
                   </th>
-                  <th className="hidden px-4 py-3 font-semibold text-gray-400 lg:table-cell">
-                    Date
+                  <th className="hidden px-4 py-3 font-medium text-gray-500 lg:table-cell">
+                    date
                   </th>
-                  <th className="px-4 py-3 text-right font-semibold text-gray-400">
-                    Actions
+                  <th className="px-4 py-3 text-right font-medium text-gray-500">
+                    actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
-                {filtered.map((post) => {
+              <tbody className="divide-y divide-white/4">
+                {filtered.map((post, rowIdx) => {
                   const tsc = getStatusConfig(post.status);
                   const tcc = getCategoryConfig(post.category);
                   return (
                     <tr
                       key={post.id}
-                      className="transition-colors hover:bg-white/3"
+                      className="group transition-colors hover:bg-[#161b22]"
                     >
+                      {/* line number */}
+                      <td className="px-3 py-3 text-center font-mono text-[10px] text-gray-700 select-none">
+                        {String(rowIdx + 1).padStart(2, '0')}
+                      </td>
                       <td className="max-w-xs px-4 py-3">
                         <div className="flex items-center gap-3">
                           {post.thumbnail ? (
                             <img
                               src={post.thumbnail}
                               alt=""
-                              className="hidden h-8 w-12 shrink-0 rounded-lg object-cover sm:block"
+                              className="hidden h-8 w-12 shrink-0 rounded-md object-cover sm:block"
                             />
                           ) : (
                             <div
-                              className={`hidden h-8 w-12 shrink-0 items-center justify-center rounded-lg bg-linear-to-br sm:flex ${tsc.gradient}`}
+                              className={`hidden h-8 w-12 shrink-0 items-center justify-center rounded-md bg-linear-to-br sm:flex ${tsc.gradient}`}
                             >
-                              <span className="text-sm opacity-60">
+                              <span className="text-sm opacity-50">
                                 {tcc.emoji}
                               </span>
                             </div>
                           )}
                           <div className="min-w-0">
-                            <p className="truncate font-semibold text-white">
+                            <p className="truncate font-mono text-xs font-semibold text-gray-200">
                               {post.title}
                             </p>
                             {post.is_featured && (
-                              <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-amber-400">
+                              <span className="mt-0.5 inline-flex items-center gap-1 font-mono text-[9px] text-amber-400">
                                 <Star className="h-2.5 w-2.5 fill-current" />{' '}
-                                Featured
+                                featured
                               </span>
                             )}
                           </div>
@@ -531,12 +578,15 @@ export default function BlogManagementClient({ initialPosts, stats }) {
                               className="h-5 w-5 rounded-full object-cover"
                             />
                           ) : (
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-700">
-                              <User className="h-3 w-3 text-gray-500" />
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#1c2128] ring-1 ring-white/8">
+                              <User className="h-3 w-3 text-gray-600" />
                             </div>
                           )}
-                          <span className="truncate text-gray-400">
-                            {post.users?.full_name ?? 'Unknown'}
+                          <span className="truncate font-mono text-[11px] text-gray-500">
+                            @
+                            {(post.users?.full_name ?? 'unknown')
+                              .split(' ')[0]
+                              .toLowerCase()}
                           </span>
                         </div>
                       </td>
@@ -561,24 +611,24 @@ export default function BlogManagementClient({ initialPosts, stats }) {
                           <span className="text-gray-600">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-400 tabular-nums">
+                      <td className="px-4 py-3 text-right font-mono text-gray-500 tabular-nums">
                         {(post.views ?? 0).toLocaleString()}
                       </td>
-                      <td className="hidden px-4 py-3 text-right text-gray-400 tabular-nums sm:table-cell">
+                      <td className="hidden px-4 py-3 text-right font-mono text-gray-500 tabular-nums sm:table-cell">
                         {post.likes ?? 0}
                       </td>
                       <td className="hidden px-4 py-3 text-right sm:table-cell">
-                        <span className="text-gray-400 tabular-nums">
+                        <span className="font-mono text-gray-500 tabular-nums">
                           {post.commentCount ?? 0}
                         </span>
                         {post.pendingComments > 0 && (
-                          <span className="ml-1 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[9px] text-amber-400">
-                            {post.pendingComments}
+                          <span className="ml-1 rounded bg-amber-500/15 px-1.5 py-0.5 font-mono text-[9px] text-amber-400">
+                            !{post.pendingComments}
                           </span>
                         )}
                       </td>
                       <td
-                        className="hidden px-4 py-3 text-gray-500 lg:table-cell"
+                        className="hidden px-4 py-3 font-mono text-[11px] text-gray-700 lg:table-cell"
                         title={formatBlogDate(post.created_at)}
                       >
                         {formatRelativeDate(post.created_at)}
@@ -620,7 +670,7 @@ export default function BlogManagementClient({ initialPosts, stats }) {
           </div>
         ) : (
           /* ── Grid View ───────────────────────────────────────────────── */
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map((post) => (
               <BlogCard
                 key={post.id}
@@ -635,8 +685,8 @@ export default function BlogManagementClient({ initialPosts, stats }) {
         )}
 
         {/* ── Footer legend ─────────────────────────────────────────────────── */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-white/6 bg-white/2 px-4 py-2.5 text-[11px] text-gray-600">
-          <span className="font-semibold text-gray-500">Status Guide:</span>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border border-white/5 bg-[#161b22] px-4 py-2.5 font-mono text-[10px] text-gray-700">
+          <span className="text-gray-600">// status guide</span>
           {[
             { dot: 'bg-gray-400', label: 'Draft – work in progress' },
             { dot: 'bg-emerald-400', label: 'Published – live on site' },
@@ -652,8 +702,7 @@ export default function BlogManagementClient({ initialPosts, stats }) {
 
       {/* ── Modals ──────────────────────────────────────────────────────────── */}
       {formModal && (
-        <BlogFormModal
-          mode={formModal.mode}
+        <BlogFormPanel
           post={formModal.post ?? null}
           onClose={() => setFormModal(null)}
           onSaved={handleSaved}

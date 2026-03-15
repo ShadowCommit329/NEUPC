@@ -14,7 +14,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { cn } from '@/app/_lib/utils';
+import { cn, getFallbackAvatarUrl } from '@/app/_lib/utils';
 import { getInitials } from '@/app/_lib/utils';
 import {
   getChatableUsersAction,
@@ -188,6 +188,9 @@ export default function NewChatPicker({
                         alt={user.full_name}
                         className="h-11 w-11 rounded-full object-cover ring-1 ring-white/5"
                         referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          e.target.src = getFallbackAvatarUrl(user.email || user.full_name);
+                        }}
                       />
                     ) : (
                       <div

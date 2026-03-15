@@ -29,6 +29,7 @@ import {
   RefreshCw,
   Database,
 } from 'lucide-react';
+import Link from 'next/link';
 import {
   exportUsersAction,
   exportJoinRequestsAction,
@@ -629,28 +630,53 @@ export default function ExportClient({ adminId, adminName }) {
 
   return (
     <>
-      {/* ── Page Header ──────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">
-            Export Center
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Download platform data as CSV or JSON
-          </p>
+      {/* ── Page Header ──────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
+        <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-cyan-500/8 blur-3xl" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <nav className="mb-3 flex items-center gap-1.5 text-[11px] text-gray-500">
+              <Link
+                href="/account/admin"
+                className="transition-colors hover:text-gray-300"
+              >
+                Dashboard
+              </Link>
+              <ChevronRight className="h-3 w-3 text-gray-700" />
+              <span className="font-medium text-gray-400">Export Center</span>
+            </nav>
+            <h1 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white sm:text-2xl">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/15 ring-1 ring-blue-500/25">
+                <Download className="h-5 w-5 text-blue-400" />
+              </div>
+              Export Center
+            </h1>
+            <p className="mt-2 text-sm text-gray-500">
+              Download platform data as CSV or JSON
+            </p>
+          </div>
+          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+            <Link
+              href="/account/admin"
+              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+            >
+              ← Dashboard
+            </Link>
+            <button
+              onClick={() => setShowHistory((v) => !v)}
+              className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+            >
+              <Clock className="h-3.5 w-3.5" />
+              Export History
+              {history.length > 0 && (
+                <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] tabular-nums">
+                  {history.length}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setShowHistory((v) => !v)}
-          className="flex items-center gap-2 self-start rounded-xl border border-white/8 bg-white/3 px-3.5 py-2 text-xs font-medium text-gray-400 transition-colors hover:bg-white/6 hover:text-white sm:self-auto"
-        >
-          <Clock className="h-3.5 w-3.5" />
-          Export History
-          {history.length > 0 && (
-            <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] tabular-nums">
-              {history.length}
-            </span>
-          )}
-        </button>
       </div>
 
       {/* ── Export History (collapsible) ─────────────────────────────────── */}

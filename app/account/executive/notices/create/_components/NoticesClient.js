@@ -27,6 +27,7 @@ import {
   execUpdateNoticeAction,
   execDeleteNoticeAction,
 } from '@/app/_lib/executive-actions';
+import { useScrollLock } from '@/app/_lib/hooks';
 
 const PRIORITY_CONFIG = {
   low: {
@@ -73,6 +74,7 @@ const AUDIENCES = [
 function NoticeModal({ notice, onClose, onSuccess }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
+  useScrollLock();
   const isEdit = !!notice?.id;
 
   const fmt = (d) => (d ? new Date(d).toISOString().slice(0, 16) : '');
@@ -260,6 +262,7 @@ export default function NoticesClient({ initialNotices }) {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [modal, setModal] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  useScrollLock(!!deleteId);
   const [expanded, setExpanded] = useState(null);
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState(null);

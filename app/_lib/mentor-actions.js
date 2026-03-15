@@ -8,7 +8,7 @@
 import { auth } from './auth';
 import { getUserRoles, getUserByEmail } from './data-service';
 import { supabase } from './supabase';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 // --- Auth Helper ---
 async function requireMentor() {
@@ -17,7 +17,7 @@ async function requireMentor() {
   const roles = await getUserRoles(session.user.email);
   if (!roles.includes('mentor')) throw new Error('Not authorized as mentor');
   const user = await getUserByEmail(session.user.email);
-  if (user?.account_status !== 'active' || !user?.is_active)
+  if (user?.account_status !== 'active' || !user?.is_online)
     throw new Error('Account not active');
   return user;
 }
@@ -61,6 +61,7 @@ export async function createWeeklyTaskAction(formData) {
 
     if (error) throw new Error(error.message);
     revalidatePath('/account/mentor/tasks');
+    revalidatePath('/account/member/problem-set');
     return { success: 'Task created successfully', data };
   } catch (err) {
     return { error: err.message };
@@ -108,6 +109,7 @@ export async function updateWeeklyTaskAction(formData) {
 
     if (error) throw new Error(error.message);
     revalidatePath('/account/mentor/tasks');
+    revalidatePath('/account/member/problem-set');
     return { success: 'Task updated successfully' };
   } catch (err) {
     return { error: err.message };
@@ -130,6 +132,7 @@ export async function deleteWeeklyTaskAction(formData) {
     const { error } = await supabase.from('weekly_tasks').delete().eq('id', id);
     if (error) throw new Error(error.message);
     revalidatePath('/account/mentor/tasks');
+    revalidatePath('/account/member/problem-set');
     return { success: 'Task deleted successfully' };
   } catch (err) {
     return { error: err.message };
@@ -153,6 +156,7 @@ export async function reviewTaskSubmissionAction(formData) {
 
     if (error) throw new Error(error.message);
     revalidatePath('/account/mentor/tasks');
+    revalidatePath('/account/member/problem-set');
     return { success: 'Submission reviewed successfully' };
   } catch (err) {
     return { error: err.message };
@@ -198,6 +202,9 @@ export async function createResourceAction(formData) {
 
     if (error) throw new Error(error.message);
     revalidatePath('/account/mentor/resources');
+    revalidatePath('/account/member/resources');
+    revalidateTag('roadmaps');
+    revalidatePath('/roadmaps');
     return { success: 'Resource added successfully' };
   } catch (err) {
     return { error: err.message };
@@ -220,6 +227,9 @@ export async function deleteResourceAction(formData) {
     const { error } = await supabase.from('resources').delete().eq('id', id);
     if (error) throw new Error(error.message);
     revalidatePath('/account/mentor/resources');
+    revalidatePath('/account/member/resources');
+    revalidateTag('roadmaps');
+    revalidatePath('/roadmaps');
     return { success: 'Resource deleted successfully' };
   } catch (err) {
     return { error: err.message };

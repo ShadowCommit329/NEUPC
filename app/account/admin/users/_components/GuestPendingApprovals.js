@@ -164,6 +164,21 @@ function UserCard({ user, onApprove, onReject, isPending }) {
         </div>
       </div>
 
+      {/* User message — only shown when the user themselves wrote it */}
+      {user.statusReason && user.statusChangedBy === user.id && (
+        <div className="mt-3 rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2.5">
+          <div className="mb-1 flex items-center gap-1.5">
+            <MessageSquare className="h-3 w-3 text-blue-400" />
+            <p className="text-[10px] font-semibold tracking-widest text-blue-400 uppercase">
+              Message from user
+            </p>
+          </div>
+          <p className="text-xs leading-relaxed text-gray-300">
+            {user.statusReason}
+          </p>
+        </div>
+      )}
+
       <div className="mt-4 flex gap-2">
         <button
           onClick={() => onApprove(user)}
@@ -211,13 +226,13 @@ function AppealCard({ user, onApprove, onReject, isPending }) {
         </div>
       </div>
 
-      {/* Appeal message */}
-      {user.statusReason && (
-        <div className="mt-3 rounded-lg border border-orange-500/15 bg-white/5 px-3 py-2.5">
+      {/* User message — only shown when the user themselves wrote it */}
+      {user.statusReason && user.statusChangedBy === user.id && (
+        <div className="mt-3 rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2.5">
           <div className="mb-1 flex items-center gap-1.5">
-            <MessageSquare className="h-3 w-3 text-orange-400" />
-            <p className="text-[10px] font-semibold tracking-widest text-orange-400 uppercase">
-              Appeal message
+            <MessageSquare className="h-3 w-3 text-blue-400" />
+            <p className="text-[10px] font-semibold tracking-widest text-blue-400 uppercase">
+              Message from user
             </p>
           </div>
           <p className="text-xs leading-relaxed text-gray-300">

@@ -5,17 +5,25 @@
 
 import '@/app/_styles/global.css';
 
-import { Space_Grotesk, Inter, JetBrains_Mono } from 'next/font/google';
+import {
+  Space_Grotesk,
+  Inter,
+  JetBrains_Mono,
+  Sora,
+  Lora,
+} from 'next/font/google';
 import Header from './_components/sections/Header';
 import Footer from './_components/sections/Footer';
 import TopProgressBar from './_components/ui/TopProgressBar';
 import ToasterProvider from './_components/ui/ToasterProvider';
 import { UserRoleProvider } from './_components/ui/UserRoleProvider';
+import PageTransition from './_components/motion/PageTransition';
 import { auth } from '@/app/_lib/auth';
 import {
   getSocialLinks,
   getContactInfo,
   getFooterData,
+  getAllPublicSettings,
 } from '@/app/_lib/public-actions';
 import {
   SITE_URL,
@@ -43,6 +51,27 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ['400', '500', '600'],
   variable: '--font-mono',
 });
+
+const sora = Sora({
+  subsets: ['latin'],
+  weight: ['600', '700'],
+  variable: '--font-sora',
+  display: 'swap',
+});
+
+const lora = Lora({
+  subsets: ['latin'],
+  weight: ['400', '600'],
+  style: ['normal', 'italic'],
+  variable: '--font-lora',
+  display: 'swap',
+});
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+};
 
 export const metadata = {
   title: {
@@ -105,31 +134,33 @@ export const metadata = {
 };
 
 export default async function RootLayout({ children }) {
-  const [session, social, contact, footer] = await Promise.all([
+  const [session, social, contact, footer, settings] = await Promise.all([
     auth(),
     getSocialLinks(),
     getContactInfo(),
     getFooterData(),
+    getAllPublicSettings(),
   ]);
 
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
+      className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} ${sora.variable} ${lora.variable} overflow-x-clip`}
     >
       <body
         className={`${inter.className} bg-background-dark text-primary-50 flex min-h-screen flex-col`}
       >
         <TopProgressBar />
         <ToasterProvider />
-        <UserRoleProvider role={session?.user?.role || null}>
+        <UserRoleProvider role={session?.user?.role || null} isLoggedIn={!!session}>
           <Header />
-          <main className="grow">{children}</main>
+          <main className="grow"><PageTransition>{children}</PageTransition></main>
           <Footer
             session={session}
             social={social}
             contact={contact}
             footer={footer}
+            settings={settings}
           />
         </UserRoleProvider>
       </body>

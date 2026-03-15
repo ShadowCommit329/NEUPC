@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * @file Join
  * @module Join
@@ -8,6 +10,8 @@ import { cn } from '@/app/_lib/utils';
 import JoinButton from '../ui/JoinButton';
 import Button from '../ui/Button';
 import SectionBackground from '../ui/SectionBackground';
+import SectionHeader from '../ui/SectionHeader';
+import { useScrollReveal, useStaggerReveal } from '@/app/_lib/hooks';
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
@@ -79,7 +83,7 @@ function BenefitCard({ benefit, index }) {
   return (
     <div
       className={cn(
-        'group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md transition-all duration-500 hover:-translate-y-2 hover:bg-white/10 hover:shadow-2xl',
+        'group relative overflow-hidden rounded-2xl border border-white/6 bg-white/3 p-5 backdrop-blur-xl transition-all duration-500 hover:-translate-y-3 hover:bg-white/6 hover:shadow-[0_20px_60px_-15px_rgba(8,131,149,0.15)] sm:rounded-3xl sm:p-6',
         v.border
       )}
     >
@@ -134,55 +138,69 @@ function BenefitCard({ benefit, index }) {
  *
  * @param {Array} benefits – Benefit card data (falls back to DEFAULT_BENEFITS)
  */
-function Join({ benefits = [] }) {
+function Join({ benefits = [], settings = {} }) {
   const displayBenefits = benefits.length > 0 ? benefits : DEFAULT_BENEFITS;
 
+  const { ref: gridRef, isVisible: gridVisible, getDelay } = useStaggerReveal({ staggerMs: 100 });
+  const [ctaRef, ctaVisible] = useScrollReveal({ threshold: 0.1 });
+
   return (
-    <section className="relative overflow-hidden py-20 md:py-28 lg:py-32">
+    <section className="relative overflow-hidden py-16 sm:py-20 md:py-28 lg:py-36">
       <SectionBackground />
 
       <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           {/* ── Section Header ────────────────────────────────── */}
-          <div className="mb-12 text-center md:mb-16 lg:mb-20">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-6 py-2.5 text-sm font-medium shadow-lg backdrop-blur-md transition-all hover:bg-white/15 hover:shadow-xl md:mb-6">
-              <span className="text-2xl">🚀</span>
-              <span className="text-primary-300">Join Our Community</span>
-            </div>
-            <h2 className="mb-4 text-4xl font-bold text-white md:mb-6 md:text-5xl lg:text-6xl">
-              Become a Member
-            </h2>
-            <div className="from-primary-500 via-secondary-300 to-primary-500 shadow-glow mx-auto h-1.5 w-32 rounded-full bg-linear-to-r md:w-40" />
-            <p className="mx-auto mt-6 max-w-2xl text-base text-gray-300 md:text-lg lg:text-xl">
-              Join NEUPC and unlock your potential in competitive programming,
-              software development, and tech innovation
-            </p>
-          </div>
+          <SectionHeader
+            badge={settings?.homepage_join_badge || 'Join Our Community'}
+            title={settings?.homepage_join_title || 'Become a Member'}
+            subtitle={
+              settings?.homepage_join_subtitle ||
+              'Join NEUPC and unlock your potential in competitive programming, software development, and tech innovation'
+            }
+            lineClassName="to-primary-500/40"
+            titleClassName="from-white via-gray-100 to-gray-300"
+          />
 
           {/* ── Benefits Grid ─────────────────────────────────── */}
-          <div className="mb-12 grid gap-6 sm:grid-cols-2 md:mb-16 lg:grid-cols-4">
+          <div
+            ref={gridRef}
+            className="mb-10 grid gap-4 sm:grid-cols-2 sm:gap-6 md:mb-16 lg:grid-cols-4"
+          >
             {displayBenefits.map((benefit, index) => (
-              <BenefitCard
+              <div
                 key={benefit.title || index}
-                benefit={benefit}
-                index={index}
-              />
+                className={cn(
+                  'transition-all duration-700 ease-out',
+                  gridVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+                )}
+                style={{ transitionDelay: gridVisible ? `${getDelay(index)}ms` : '0ms' }}
+              >
+                <BenefitCard benefit={benefit} index={index} />
+              </div>
             ))}
           </div>
 
           {/* ── CTA Box ───────────────────────────────────────── */}
-          <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-linear-to-br from-white/10 to-white/5 p-8 shadow-2xl backdrop-blur-md md:p-12 lg:p-16">
-            <div className="from-primary-500/30 via-secondary-500/30 to-primary-500/30 absolute inset-0 bg-linear-to-r opacity-50" />
-            <div className="from-primary-500/40 absolute -top-20 -left-20 h-40 w-40 rounded-full bg-linear-to-br to-transparent blur-3xl" />
-            <div className="from-secondary-500/40 absolute -right-20 -bottom-20 h-40 w-40 rounded-full bg-linear-to-br to-transparent blur-3xl" />
+          <div
+            ref={ctaRef}
+            className={cn(
+              'relative overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-white/6 to-white/2 p-6 shadow-2xl backdrop-blur-xl transition-all duration-700 ease-out sm:rounded-3xl sm:p-8 md:p-12 lg:p-16',
+              ctaVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+            )}
+          >
+            <div className="from-primary-500/20 via-secondary-500/20 to-primary-500/20 absolute inset-0 bg-linear-to-r opacity-40" />
+            <div className="from-primary-500/30 absolute -top-24 -left-24 h-48 w-48 rounded-full bg-linear-to-br to-transparent blur-[80px]" />
+            <div className="from-secondary-500/30 absolute -right-24 -bottom-24 h-48 w-48 rounded-full bg-linear-to-br to-transparent blur-[80px]" />
 
             <div className="relative text-center">
-              <h3 className="mb-4 text-3xl font-bold text-white md:text-4xl lg:text-5xl">
-                Ready to Start Your Journey?
+              <h3 className="mb-3 text-2xl font-bold text-white sm:mb-4 sm:text-3xl md:text-4xl lg:text-5xl">
+                {settings?.homepage_join_cta_title ||
+                  'Ready to Start Your Journey?'}
               </h3>
-              <p className="mx-auto mb-8 max-w-2xl text-base text-gray-300 md:text-lg lg:text-xl">
-                Join hundreds of students who are already part of NEUPC and take
-                your programming skills to the next level
+              <p className="mx-auto mb-6 max-w-2xl text-sm text-gray-300 sm:mb-8 sm:text-base md:text-lg lg:text-xl">
+                {settings?.homepage_join_cta_description ||
+                  'Join hundreds of students who are already part of NEUPC and take your programming skills to the next level'}
               </p>
 
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -191,7 +209,9 @@ function Join({ benefits = [] }) {
                   className="group from-primary-500 via-secondary-500 to-primary-600 hover:shadow-3xl hover:shadow-primary-500/50 focus-visible:ring-primary-500 relative inline-flex items-center gap-3 overflow-hidden rounded-xl bg-linear-to-r px-8 py-4 text-base font-semibold text-white shadow-2xl transition-all duration-300 hover:scale-105 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 focus-visible:outline-none active:scale-[0.97] md:px-12 md:py-5 md:text-lg"
                 >
                   <span className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                  <span className="relative">Join NEUPC Now</span>
+                  <span className="relative">
+                    {settings?.homepage_join_cta_button || 'Join NEUPC Now'}
+                  </span>
                   <svg
                     className="relative h-5 w-5 transition-transform duration-300 group-hover:translate-x-1 md:h-6 md:w-6"
                     fill="none"

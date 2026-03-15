@@ -30,7 +30,7 @@ export async function exportUsersAction({
   let q = supabaseAdmin
     .from('users')
     .select(
-      'id, full_name, email, phone, account_status, is_active, email_verified, last_login, created_at, provider'
+      'id, full_name, email, phone, account_status, is_online, email_verified, last_login, created_at, provider'
     )
     .order('created_at', { ascending: false })
     .limit(limit);

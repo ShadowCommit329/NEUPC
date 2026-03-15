@@ -17,7 +17,9 @@ async function _log(userId, action, entityType, entityId, details = {}) {
         details,
       },
     ]);
-  } catch (_) {}
+  } catch {
+    // Silently ignore errors
+  }
 }
 
 // Get user by email.
@@ -130,6 +132,7 @@ export async function getAllUsers() {
         status: 'Active',
         joined: new Date().toISOString(),
         lastActive: new Date().toISOString(),
+        isOnline: false,
         role: 'Admin',
         roles: ['admin'],
         isApproved: true,
@@ -141,7 +144,7 @@ export async function getAllUsers() {
     const { data: users, error: usersError } = await supabase
       .from('users')
       .select(
-        'id, email, full_name, avatar_url, is_active, phone, phone_verified, email_verified, status_changed_by, account_status, status_reason, status_changed_at, last_login, created_at'
+        'id, email, full_name, avatar_url, is_online, last_seen, phone, phone_verified, email_verified, status_changed_by, account_status, status_reason, status_changed_at, last_login, created_at'
       )
       .order('created_at', { ascending: false });
 
@@ -157,7 +160,9 @@ export async function getAllUsers() {
 
     const { data: memberProfiles = [] } = await supabase
       .from('member_profiles')
-      .select('user_id, approved, student_id, batch, department, created_at')
+      .select(
+        'user_id, approved, student_id, academic_session, department, created_at'
+      )
       .in('user_id', userIds);
 
     const rolesMap = {};
@@ -180,9 +185,11 @@ export async function getAllUsers() {
 
     const statusMap = {
       active: 'Active',
+      inactive: 'Inactive',
       pending: 'Pending',
       suspended: 'Suspended',
       banned: 'Banned',
+      blocked: 'Blocked',
       locked: 'Locked',
       rejected: 'Rejected',
     };
@@ -194,7 +201,7 @@ export async function getAllUsers() {
         .sort((a, b) => (b.roles?.priority ?? 0) - (a.roles?.priority ?? 0));
 
       const roles = roleRows.map((r) => r.roles.name);
-      const primaryRole = roles[0] ?? 'guest';
+      const primaryRole = roles[0] ?? null;
 
       const profile = profilesMap[u.id];
 
@@ -210,20 +217,30 @@ export async function getAllUsers() {
         id: u.id,
         name: u.full_name,
         email: u.email,
-        avatar: u.avatar_url?.startsWith('http') ? u.avatar_url : initials,
+        avatar:
+          u.avatar_url?.startsWith('http') || u.avatar_url?.startsWith('/')
+            ? u.avatar_url
+            : u.avatar_url && u.avatar_url.length > 5
+              ? `/api/image/${u.avatar_url}`
+              : initials,
         status: statusMap[u.account_status?.toLowerCase()] ?? 'Pending',
         statusReason: u.status_reason,
         statusChangedBy: u.status_changed_by,
         statusChangedAt: u.status_changed_at,
         joined: u.created_at,
-        lastActive: u.last_login,
-        role: primaryRole.charAt(0).toUpperCase() + primaryRole.slice(1),
+        lastActive: u.last_seen ?? u.last_login,
+        isOnline: u.last_seen
+          ? Date.now() - new Date(u.last_seen).getTime() < 90_000
+          : false,
+        role: primaryRole
+          ? primaryRole.charAt(0).toUpperCase() + primaryRole.slice(1)
+          : 'Unassigned',
         roles,
         studentId: profile?.student_id ?? null,
         appliedAt: profile?.created_at ?? null,
         hasProfile: !!profile,
         isApproved: profile?.approved ?? null,
-        batch: profile?.batch ?? null,
+        session: profile?.academic_session ?? null,
         department: profile?.department ?? null,
       };
     });
@@ -239,55 +256,85 @@ export async function getUserStats() {
     return {
       total: 1,
       active: 1,
+      inactive: 0,
       pending: 0,
       suspended: 0,
       banned: 0,
+      blocked: 0,
       locked: 0,
+      rejected: 0,
     };
   }
 
   try {
-    const [total, active, pending, suspended, banned, locked] =
-      await Promise.all([
-        supabase.from('users').select('*', { count: 'exact', head: true }),
-        supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true })
-          .eq('account_status', 'active'),
-        supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true })
-          .eq('account_status', 'pending'),
-        supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true })
-          .eq('account_status', 'suspended'),
-        supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true })
-          .eq('account_status', 'banned'),
-        supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true })
-          .eq('account_status', 'locked'),
-      ]);
+    const [
+      total,
+      active,
+      inactive,
+      pending,
+      suspended,
+      banned,
+      blocked,
+      locked,
+      rejected,
+    ] = await Promise.all([
+      supabase.from('users').select('*', { count: 'exact', head: true }),
+      supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('account_status', 'active'),
+      supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('account_status', 'inActive'),
+      supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('account_status', 'pending'),
+      supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('account_status', 'suspended'),
+      supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('account_status', 'banned'),
+      supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('account_status', 'blocked'),
+      supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('account_status', 'locked'),
+      supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('account_status', 'rejected'),
+    ]);
 
     return {
       total: total.count || 0,
       active: active.count || 0,
+      inactive: inactive.count || 0,
       pending: pending.count || 0,
       suspended: suspended.count || 0,
       banned: banned.count || 0,
+      blocked: blocked.count || 0,
       locked: locked.count || 0,
+      rejected: rejected.count || 0,
     };
   } catch {
     return {
       total: 0,
       active: 0,
+      inactive: 0,
       pending: 0,
       suspended: 0,
       banned: 0,
+      blocked: 0,
       locked: 0,
+      rejected: 0,
     };
   }
 }
@@ -320,6 +367,7 @@ export async function suspendUser(userId, adminId, reason, expiresAt = null) {
       status_changed_by: adminId,
       status_changed_at: new Date().toISOString(),
       suspension_expires_at: expiresAt,
+      is_online: false,
       updated_at: new Date().toISOString(),
     })
     .eq('id', userId);
@@ -342,7 +390,7 @@ export async function activateUser(
       status_changed_by: adminId,
       status_changed_at: new Date().toISOString(),
       suspension_expires_at: null,
-      is_active: true,
+      is_online: true,
       updated_at: new Date().toISOString(),
     })
     .eq('id', userId);
@@ -360,7 +408,7 @@ export async function banUser(userId, adminId, reason) {
       status_reason: reason,
       status_changed_by: adminId,
       status_changed_at: new Date().toISOString(),
-      is_active: false,
+      is_online: false,
       updated_at: new Date().toISOString(),
     })
     .eq('id', userId);
@@ -385,27 +433,69 @@ export async function approveMember(userId, adminId) {
     .from('users')
     .update({
       account_status: 'active',
+      is_online: true,
       status_reason: 'Membership approved',
       status_changed_by: adminId,
       status_changed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq('id', userId)
-    .eq('account_status', 'pending');
+    .eq('id', userId);
 
   await _log(adminId, 'approve_member', 'member_profile', userId, {});
   return { success: true };
 }
 
-// Create a new admin user.
-export async function createAdminUser(fullName, email, role, adminId) {
+// Create a new admin user with role-specific profile.
+export async function createAdminUser(
+  fullName,
+  email,
+  role,
+  adminId,
+  profileData = {}
+) {
+  if (role === 'member') {
+    if (
+      !String(profileData.student_id || '').trim() ||
+      !String(profileData.academic_session || '').trim() ||
+      !String(profileData.department || '').trim()
+    ) {
+      throw new Error(
+        'Member profile requires student_id, academic_session, and department.'
+      );
+    }
+  }
+
+  if (role === 'advisor') {
+    if (
+      !String(profileData.position || '').trim() ||
+      !String(profileData.profile_link || '').trim() ||
+      !String(profileData.department || '').trim()
+    ) {
+      throw new Error(
+        'Advisor profile requires position, profile_link, and department.'
+      );
+    }
+  }
+
+  if (role === 'executive') {
+    if (
+      !String(profileData.position_id || '').trim() ||
+      !String(profileData.term_start || '').trim() ||
+      !String(profileData.term_end || '').trim()
+    ) {
+      throw new Error(
+        'Executive profile requires position_id, term_start, and term_end.'
+      );
+    }
+  }
+
   const { data: newUser, error: userError } = await supabaseAdmin
     .from('users')
     .insert({
       full_name: fullName,
       email,
-      account_status: 'active',
-      email_verified: true,
+      account_status: 'inActive',
+      status_reason: 'need to verify their email',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -431,8 +521,50 @@ export async function createAdminUser(fullName, email, role, adminId) {
   if (assignError)
     throw new Error(`Failed to assign role: ${assignError.message}`);
 
-  await _log(adminId, 'create_user', 'user', newUser.id, { email, role });
-  return { success: true, userId: newUser.id };
+  // Create role-specific profile
+  const userId = newUser.id;
+  try {
+    if (role === 'member') {
+      await supabaseAdmin.from('member_profiles').insert({
+        user_id: userId,
+        student_id: profileData.student_id || '',
+        academic_session: profileData.academic_session || '',
+        department: profileData.department || '',
+        approved: false,
+      });
+    } else if (role === 'advisor') {
+      await supabaseAdmin.from('advisor_profiles').insert({
+        user_id: userId,
+        position: profileData.position || '',
+        profile_link: profileData.profile_link || '',
+        department: profileData.department || '',
+      });
+    } else if (role === 'admin') {
+      await supabaseAdmin.from('admin_profiles').insert({
+        user_id: userId,
+        bio: profileData.bio || '',
+      });
+    } else if (role === 'mentor') {
+      await supabaseAdmin.from('mentor_profiles').insert({
+        user_id: userId,
+        bio: profileData.bio || '',
+      });
+    } else if (role === 'executive') {
+      await supabaseAdmin.from('committee_members').insert({
+        user_id: userId,
+        position_id: profileData.position_id || null,
+        term_start: profileData.term_start || null,
+        term_end: profileData.term_end || null,
+        is_current: profileData.is_current ?? true,
+        bio: profileData.bio || '',
+      });
+    }
+  } catch (profileErr) {
+    console.error(`Failed to create ${role} profile:`, profileErr);
+  }
+
+  await _log(adminId, 'create_user', 'user', userId, { email, role });
+  return { success: true, userId };
 }
 
 // Update an admin user.
@@ -473,12 +605,12 @@ export async function updateAdminUser(userId, updates, adminId) {
 // Get role names for a user by email.
 export async function getUserRoles(email) {
   if (!isSupabaseConfigured) {
-    console.warn('⚠️ Supabase not configured — returning guest role');
-    return ['guest'];
+    console.warn('⚠️ Supabase not configured — returning empty roles');
+    return [];
   }
 
   try {
-    const { data: userData, error: userError } = await supabase
+    const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('email', email)
@@ -486,39 +618,42 @@ export async function getUserRoles(email) {
 
     if (userError || !userData) {
       console.warn('⚠️ User not found for email:', email);
-      return ['guest'];
+      return [];
     }
 
     const userId = userData.id;
 
     const { data: rolesData, error: rolesError } = await supabaseAdmin
       .from('user_roles')
-      .select('id, role_id, roles(name, id)')
+      .select('id, role_id, roles(name, id, priority)')
       .eq('user_id', userId);
 
     if (rolesError) {
       console.error('❌ Error fetching roles:', rolesError.message);
-      return ['guest'];
+      return [];
     }
 
     if (!rolesData || rolesData.length === 0) {
       console.warn('⚠️ No roles found for user:', userId);
-      return ['guest'];
+      return [];
     }
 
     const roleNames =
-      rolesData?.map((r) => r.roles?.name).filter(Boolean) || [];
+      rolesData
+        ?.filter((r) => r.roles?.name)
+        .sort((a, b) => (b.roles?.priority ?? 0) - (a.roles?.priority ?? 0))
+        .map((r) => r.roles?.name) || [];
 
-    return roleNames.length > 0 ? roleNames : ['guest'];
+    return roleNames.length > 0 ? roleNames : [];
   } catch (error) {
     console.error('❌ Exception in getUserRoles:', error);
-    return ['guest'];
+    return [];
   }
 }
 
 // Get users with basic role/status fields.
 export async function getUsersBasic() {
-  const { data: users, error: uErr } = await supabase
+  const { data: users, error: uErr } = await supabaseAdmin
     .from('users')
     .select('id, full_name, email, avatar_url, account_status')
     .order('full_name');
@@ -527,7 +662,7 @@ export async function getUsersBasic() {
 
   const userIds = users.map((u) => u.id);
 
-  const { data: userRoles = [] } = await supabase
+  const { data: userRoles = [] } = await supabaseAdmin
     .from('user_roles')
     .select('user_id, roles(id, name, priority)')
     .in('user_id', userIds);
@@ -558,7 +693,7 @@ export async function getUsersBasic() {
       status: u.account_status ?? 'pending',
 
       currentRoleId: primary?.id ?? null,
-      currentRoleName: primary?.name ?? 'guest',
+      currentRoleName: primary?.name ?? null,
 
       roleIds: uroles.map((r) => r.id),
       roleNames: uroles.map((r) => r.name),
@@ -595,6 +730,17 @@ export async function getAllPermissions() {
     .order('category');
   if (error) throw new Error(error.message);
   return data;
+}
+
+// Get guest & member roles (id + name) for eligibility selectors.
+export async function getEligibilityRoles() {
+  const { data, error } = await supabase
+    .from('roles')
+    .select('id, name')
+    .in('name', ['guest', 'member'])
+    .order('priority', { ascending: true });
+  if (error) throw new Error(error.message);
+  return data || [];
 }
 
 // Get roles with user counts.
@@ -777,15 +923,20 @@ export async function getPendingMemberProfiles() {
   return data;
 }
 
-// Get members filtered by batch.
-export async function getMembersByBatch(batch) {
+// Get members filtered by session.
+export async function getMembersBySession(session) {
   const { data, error } = await supabase
     .from('member_profiles')
     .select('*, users(id, full_name, email, avatar_url)')
-    .eq('batch', batch)
+    .eq('session', session)
     .eq('approved', true);
   if (error) throw new Error(error.message);
   return data;
+}
+
+// Backward-compatible alias for older callers.
+export async function getMembersByBatch(batch) {
+  return getMembersBySession(batch);
 }
 
 // Create a new member profile.
@@ -844,7 +995,7 @@ export async function getAllMemberStatistics() {
   const { data, error } = await supabase
     .from('member_statistics')
     .select(
-      '*, member_profiles(user_id, student_id, batch, users(full_name, avatar_url))'
+      '*, member_profiles(user_id, student_id, academic_session, users(full_name, avatar_url))'
     )
     .order('codeforces_rating', { ascending: false });
   if (error) throw new Error(error.message);
@@ -940,7 +1091,39 @@ export async function getPublishedEvents() {
     .in('status', ['upcoming', 'ongoing', 'completed'])
     .order('start_date', { ascending: false });
   if (error) throw new Error(error.message);
-  return data;
+
+  // Resolve eligibility role_ids → display names
+  const events = data || [];
+  const roleIds = [
+    ...new Set(
+      events.map((e) => e.eligibility).filter((v) => v && v !== 'all')
+    ),
+  ];
+
+  if (roleIds.length > 0) {
+    const { data: roles } = await supabase
+      .from('roles')
+      .select('id, name')
+      .in('id', roleIds);
+    const roleMap = {};
+    (roles || []).forEach((r) => {
+      roleMap[r.id] =
+        r.name.charAt(0).toUpperCase() + r.name.slice(1) + 's Only';
+    });
+    events.forEach((e) => {
+      if (e.eligibility === 'all') {
+        e.eligibility = 'Everyone';
+      } else if (roleMap[e.eligibility]) {
+        e.eligibility = roleMap[e.eligibility];
+      }
+    });
+  } else {
+    events.forEach((e) => {
+      if (e.eligibility === 'all') e.eligibility = 'Everyone';
+    });
+  }
+
+  return events;
 }
 
 // Get upcoming published events.
@@ -956,13 +1139,26 @@ export async function getUpcomingEvents(limit = 10) {
   return data;
 }
 
+// Get recent published events that are NOT featured (for homepage).
+export async function getRecentNonFeaturedEvents(limit = 3) {
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .in('status', ['upcoming', 'ongoing', 'completed'])
+    .eq('is_featured', false)
+    .order('start_date', { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 // Get featured published events.
 export async function getFeaturedEvents() {
   const { data, error } = await supabase
     .from('events')
     .select('*')
     .eq('is_featured', true)
-    .in('status', ['upcoming', 'ongoing'])
+    .in('status', ['upcoming', 'ongoing', 'completed'])
     .order('start_date', { ascending: true });
   if (error) throw new Error(error.message);
   return data;
@@ -981,12 +1177,36 @@ export async function getEventBySlug(slug) {
 
 // Get an event by ID.
 export async function getEventById(id) {
-  const { data, error } = await supabase
+  // Try by UUID first, then fall back to slug
+  const isUUID =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
+  const query = supabase
     .from('events')
-    .select('*, users!events_created_by_fkey(full_name, avatar_url)')
-    .eq('id', id)
-    .single();
+    .select('*, users!events_created_by_fkey(full_name, avatar_url)');
+
+  const { data, error } = await (
+    isUUID ? query.eq('id', id) : query.eq('slug', id)
+  ).single();
+
   if (error) throw new Error(error.message);
+
+  // Resolve eligibility role_id → display name (keep raw value for registration logic)
+  data.eligibility_raw = data.eligibility;
+  if (data.eligibility && data.eligibility !== 'all') {
+    const { data: role } = await supabase
+      .from('roles')
+      .select('name')
+      .eq('id', data.eligibility)
+      .single();
+    if (role) {
+      data.eligibility =
+        role.name.charAt(0).toUpperCase() + role.name.slice(1) + 's Only';
+    }
+  } else if (data.eligibility === 'all') {
+    data.eligibility = 'Everyone';
+  }
+
   return data;
 }
 
@@ -1035,11 +1255,11 @@ export async function deleteEvent(id) {
 // Get events with registration/attendance stats.
 export async function getEventsWithStats() {
   const [eventsRes, regsRes] = await Promise.all([
-    supabase
+    supabaseAdmin
       .from('events')
       .select('*, users!events_created_by_fkey(full_name, avatar_url)')
       .order('created_at', { ascending: false }),
-    supabase.from('event_registrations').select('event_id, status'),
+    supabaseAdmin.from('event_registrations').select('event_id, status'),
   ]);
 
   if (eventsRes.error) throw new Error(eventsRes.error.message);
@@ -1049,8 +1269,9 @@ export async function getEventsWithStats() {
 
   const regCountByEvent = regs.reduce((acc, r) => {
     if (!acc[r.event_id])
-      acc[r.event_id] = { total: 0, attended: 0, confirmed: 0 };
+      acc[r.event_id] = { total: 0, active: 0, attended: 0, confirmed: 0 };
     acc[r.event_id].total++;
+    if (r.status !== 'cancelled') acc[r.event_id].active++;
     if (r.status === 'attended') acc[r.event_id].attended++;
     if (r.status === 'confirmed') acc[r.event_id].confirmed++;
     return acc;
@@ -1060,10 +1281,12 @@ export async function getEventsWithStats() {
     ...e,
     creatorName: e.users?.full_name ?? 'Unknown',
     creatorAvatar: e.users?.avatar_url ?? null,
-    registrationCount: regCountByEvent[e.id]?.total ?? 0,
+    registrationCount: regCountByEvent[e.id]?.active ?? 0,
     attendedCount: regCountByEvent[e.id]?.attended ?? 0,
     confirmedCount: regCountByEvent[e.id]?.confirmed ?? 0,
   }));
+
+  const activeRegs = regs.filter((r) => r.status !== 'cancelled');
 
   const stats = {
     total: events.length,
@@ -1073,7 +1296,7 @@ export async function getEventsWithStats() {
     completed: events.filter((e) => e.status === 'completed').length,
     cancelled: events.filter((e) => e.status === 'cancelled').length,
     featured: events.filter((e) => e.is_featured).length,
-    totalRegistrations: regs.length,
+    totalRegistrations: activeRegs.length,
   };
 
   return { events: enriched, stats };
@@ -1081,7 +1304,7 @@ export async function getEventsWithStats() {
 
 // Get registrations for an event.
 export async function getEventRegistrations(eventId) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('event_registrations')
     .select('*, users(id, full_name, email, avatar_url)')
     .eq('event_id', eventId)
@@ -1090,17 +1313,39 @@ export async function getEventRegistrations(eventId) {
   return data;
 }
 
-// Get all event registrations for a user.
+// Get all event registrations for a user (as leader AND as team member).
 export async function getUserEventRegistrations(userId) {
-  const { data, error } = await supabase
+  // 1) Registrations where the user is the leader / individual registrant
+  const { data: leaderRegs, error: leaderErr } = await supabaseAdmin
     .from('event_registrations')
     .select(
       '*, events(id, title, slug, start_date, cover_image, category, status)'
     )
     .eq('user_id', userId)
     .order('registered_at', { ascending: false });
-  if (error) throw new Error(error.message);
-  return data;
+  if (leaderErr) throw new Error(leaderErr.message);
+
+  // 2) Registrations where the user is a non-leader team member
+  const { data: memberRegs, error: memberErr } = await supabaseAdmin
+    .from('event_registrations')
+    .select(
+      '*, events(id, title, slug, start_date, cover_image, category, status)'
+    )
+    .contains('team_members', [userId])
+    .neq('user_id', userId) // exclude rows already in leaderRegs
+    .order('registered_at', { ascending: false });
+  if (memberErr) throw new Error(memberErr.message);
+
+  // Tag each registration with the user's role in it
+  const tagged = [
+    ...(leaderRegs ?? []).map((r) => ({ ...r, isTeamLeader: true })),
+    ...(memberRegs ?? []).map((r) => ({ ...r, isTeamLeader: false })),
+  ];
+
+  // Sort combined results by registered_at descending
+  tagged.sort((a, b) => new Date(b.registered_at) - new Date(a.registered_at));
+
+  return tagged;
 }
 
 // Get a single event registration.
@@ -1198,13 +1443,34 @@ export async function removeEventOrganizer(eventId, userId) {
 
 // Get gallery items for an event.
 export async function getEventGallery(eventId) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('event_gallery')
     .select('*')
     .eq('event_id', eventId)
     .order('display_order');
   if (error) throw new Error(error.message);
   return data;
+}
+
+// Get all event_gallery items (admin) — includes event title join.
+export async function getAllEventGalleryAdmin() {
+  const { data, error } = await supabaseAdmin
+    .from('event_gallery')
+    .select('*, events(id, title)')
+    .order('event_id')
+    .order('display_order');
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+// Get all event_gallery items (public) — includes event title/category join.
+export async function getAllEventGalleryPublic() {
+  const { data, error } = await supabaseAdmin
+    .from('event_gallery')
+    .select('*, events(id, title, category, start_date, status)')
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }
 
 // Add a gallery item to an event.
@@ -1459,6 +1725,25 @@ export async function getFeaturedBlogPosts() {
   return data;
 }
 
+// Get recent non-featured published blog posts (for homepage grid).
+export async function getRecentNonFeaturedBlogPosts(limit = 6) {
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select(
+      `
+      id, slug, title, excerpt, thumbnail, category, tags,
+      read_time, views, likes, published_at,
+      users!blog_posts_author_id_fkey(id, full_name, avatar_url)
+    `
+    )
+    .eq('status', 'published')
+    .eq('is_featured', false)
+    .order('published_at', { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 // Get a published blog post by slug.
 export async function getBlogPostBySlug(slug) {
   const { data, error } = await supabase
@@ -1571,7 +1856,7 @@ export async function deleteBlogPost(id) {
 
 // Get approved comments for a blog post.
 export async function getBlogComments(blogId) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('blog_comments')
     .select('*, users(id, full_name, avatar_url)')
     .eq('blog_id', blogId)
@@ -1668,6 +1953,38 @@ export async function getAchievementsAdmin() {
   };
 
   return { achievements, stats };
+}
+
+// Get all participation records with admin details.
+export async function getParticipationRecordsAdmin() {
+  const { data, error } = await supabaseAdmin
+    .from('participation_records')
+    .select(
+      `id, contest_name, contest_url, category, year, participation_date,
+       result, is_team, team_name, team_members, photos, featured_photo, notes, created_at,
+       user_id, users!participation_records_user_id_fkey(id, full_name, avatar_url),
+       achievement_id, achievements(id, title, result)`
+    )
+    .order('year', { ascending: false })
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+// Get public participation records (no sensitive fields like notes, created_by).
+export async function getPublicParticipationRecords() {
+  const { data, error } = await supabaseAdmin
+    .from('participation_records')
+    .select(
+      `id, contest_name, contest_url, category, year, participation_date,
+       result, is_team, team_name, team_members, photos, featured_photo,
+       user_id, users!participation_records_user_id_fkey(id, full_name, avatar_url),
+       achievement_id, achievements(id, title, result)`
+    )
+    .order('year', { ascending: false })
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }
 
 // Get all achievements.
@@ -2384,7 +2701,7 @@ export async function deleteCertificate(id) {
 
 // Get all committee positions.
 export async function getCommitteePositions() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('committee_positions')
     .select('*')
     .order('display_order');
@@ -2394,7 +2711,7 @@ export async function getCommitteePositions() {
 
 // Get committee positions by category.
 export async function getPositionsByCategory(category) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('committee_positions')
     .select('*')
     .eq('category', category)
@@ -2403,25 +2720,101 @@ export async function getPositionsByCategory(category) {
   return data;
 }
 
-// Get current active committee members.
+// Get current active committee members with full profiles.
 export async function getCurrentCommittee() {
-  const { data, error } = await supabase
-    .from('committee_members')
-    .select(
-      '*, users(id, full_name, email, avatar_url), committee_positions(id, title, category)'
-    )
-    .eq('is_current', true)
-    .order('display_order');
-  if (error) throw new Error(error.message);
-  return data;
+  const selectWithProfiles =
+    '*, users!committee_members_user_id_fkey(id, full_name, email, phone, avatar_url, member_profiles!member_profiles_user_id_fkey(academic_session, department, updated_at), advisor_profiles!teacher_profiles_user_id_fkey(position, department)), committee_positions(id, title, category, rank, display_order, responsibilities)';
+  const selectWithoutProfiles =
+    '*, users!committee_members_user_id_fkey(id, full_name, email, phone, avatar_url), committee_positions(id, title, category, rank, display_order, responsibilities)';
+
+  const runCurrentQuery = async (selectClause) =>
+    supabaseAdmin
+      .from('committee_members')
+      .select(selectClause)
+      .eq('is_current', true);
+
+  const runAllQuery = async (selectClause) =>
+    supabaseAdmin.from('committee_members').select(selectClause);
+
+  let selectClause = selectWithProfiles;
+  let { data, error } = await runCurrentQuery(selectClause);
+
+  // Some environments fail on nested member_profiles join; retry without it.
+  if (error) {
+    console.error(
+      '[getCurrentCommittee] profile join failed, retrying without profiles:',
+      error.message
+    );
+    selectClause = selectWithoutProfiles;
+    ({ data, error } = await runCurrentQuery(selectClause));
+  }
+
+  if (error) {
+    console.error(
+      '[getCurrentCommittee] failed fetching current members:',
+      error.message
+    );
+    return [];
+  }
+
+  if (Array.isArray(data) && data.length > 0) {
+    return data;
+  }
+
+  // Fallback 1: if is_current flags are not maintained, infer by date range.
+  let { data: allMembers, error: allError } = await runAllQuery(selectClause);
+
+  if (allError && selectClause === selectWithProfiles) {
+    console.error(
+      '[getCurrentCommittee] fallback profile join failed, retrying without profiles:',
+      allError.message
+    );
+    ({ data: allMembers, error: allError } = await runAllQuery(
+      selectWithoutProfiles
+    ));
+  }
+
+  if (allError) {
+    console.error(
+      '[getCurrentCommittee] failed fetching fallback committee data:',
+      allError.message
+    );
+    return [];
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const currentByDate = (allMembers || []).filter(
+    (member) =>
+      member.term_start <= today &&
+      (!member.term_end || member.term_end >= today)
+  );
+
+  if (currentByDate.length > 0) {
+    return currentByDate;
+  }
+
+  // Fallback 2: use latest term_start cohort when no active date window is found.
+  let latestTermStart = null;
+  (allMembers || []).forEach((member) => {
+    if (!member.term_start) return;
+    if (!latestTermStart || member.term_start > latestTermStart) {
+      latestTermStart = member.term_start;
+    }
+  });
+
+  if (!latestTermStart) return allMembers || [];
+
+  return (allMembers || []).filter(
+    (member) => member.term_start === latestTermStart
+  );
 }
 
-// Get all committee members with position info.
+// Get all committee members with position info and full profiles.
 export async function getAllCommitteeMembers() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('committee_members')
     .select(
-      '*, users(id, full_name, email, avatar_url), committee_positions(id, title, category)'
+      '*, users!committee_members_user_id_fkey(id, full_name, email, phone, avatar_url, member_profiles!member_profiles_user_id_fkey(academic_session, department, bio, github, linkedin, codeforces_handle)), committee_positions(id, title, category, rank, display_order, responsibilities)'
     )
     .order('term_start', { ascending: false });
   if (error) throw new Error(error.message);
@@ -2430,7 +2823,7 @@ export async function getAllCommitteeMembers() {
 
 // Add a committee member.
 export async function addCommitteeMember(memberData) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('committee_members')
     .insert([memberData])
     .select()
@@ -2441,7 +2834,7 @@ export async function addCommitteeMember(memberData) {
 
 // Update a committee member record.
 export async function updateCommitteeMember(id, updates) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('committee_members')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
@@ -2453,7 +2846,7 @@ export async function updateCommitteeMember(id, updates) {
 
 // Remove a committee member.
 export async function removeCommitteeMember(id) {
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('committee_members')
     .delete()
     .eq('id', id);
@@ -2501,7 +2894,7 @@ export async function getMentorshipsByMentor(mentorId) {
     .select(
       `
       *,
-      users!mentorships_mentee_id_fkey(id, full_name, avatar_url, member_profiles(student_id, batch))
+      users!mentorships_mentee_id_fkey(id, full_name, avatar_url, member_profiles(student_id, academic_session))
     `
     )
     .eq('mentor_id', mentorId)
@@ -2662,7 +3055,7 @@ export async function getTaskSubmissions(taskId) {
       *,
       users!task_submissions_user_id_fkey(
         id, full_name, avatar_url,
-        member_profiles(student_id, batch)
+        member_profiles(student_id, academic_session)
       )
     `
     )
@@ -2866,12 +3259,12 @@ export async function getAllRoadmaps() {
   return data;
 }
 
-// Get published roadmaps by view count.
+// Get published roadmaps, sorted by view count (includes content for stage data).
 export async function getPublishedRoadmaps() {
   const { data, error } = await supabase
     .from('roadmaps')
     .select(
-      'id, slug, title, description, category, difficulty, thumbnail, estimated_duration, views, is_featured'
+      'id, slug, title, description, category, difficulty, thumbnail, estimated_duration, prerequisites, content, views, is_featured, created_at'
     )
     .eq('status', 'published')
     .order('views', { ascending: false });
@@ -2891,12 +3284,12 @@ export async function getRoadmapBySlug(slug) {
   return data;
 }
 
-// Get published roadmaps by category.
+// Get published roadmaps by category, sorted by view count (includes content).
 export async function getRoadmapsByCategory(category) {
   const { data, error } = await supabase
     .from('roadmaps')
     .select(
-      'id, slug, title, description, difficulty, thumbnail, estimated_duration, views, is_featured'
+      'id, slug, title, description, category, difficulty, thumbnail, estimated_duration, prerequisites, content, views, is_featured, created_at'
     )
     .eq('category', category)
     .eq('status', 'published')
@@ -2966,7 +3359,7 @@ export async function getGalleryAdmin() {
 
 // Get all gallery items.
 export async function getAllGalleryItems() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('gallery_items')
     .select('*')
     .order('display_order');
@@ -2991,9 +3384,10 @@ export async function getGalleryItemsByEvent(eventId) {
     .from('gallery_items')
     .select('*')
     .eq('event_id', eventId)
+    .not('event_id', 'is', null)
     .order('display_order');
   if (error) throw new Error(error.message);
-  return data;
+  return data ?? [];
 }
 
 // Get gallery items by category.
@@ -3042,7 +3436,7 @@ export async function deleteGalleryItem(id) {
 
 // Get all join requests.
 export async function getAllJoinRequests() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('join_requests')
     .select('*')
     .order('created_at', { ascending: false });
@@ -3052,7 +3446,7 @@ export async function getAllJoinRequests() {
 
 // Get pending join requests.
 export async function getPendingJoinRequests() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('join_requests')
     .select('*')
     .eq('status', 'pending')
@@ -3127,9 +3521,72 @@ export async function rejectJoinRequest(id, reviewedBy, rejectionReason) {
   return data;
 }
 
+// Get pending guest account applications (new sign-ups awaiting admin review).
+// Returns users with account_status = 'pending' (no member profile = pure guest applicants).
+// Also includes 'rejected' users who wrote their own appeal message.
+export async function getPendingGuestApplications() {
+  const { data: users, error } = await supabaseAdmin
+    .from('users')
+    .select(
+      'id, email, full_name, avatar_url, account_status, status_reason, status_changed_by, status_changed_at, last_login, created_at'
+    )
+    .in('account_status', ['pending', 'rejected'])
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+  if (!users || users.length === 0) return [];
+
+  const userIds = users.map((u) => u.id);
+
+  // Exclude users who already have a member_profiles (they belong to Membership section)
+  const { data: profiles = [] } = await supabaseAdmin
+    .from('member_profiles')
+    .select('user_id')
+    .in('user_id', userIds);
+
+  const profiledIds = new Set((profiles ?? []).map((p) => p.user_id));
+
+  return users
+    .filter((u) => {
+      if (profiledIds.has(u.id)) return false;
+      // Include all pending users
+      if (u.account_status === 'pending') return true;
+      // Include rejected users only if they wrote their own appeal
+      if (u.account_status === 'rejected' && u.status_changed_by === u.id)
+        return true;
+      return false;
+    })
+    .map((u) => {
+      const initials =
+        u.full_name
+          ?.split(' ')
+          .map((n) => n[0])
+          .slice(0, 2)
+          .join('')
+          .toUpperCase() ?? '?';
+
+      return {
+        id: u.id,
+        name: u.full_name,
+        email: u.email,
+        avatar:
+          u.avatar_url?.startsWith('http') || u.avatar_url?.startsWith('/')
+            ? u.avatar_url
+            : u.avatar_url && u.avatar_url.length > 5
+              ? `/api/image/${u.avatar_url}`
+              : initials,
+        joinedAt: u.created_at,
+        lastLogin: u.last_login,
+        statusReason: u.status_reason,
+        statusChangedBy: u.status_changed_by,
+        accountStatus: u.account_status,
+      };
+    });
+}
+
 // Get all contact form submissions.
 export async function getAllContactSubmissions() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('contact_submissions')
     .select('*')
     .order('created_at', { ascending: false });
@@ -3278,7 +3735,7 @@ export async function deleteBudgetEntry(id) {
 
 // Get all settings.
 export async function getAllSettings() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('website_settings')
     .select('*')
     .order('category');
@@ -3288,7 +3745,7 @@ export async function getAllSettings() {
 
 // Get settings by category.
 export async function getSettingsByCategory(category) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('website_settings')
     .select('key, value')
     .eq('category', category);
@@ -3298,7 +3755,7 @@ export async function getSettingsByCategory(category) {
 
 // Get a single setting by key.
 export async function getSetting(key) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('website_settings')
     .select('value')
     .eq('key', key)
@@ -3315,7 +3772,7 @@ export async function upsertSetting(
   category = null,
   description = null
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('website_settings')
     .upsert(
       {
@@ -3336,7 +3793,7 @@ export async function upsertSetting(
 
 // Delete a setting.
 export async function deleteSetting(key) {
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('website_settings')
     .delete()
     .eq('key', key);
@@ -3346,7 +3803,7 @@ export async function deleteSetting(key) {
 
 // Create a committee position.
 export async function createCommitteePosition(positionData) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('committee_positions')
     .insert([positionData])
     .select()
@@ -3357,7 +3814,7 @@ export async function createCommitteePosition(positionData) {
 
 // Update a committee position.
 export async function updateCommitteePosition(id, updates) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('committee_positions')
     .update(updates)
     .eq('id', id)
@@ -3369,7 +3826,7 @@ export async function updateCommitteePosition(id, updates) {
 
 // Delete a committee position.
 export async function deleteCommitteePosition(id) {
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('committee_positions')
     .delete()
     .eq('id', id);
@@ -3399,18 +3856,35 @@ export async function deleteTaskSubmission(id) {
 
 // Increment view count for a roadmap.
 export async function incrementRoadmapViews(id) {
-  const { data: roadmap } = await supabase
-    .from('roadmaps')
-    .select('views')
-    .eq('id', id)
-    .single();
-  if (roadmap) {
-    await supabase
+  let newViews = 1;
+  const { error } = await supabaseAdmin.rpc('increment_roadmap_views', {
+    roadmap_id: id,
+  });
+
+  if (error) {
+    const { data: roadmap } = await supabaseAdmin
       .from('roadmaps')
-      .update({ views: (roadmap.views || 0) + 1 })
-      .eq('id', id);
+      .select('views')
+      .eq('id', id)
+      .single();
+    if (roadmap) {
+      newViews = (roadmap.views || 0) + 1;
+      await supabaseAdmin
+        .from('roadmaps')
+        .update({ views: newViews })
+        .eq('id', id);
+    }
+  } else {
+    // Fetch live views directly after successful RPC
+    const { data: current } = await supabaseAdmin
+      .from('roadmaps')
+      .select('views')
+      .eq('id', id)
+      .single();
+    if (current) newViews = current.views;
   }
-  return { success: true };
+
+  return { success: true, views: newViews };
 }
 
 // Get featured roadmaps by category.
@@ -3724,4 +4198,28 @@ export async function createActivityLog(
     return null;
   }
   return data;
+}
+
+// =============================================================================
+// JOURNEY ITEMS
+// =============================================================================
+
+export async function getJourneyItemsAdmin() {
+  const { data, error } = await supabaseAdmin
+    .from('journey_items')
+    .select('*')
+    .order('display_order', { ascending: true })
+    .order('year', { ascending: true });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function getPublicJourneyItems() {
+  const { data, error } = await supabaseAdmin
+    .from('journey_items')
+    .select('id, year, event, icon, description, display_order')
+    .order('display_order', { ascending: true })
+    .order('year', { ascending: true });
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }

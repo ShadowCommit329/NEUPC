@@ -46,6 +46,7 @@ import {
   fetchThreadDetailAction,
   markThreadSolvedAction,
 } from '@/app/_lib/member-discussions-actions';
+import { useScrollLock } from '@/app/_lib/hooks';
 import { getInitials } from '@/app/_lib/utils';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -101,6 +102,7 @@ function Avatar({ name, size = 'md' }) {
 // ─── Create Thread Modal ───────────────────────────────────────────────────────
 
 function CreateThreadModal({ categories, userId, onClose, onCreated }) {
+  useScrollLock();
   const [isPending, startTransition] = useTransition();
   const [form, setForm] = useState({
     categoryId: '',

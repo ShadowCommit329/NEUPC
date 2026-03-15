@@ -186,18 +186,26 @@ function SocialLinkButton({
 function DeveloperCard({ dev, index }) {
   return (
     <div className="group hover:border-primary-500/30 hover:shadow-primary-500/20 overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl transition-all duration-300 hover:scale-105 hover:bg-white/10 hover:shadow-2xl">
-      {/* Photo placeholder */}
+      {/* Photo section */}
       <div className="from-primary-500/20 to-secondary-500/20 relative h-48 overflow-hidden bg-linear-to-br">
         <div className="absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/10 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
-        <div className="flex h-full items-center justify-center">
-          <svg
-            className="h-20 w-20 text-white/30 transition-transform duration-300 group-hover:scale-110"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-          </svg>
-        </div>
+        {dev.profileImage ? (
+          <img
+            src={dev.profileImage}
+            alt={dev.name}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <svg
+              className="h-20 w-20 text-white/30 transition-transform duration-300 group-hover:scale-110"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+            </svg>
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -318,6 +326,7 @@ export default function DevelopersClient({
   techStack: propTechStack = {},
   timeline: propTimeline = [],
   githubStats: propGithubStats = {},
+  settings = {},
 }) {
   const isLoaded = useDelayedLoad();
   const [teamRef, teamVisible] = useScrollReveal({ threshold: 0.05 });
@@ -372,7 +381,7 @@ export default function DevelopersClient({
                 d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
               />
             </svg>
-            Development Team
+            {settings?.developers_page_badge || 'Development Team'}
           </div>
 
           <h1
@@ -381,7 +390,7 @@ export default function DevelopersClient({
               isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
             )}
           >
-            Meet the Developers
+            {settings?.developers_page_title || 'Meet the Developers'}
           </h1>
 
           <p
@@ -390,9 +399,8 @@ export default function DevelopersClient({
               isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
             )}
           >
-            The minds behind the digital platform of Netrokona University
-            Programming Club. Passionate developers building the future of our
-            community.
+            {settings?.developers_page_description ||
+              'The minds behind the digital platform of Netrokona University Programming Club. Passionate developers building the future of our community.'}
           </p>
 
           {/* GitHub Stats */}
@@ -681,11 +689,14 @@ export default function DevelopersClient({
 
       <CTASection
         icon="💻"
-        title="Want to Contribute?"
-        description="This project follows collaborative development practices. Contributions from club members are welcomed through GitHub."
+        title={settings?.developers_page_cta_title || 'Want to Contribute?'}
+        description={
+          settings?.developers_page_cta_description ||
+          'This project follows collaborative development practices. Contributions from club members are welcomed through GitHub.'
+        }
         primaryAction={{
           label: 'View Repository',
-          href: 'https://github.com/',
+          href: 'https://github.com/eyasir329/NEUPC',
         }}
         secondaryAction={{ label: 'Contact Team', href: '/contact' }}
       />

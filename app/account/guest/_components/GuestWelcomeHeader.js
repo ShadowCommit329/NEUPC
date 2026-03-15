@@ -6,8 +6,7 @@
 
 'use client';
 
-import Link from 'next/link';
-import { User, Sparkles, ArrowRight } from 'lucide-react';
+import { User } from 'lucide-react';
 
 export default function GuestWelcomeHeader({ userName }) {
   return (
@@ -30,17 +29,9 @@ export default function GuestWelcomeHeader({ userName }) {
               </span>
             </div>
             <p className="mt-3 text-sm text-gray-400">
-              Unlock full access by becoming a member
+              Welcome to the NEUPC guest dashboard.
             </p>
           </div>
-          <Link
-            href="/join"
-            className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-linear-to-r from-purple-600 to-pink-600 px-6 py-3 font-bold text-white shadow-xl shadow-purple-500/30 transition-all duration-300 hover:scale-105 hover:shadow-purple-500/50"
-          >
-            <Sparkles className="h-5 w-5" />
-            <span className="whitespace-nowrap">Apply for Membership</span>
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Link>
         </div>
       </div>
     </div>

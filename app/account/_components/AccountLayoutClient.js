@@ -50,10 +50,35 @@ const SIDEBAR_STATS = {
   pendingReviews: 4,
 };
 
+/** Send a heartbeat to keep is_online / last_seen fresh in the DB. */
+function useHeartbeat() {
+  useEffect(() => {
+    const ping = () => fetch('/api/account/heartbeat', { method: 'POST' });
+
+    // Ping immediately on mount, then every 60 s.
+    ping();
+    const interval = setInterval(ping, 60_000);
+
+    // Re-ping when the tab regains focus (user switched back).
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') ping();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
+}
+
 export default function AccountLayoutClient({ children, session, userRoles }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   const { activeRole, setActiveRole } = useRole();
+
+  useHeartbeat();
 
   // Auto-detect and sync role from URL
   const detectedRole = getRoleFromPath(pathname);
@@ -64,7 +89,11 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
     }
   }, [detectedRole, activeRole, setActiveRole]);
 
-  const currentRole = detectedRole || activeRole;
+  // Use URL-detected role while inside a role dashboard.
+  // On /account hub (no role segment in URL), fall back to the first role
+  // the user actually has (from the server-provided userRoles prop).
+  // If no role is assigned, currentRole will be null/undefined.
+  const currentRole = detectedRole || userRoles?.[0] || activeRole || null;
 
   // Hide sidebar only on the account selection page
   const hideSidebar = pathname === '/account';
@@ -81,12 +110,15 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
   // Prevent body scroll when sidebar is open on mobile
   useEffect(() => {
     if (sidebarOpen) {
+      document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
     }
     return () => {
-      document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
     };
   }, [sidebarOpen]);
 
@@ -110,6 +142,8 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
         activeRole={currentRole}
         session={session}
         userRoles={userRoles}
+        collapsed={collapsed}
+        setCollapsed={setCollapsed}
       />
 
       {/* Main Content Area */}

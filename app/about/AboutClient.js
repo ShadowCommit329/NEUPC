@@ -1,15 +1,18 @@
 /**
- * @file About page client component.
- * Renders detailed information about NEUPC — mission, vision, activities,
- * values, organizational structure, and growth initiatives.
+ * @file About page — Professional redesign.
+ *
+ * Sections: Hero ▸ Introduction ▸ Stats ▸ Mission & Vision ▸ What We Do
+ * ▸ Core Values ▸ Org Structure ▸ Impact ▸ Growth & Inclusivity ▸ CTA
+ *
+ * All content is admin-controllable via DB settings with local fallbacks.
  *
  * @module AboutClient
  */
 
 'use client';
 
-import Link from 'next/link';
-import About from '../_components/sections/About';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import { useDelayedLoad, useScrollReveal } from '../_lib/hooks';
 import CTASection from '../_components/ui/CTASection';
 import dynamic from 'next/dynamic';
@@ -17,14 +20,84 @@ const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
   ssr: false,
 });
 import PageBackground from '../_components/ui/PageBackground';
+import PageShell from '../_components/ui/PageShell';
 import { cn } from '../_lib/utils';
+import {
+  Code,
+  GraduationCap,
+  Users,
+  Trophy,
+  BookOpen,
+  Lightbulb,
+  Award,
+  Briefcase,
+  Globe,
+  Heart,
+  Target,
+  Zap,
+  Star,
+  Rocket,
+  Shield,
+  Cpu,
+  Monitor,
+  Terminal,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  ArrowRight,
+  Sparkles,
+  TrendingUp,
+} from 'lucide-react';
 
-// ---------------------------------------------------------------------------
-// Data configurations — single source of truth for all static content
-// ---------------------------------------------------------------------------
+/* ========================================================================= */
+/* Icon helpers                                                              */
+/* ========================================================================= */
 
-/** Mission statement bullet items */
-const MISSION_ITEMS = [
+const ICON_MAP = {
+  Code,
+  GraduationCap,
+  Users,
+  Trophy,
+  BookOpen,
+  Lightbulb,
+  Award,
+  Briefcase,
+  Globe,
+  Heart,
+  Target,
+  Zap,
+  Star,
+  Rocket,
+  Shield,
+  Cpu,
+  Monitor,
+  Terminal,
+  Sparkles,
+  TrendingUp,
+};
+
+/** Return a Lucide **component** from a string name or pass-through a component. */
+function resolveIconComponent(value) {
+  if (!value) return Lightbulb;
+  if (typeof value === 'string') return ICON_MAP[value] || Lightbulb;
+  return value;
+}
+
+/** Return a rendered icon **element** from a string, emoji, or component. */
+function resolveIcon(value, size = 28) {
+  if (!value) return <Lightbulb size={size} />;
+  if (/^\p{Emoji}/u.test(value) && !/^[A-Za-z]/.test(value))
+    return <span style={{ fontSize: size * 1.1 }}>{value}</span>;
+  const Comp = ICON_MAP[value];
+  if (Comp) return <Comp size={size} />;
+  return <span style={{ fontSize: size * 1.1 }}>{value}</span>;
+}
+
+/* ========================================================================= */
+/* Default fallback data                                                     */
+/* ========================================================================= */
+
+const DEFAULT_MISSION_ITEMS = [
   'To enhance programming skills among students',
   'To introduce various branches of Computer Science beyond academic coursework',
   'To prepare students for competitive programming contests (ICPC, NCPC, etc.)',
@@ -32,8 +105,7 @@ const MISSION_ITEMS = [
   'To build a strong programming community within the university',
 ];
 
-/** "What We Do" activity cards */
-const ACTIVITY_CARDS = [
+const DEFAULT_ACTIVITY_CARDS = [
   {
     emoji: '💻',
     title: 'Competitive Programming Training',
@@ -76,49 +148,49 @@ const ACTIVITY_CARDS = [
   },
 ];
 
-/** Core values displayed in the grid */
 const CORE_VALUES = [
-  'Discipline & Professionalism',
-  'Ethical Conduct',
-  'Zero Tolerance for Discrimination',
-  'Transparency in Finances',
-  'Non-political Structure',
-  'Non-profit Organization',
+  { label: 'Discipline & Professionalism', icon: Shield },
+  { label: 'Ethical Conduct', icon: Heart },
+  { label: 'Zero Tolerance for Discrimination', icon: Users },
+  { label: 'Transparency in Finances', icon: BookOpen },
+  { label: 'Non-political Structure', icon: Globe },
+  { label: 'Non-profit Organization', icon: Award },
 ];
 
-/** Organizational structure hierarchy */
 const ORG_STRUCTURE = [
   {
     title: 'Faculty Advisors',
     description: 'Lecturers from the Department of CSE',
-    dotClass: 'bg-primary-500 shadow-primary-500/50',
+    icon: GraduationCap,
+    color: 'primary',
   },
   {
     title: 'Executive Committee',
     description: 'President, Vice President, Secretary, and other officers',
-    dotClass: 'bg-secondary-500 shadow-secondary-500/50',
+    icon: Briefcase,
+    color: 'secondary',
   },
   {
     title: 'Mentors',
     description: 'Senior students and alumni',
-    dotClass: 'bg-primary-700 shadow-primary-700/50',
+    icon: Star,
+    color: 'primary',
   },
   {
     title: 'Members',
     description: 'Active student participants',
-    dotClass: 'bg-secondary-700 shadow-secondary-700/50',
+    icon: Users,
+    color: 'secondary',
   },
 ];
 
-/** Skills developed through programming */
 const SKILLS = [
-  { emoji: '🧠', label: 'Logical reasoning' },
-  { emoji: '🏗️', label: 'Structured thinking' },
-  { emoji: '📊', label: 'Analytical problem solving' },
-  { emoji: '🌍', label: 'Real-world solution building' },
+  { icon: Target, label: 'Logical reasoning' },
+  { icon: Cpu, label: 'Structured thinking' },
+  { icon: Monitor, label: 'Analytical problem solving' },
+  { icon: Globe, label: 'Real-world solution building' },
 ];
 
-/** Mentorship guidance areas */
 const MENTORSHIP_AREAS = [
   'Competitive programming strategies',
   'Academic development',
@@ -126,129 +198,423 @@ const MENTORSHIP_AREAS = [
   'Project building',
 ];
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
+/* ========================================================================= */
+/* Shared primitives                                                         */
+/* ========================================================================= */
 
-/**
- * Reusable activity card for the "What We Do" section.
- * @param {{ card: typeof ACTIVITY_CARDS[0], index: number }} props
- */
-function ActivityCard({ card, index }) {
-  const isPrimary = card.color === 'primary';
+/** Glass-morphism card wrapper with optional accent colour. */
+function GlassCard({ children, className, accent = 'primary', ...props }) {
   return (
     <div
       className={cn(
-        'group relative overflow-hidden rounded-2xl bg-white/10 p-6 shadow-lg backdrop-blur-md transition-all duration-700 hover:-translate-y-2 hover:bg-white/15 hover:shadow-2xl',
-        isPrimary
-          ? 'hover:shadow-primary-500/20'
-          : 'hover:shadow-secondary-500/20'
+        'group relative overflow-hidden rounded-2xl border border-white/6 bg-white/3 backdrop-blur-xl transition-all duration-500',
+        'hover:border-white/12 hover:bg-white/6 hover:shadow-2xl',
+        accent === 'primary'
+          ? 'hover:shadow-primary-500/6'
+          : 'hover:shadow-secondary-500/6',
+        className
       )}
+      {...props}
     >
+      {/* top highlight line */}
       <div
         className={cn(
-          'absolute -top-8 -right-8 h-32 w-32 rounded-full bg-linear-to-br to-transparent opacity-0 blur-2xl transition-opacity group-hover:opacity-100',
-          isPrimary ? 'from-primary-500/20' : 'from-secondary-500/20'
+          'absolute inset-x-0 top-0 h-px bg-linear-to-r to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100',
+          accent === 'primary'
+            ? 'from-primary-500/50 via-primary-400/20'
+            : 'from-secondary-500/50 via-secondary-400/20'
         )}
       />
-      <div className="relative">
-        <div
-          className={cn(
-            'mb-4 flex h-14 w-14 items-center justify-center rounded-full text-4xl transition-transform group-hover:scale-110',
-            isPrimary ? 'bg-primary-500/20' : 'bg-secondary-500/20'
-          )}
-        >
-          {card.emoji}
-        </div>
-        <h3 className="mb-3 text-xl font-bold text-white">{card.title}</h3>
-        <ul className="space-y-2 text-sm text-gray-300">
-          {card.items.map((item) => (
-            <li key={item} className="flex items-start">
-              <span
+      {children}
+    </div>
+  );
+}
+
+/** Accent-coloured icon container. */
+function IconBox({ icon: Icon, size = 18, accent = 'primary', className }) {
+  return (
+    <div
+      className={cn(
+        'flex shrink-0 items-center justify-center rounded-xl border border-white/10 transition-transform duration-300 group-hover:scale-110',
+        accent === 'primary'
+          ? 'bg-primary-500/10 text-primary-400'
+          : 'bg-secondary-500/10 text-secondary-400',
+        className
+      )}
+    >
+      <Icon size={size} />
+    </div>
+  );
+}
+
+/** Section badge + heading + subtitle. */
+function SectionHeader({
+  badge,
+  title,
+  subtitle,
+  icon: BadgeIcon = Sparkles,
+  isVisible = true,
+}) {
+  return (
+    <div
+      className={cn(
+        'mb-14 text-center transition-all duration-700 md:mb-20',
+        isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+      )}
+    >
+      {badge && (
+        <span className="from-primary-500/20 to-secondary-500/20 text-primary-300 mb-5 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-linear-to-r px-4 py-1.5 text-[11px] font-semibold tracking-[.15em] uppercase backdrop-blur-sm">
+          <BadgeIcon size={12} className="text-primary-400" />
+          {badge}
+        </span>
+      )}
+      <h2 className="mb-4 text-3xl font-extrabold tracking-tight text-white md:text-4xl lg:text-5xl">
+        {title}
+      </h2>
+      {subtitle && (
+        <p className="mx-auto max-w-2xl text-base leading-relaxed text-gray-400 md:text-lg">
+          {subtitle}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ========================================================================= */
+/* Sub-components                                                            */
+/* ========================================================================= */
+
+function ActivityCard({ card, index }) {
+  const accent = card.color || (index % 2 === 0 ? 'primary' : 'secondary');
+  const iconValue = card.emoji || card.icon || null;
+  const items = Array.isArray(card.items) ? card.items : [];
+  const description =
+    !items.length && typeof card.description === 'string'
+      ? card.description
+      : '';
+
+  return (
+    <GlassCard accent={accent} className="flex h-full flex-col p-6 md:p-7">
+      <div
+        className={cn(
+          'mb-5 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 transition-transform duration-300 group-hover:scale-110',
+          accent === 'primary'
+            ? 'bg-primary-500/10 text-primary-400'
+            : 'bg-secondary-500/10 text-secondary-400'
+        )}
+      >
+        {resolveIcon(iconValue, 22)}
+      </div>
+
+      <h3 className="mb-3 text-lg font-bold text-white">{card.title}</h3>
+
+      {description && (
+        <p className="mt-auto text-sm leading-relaxed text-gray-400">
+          {description}
+        </p>
+      )}
+
+      {items.length > 0 && (
+        <ul className="mt-auto space-y-2.5 text-sm text-gray-400">
+          {items.map((item) => (
+            <li key={item} className="flex items-start gap-2.5">
+              <ChevronRight
+                size={14}
                 className={cn(
-                  'mr-2',
-                  isPrimary ? 'text-primary-400' : 'text-secondary-400'
+                  'mt-0.5 shrink-0',
+                  accent === 'primary'
+                    ? 'text-primary-500'
+                    : 'text-secondary-500'
                 )}
-              >
-                •
-              </span>
-              <span>{item}</span>
+              />
+              <span className="leading-relaxed">{item}</span>
             </li>
           ))}
         </ul>
-      </div>
-    </div>
+      )}
+    </GlassCard>
   );
 }
 
-/**
- * Single core value item.
- * @param {{ label: string, index: number }} props
- */
-function CoreValueItem({ label, index }) {
-  const isPrimary = index % 2 === 0;
+function StatCard({ stat, index, isVisible }) {
+  const accent = index % 2 === 0 ? 'primary' : 'secondary';
   return (
     <div
       className={cn(
-        'group flex items-center rounded-xl bg-white/10 p-6 shadow-lg backdrop-blur-md transition-all duration-700 hover:-translate-x-1 hover:bg-white/15 hover:shadow-xl',
-        isPrimary
-          ? 'hover:shadow-primary-500/20'
-          : 'hover:shadow-secondary-500/20'
+        'group relative overflow-hidden rounded-2xl border border-white/6 bg-white/3 p-6 text-center backdrop-blur-xl transition-all duration-500 hover:border-white/12 hover:bg-white/6',
+        isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
       )}
+      style={{ transitionDelay: isVisible ? `${100 + index * 80}ms` : '0ms' }}
     >
-      <span
+      <div
         className={cn(
-          'mr-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-2xl transition-all group-hover:scale-110',
-          isPrimary
-            ? 'bg-primary-500/20 group-hover:bg-primary-500/30'
-            : 'bg-secondary-500/20 group-hover:bg-secondary-500/30'
+          'mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 transition-transform duration-300 group-hover:scale-110',
+          accent === 'primary'
+            ? 'bg-primary-500/10 text-primary-400'
+            : 'bg-secondary-500/10 text-secondary-400'
         )}
       >
-        ✔
-      </span>
-      <span className="text-base font-semibold text-gray-200 group-hover:text-white">
-        {label}
-      </span>
+        {resolveIcon(stat.icon, 20)}
+      </div>
+      <div
+        className={cn(
+          'mb-0.5 text-3xl font-extrabold tracking-tight md:text-4xl',
+          accent === 'primary' ? 'text-primary-400' : 'text-secondary-400'
+        )}
+      >
+        {stat.value}
+      </div>
+      <div className="text-sm font-medium text-gray-400">{stat.label}</div>
     </div>
   );
 }
 
-/**
- * Skill item for the "Why It Matters" section.
- * @param {{ skill: typeof SKILLS[0], index: number }} props
- */
-function SkillItem({ skill, index }) {
-  const isPrimary = index % 2 === 0;
+/* ========================================================================= */
+/* Activity Image Slider                                                     */
+/* ========================================================================= */
+
+function ActivityImageSlider({ images = [] }) {
+  const [current, setCurrent] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const timerRef = useRef(null);
+  const total = images.length;
+
+  const next = useCallback(() => setCurrent((p) => (p + 1) % total), [total]);
+  const prev = useCallback(
+    () => setCurrent((p) => (p - 1 + total) % total),
+    [total]
+  );
+
+  useEffect(() => {
+    if (isPaused || total <= 1) return;
+    timerRef.current = setInterval(next, 4000);
+    return () => clearInterval(timerRef.current);
+  }, [isPaused, next, total]);
+
+  if (!total) return null;
+
   return (
     <div
-      className={cn(
-        'group/skill flex items-center rounded-xl p-5 transition-all duration-700 hover:scale-105 hover:shadow-lg',
-        isPrimary
-          ? 'bg-primary-500/20 hover:bg-primary-500/30 hover:shadow-primary-500/20'
-          : 'bg-secondary-500/20 hover:bg-secondary-500/30 hover:shadow-secondary-500/20'
-      )}
+      className="group/slider relative mt-12 overflow-hidden rounded-2xl border border-white/6 bg-white/3 backdrop-blur-xl"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
     >
-      <div className="mr-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-2xl transition-transform group-hover/skill:scale-110">
-        {skill.emoji}
+      {/* Image area */}
+      <div className="relative aspect-21/9 w-full overflow-hidden sm:aspect-[2.4/1]">
+        {images.map((img, i) => (
+          <div
+            key={img.id || i}
+            className={cn(
+              'absolute inset-0 transition-all duration-700 ease-in-out',
+              i === current
+                ? 'scale-100 opacity-100'
+                : i === (current - 1 + total) % total
+                  ? '-translate-x-full scale-95 opacity-0'
+                  : 'translate-x-full scale-95 opacity-0'
+            )}
+          >
+            <Image
+              src={img.url}
+              alt={img.caption || `Activity photo ${i + 1}`}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1100px"
+              priority={i === 0}
+            />
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-linear-to-t from-gray-950/80 via-transparent to-gray-950/20" />
+          </div>
+        ))}
+
+        {/* Caption */}
+        {images[current]?.caption && (
+          <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6">
+            <p className="text-sm font-medium text-white/90 drop-shadow-lg md:text-base">
+              {images[current].caption}
+            </p>
+          </div>
+        )}
+
+        {/* Prev / Next arrows — visible on hover */}
+        {total > 1 && (
+          <>
+            <button
+              onClick={prev}
+              aria-label="Previous image"
+              className="absolute top-1/2 left-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-gray-950/50 text-white/70 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover/slider:opacity-100 hover:bg-gray-950/70 hover:text-white"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              onClick={next}
+              aria-label="Next image"
+              className="absolute top-1/2 right-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-gray-950/50 text-white/70 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover/slider:opacity-100 hover:bg-gray-950/70 hover:text-white"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </>
+        )}
       </div>
-      <span className="text-lg font-semibold text-gray-200 group-hover/skill:text-white">
-        {skill.label}
-      </span>
+
+      {/* Dot indicators */}
+      {total > 1 && (
+        <div className="flex items-center justify-center gap-2 py-3">
+          {images.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrent(i)}
+              aria-label={`Go to image ${i + 1}`}
+              className={cn(
+                'h-1.5 rounded-full transition-all duration-300',
+                i === current
+                  ? 'bg-primary-400 w-6'
+                  : 'w-1.5 bg-white/20 hover:bg-white/40'
+              )}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main component
-// ---------------------------------------------------------------------------
+/* ========================================================================= */
+/* Committee Image Slider                                                    */
+/* ========================================================================= */
 
-/**
- * About page client component.
- *
- * @param {{ data?: object }} props - About page data from server
- */
-export default function AboutClient({ data = {} }) {
+function CommitteeSlider({ members = [] }) {
+  const [current, setCurrent] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const timerRef = useRef(null);
+  const total = members.length;
+
+  const next = useCallback(() => setCurrent((p) => (p + 1) % total), [total]);
+  const prev = useCallback(
+    () => setCurrent((p) => (p - 1 + total) % total),
+    [total]
+  );
+
+  useEffect(() => {
+    if (isPaused || total <= 1) return;
+    timerRef.current = setInterval(next, 3500);
+    return () => clearInterval(timerRef.current);
+  }, [isPaused, next, total]);
+
+  if (!total) return null;
+
+  return (
+    <div
+      className="group/slider relative overflow-hidden rounded-2xl border border-white/6 bg-white/3 backdrop-blur-xl"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      {/* Image area */}
+      <div className="relative aspect-video w-full overflow-hidden sm:aspect-[2.2/1]">
+        {members.map((m, i) => {
+          const name = m.users?.full_name || 'Member';
+          const position = m.committee_positions?.title || '';
+          const avatar = m.users?.avatar_url;
+
+          return (
+            <div
+              key={m.id || i}
+              className={cn(
+                'absolute inset-0 transition-all duration-700 ease-in-out',
+                i === current
+                  ? 'scale-100 opacity-100'
+                  : i === (current - 1 + total) % total
+                    ? '-translate-x-full scale-95 opacity-0'
+                    : 'translate-x-full scale-95 opacity-0'
+              )}
+            >
+              {avatar ? (
+                <Image
+                  src={avatar}
+                  alt={name}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 800px"
+                  priority={i === 0}
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-gray-900">
+                  <Users size={64} className="text-gray-700" />
+                </div>
+              )}
+              {/* Gradient overlay */}
+              <div className="absolute inset-0 bg-linear-to-t from-gray-950/90 via-gray-950/30 to-transparent" />
+
+              {/* Name & position badge */}
+              <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6">
+                <p className="text-base font-semibold text-white drop-shadow-lg md:text-lg">
+                  {name}
+                </p>
+                {position && (
+                  <p className="text-primary-300 mt-0.5 text-sm font-medium drop-shadow-lg">
+                    {position}
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Prev / Next arrows */}
+        {total > 1 && (
+          <>
+            <button
+              onClick={prev}
+              aria-label="Previous member"
+              className="absolute top-1/2 left-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-gray-950/50 text-white/70 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover/slider:opacity-100 hover:bg-gray-950/70 hover:text-white"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              onClick={next}
+              aria-label="Next member"
+              className="absolute top-1/2 right-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-gray-950/50 text-white/70 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover/slider:opacity-100 hover:bg-gray-950/70 hover:text-white"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Dot indicators */}
+      {total > 1 && (
+        <div className="flex items-center justify-center gap-2 py-3">
+          {members.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrent(i)}
+              aria-label={`Go to member ${i + 1}`}
+              className={cn(
+                'h-1.5 rounded-full transition-all duration-300',
+                i === current
+                  ? 'bg-primary-400 w-6'
+                  : 'w-1.5 bg-white/20 hover:bg-white/40'
+              )}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ========================================================================= */
+/* Main export                                                               */
+/* ========================================================================= */
+
+export default function AboutClient({
+  data = {},
+  settings = {},
+  galleryImages = [],
+  committeeMembers = [],
+}) {
   const isLoaded = useDelayedLoad();
+
+  const [statsRef, statsVisible] = useScrollReveal({ threshold: 0.1 });
   const [missionRef, missionVisible] = useScrollReveal({ threshold: 0.1 });
   const [activitiesRef, activitiesVisible] = useScrollReveal({
     threshold: 0.1,
@@ -258,67 +624,168 @@ export default function AboutClient({ data = {} }) {
   const [skillsRef, skillsVisible] = useScrollReveal({ threshold: 0.15 });
   const [growthRef, growthVisible] = useScrollReveal({ threshold: 0.1 });
 
+  /* ── Destructure with defaults ─────────────────────────────────────── */
+
   const {
-    title = 'Who We Are',
     description1 = '',
     description2 = '',
-    what_we_do = [],
+    mission = [],
+    vision = [],
+    whatWeDo = [],
     stats = [],
+    coreValues = [],
+    orgStructure = [],
+    skills = [],
+    skillsDescription = '',
+    wieTitle = '',
+    wieDescription = '',
+    mentorshipTitle = '',
+    mentorshipDescription = '',
+    mentorshipAreas = [],
+    orgFinancialNote = '',
   } = data;
 
+  /* ── Resolved display arrays ───────────────────────────────────────── */
+
+  const missionItems =
+    Array.isArray(mission) && mission.length > 0
+      ? mission
+      : DEFAULT_MISSION_ITEMS;
+
+  const activityCards =
+    Array.isArray(whatWeDo) && whatWeDo.length > 0
+      ? whatWeDo
+      : DEFAULT_ACTIVITY_CARDS;
+
+  const visionItems =
+    Array.isArray(vision) && vision.length > 0
+      ? vision
+      : typeof vision === 'string' && vision
+        ? [vision]
+        : [
+            'To become a leading university programming community that nurtures skilled, ethical, and innovative programmers capable of competing at national and international levels.',
+          ];
+
+  const displayStats = Array.isArray(stats) && stats.length > 0 ? stats : [];
+
+  const displayCoreValues =
+    Array.isArray(coreValues) && coreValues.length > 0
+      ? coreValues
+      : CORE_VALUES;
+
+  const displayOrgStructure =
+    Array.isArray(orgStructure) && orgStructure.length > 0
+      ? orgStructure
+      : ORG_STRUCTURE;
+
+  const displaySkills =
+    Array.isArray(skills) && skills.length > 0 ? skills : SKILLS;
+
+  const displaySkillsDescription =
+    skillsDescription ||
+    'Through consistent practice and mentorship, the Programming Club helps students transform from beginners into confident programmers ready for competitive and professional challenges.';
+
+  const displayWieTitle = wieTitle || 'Women in Engineering';
+  const displayWieDescription =
+    wieDescription ||
+    'The Programming Club runs a dedicated Women in Engineering (WIE) branch to encourage female participation in programming and leadership roles. This branch organizes focused sessions, mentoring programs, and awareness initiatives to create an inclusive technical environment.';
+
+  const displayMentorshipTitle = mentorshipTitle || 'Mentorship & Guidance';
+  const displayMentorshipDescription =
+    mentorshipDescription ||
+    'The club is supported by faculty advisors and experienced mentors who guide students in:';
+
+  const displayMentorshipAreas =
+    Array.isArray(mentorshipAreas) && mentorshipAreas.length > 0
+      ? mentorshipAreas
+      : MENTORSHIP_AREAS;
+
+  const displayOrgFinancialNote =
+    orgFinancialNote ||
+    'All financial transactions require official signatory approval and are maintained transparently according to club policy.';
+
+  /* ── Render ────────────────────────────────────────────────────────── */
+
   return (
-    <main className="min-h-screen bg-linear-to-b from-gray-900 via-black to-gray-900">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 md:py-28">
-        <div className="absolute inset-0 z-0">
+    <PageShell>
+      {/* ================================================================ */}
+      {/* Hero                                                             */}
+      {/* ================================================================ */}
+      <section className="relative isolate pt-28 pb-16 md:pt-36 md:pb-20 lg:pt-44 lg:pb-24">
+        {/* Decorative background */}
+        <div className="pointer-events-none absolute inset-0 -z-10">
           <PageBackground variant="absolute" />
+          {/* Grid pattern overlay */}
+          <div
+            className="absolute inset-0 opacity-[.03]"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)',
+              backgroundSize: '60px 60px',
+            }}
+          />
+          {/* Radial fade */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(8,131,149,.12),transparent)]" />
         </div>
 
-        <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-4xl text-center">
+        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl text-center">
+            {/* Badge */}
             <div
               className={cn(
-                'mb-6 inline-block rounded-full bg-white/20 px-6 py-2 text-sm font-medium backdrop-blur-sm transition-all duration-700',
+                'mb-8 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/4 px-5 py-2 text-sm font-medium text-gray-300 backdrop-blur-md transition-all duration-700',
                 isLoaded
                   ? 'translate-y-0 opacity-100'
-                  : '-translate-y-4 opacity-0'
+                  : '-translate-y-6 opacity-0'
               )}
             >
-              🎓 Student Organization
+              <span className="text-primary-300">
+                {settings?.about_page_badge || 'Student Organization'}{' '}
+                {/* already has batch */}
+              </span>
             </div>
+
+            {/* Title */}
             <h1
               className={cn(
-                'from-primary-300 to-secondary-300 mb-6 bg-linear-to-r via-white bg-clip-text text-4xl leading-tight font-bold text-transparent transition-all duration-700 md:text-5xl lg:text-7xl',
+                'from-primary-300 mb-5 bg-linear-to-r via-white to-gray-300 bg-clip-text text-4xl leading-[1.15] font-extrabold tracking-tight text-transparent transition-all duration-700 sm:text-5xl lg:text-6xl',
                 isLoaded
                   ? 'translate-y-0 opacity-100'
-                  : 'translate-y-6 opacity-0'
+                  : 'translate-y-8 opacity-0'
               )}
-              style={{ transitionDelay: isLoaded ? '100ms' : '0ms' }}
+              style={{ transitionDelay: isLoaded ? '120ms' : '0ms' }}
             >
-              About NEUPC
+              {settings?.about_page_title || 'About NEUPC'}
             </h1>
+
+            {/* Subtitle */}
             <p
               className={cn(
-                'mb-4 text-xl font-medium text-gray-300 transition-all duration-700 md:text-2xl lg:text-3xl',
+                'mb-2 text-lg font-medium text-gray-300 transition-all duration-700 md:text-xl',
+                isLoaded
+                  ? 'translate-y-0 opacity-100'
+                  : 'translate-y-5 opacity-0'
+              )}
+              style={{ transitionDelay: isLoaded ? '240ms' : '0ms' }}
+            >
+              {settings?.about_page_subtitle ||
+                'Netrokona University Programming Club'}
+            </p>
+
+            <p
+              className={cn(
+                'text-sm text-gray-500 transition-all duration-700 md:text-base',
                 isLoaded
                   ? 'translate-y-0 opacity-100'
                   : 'translate-y-4 opacity-0'
               )}
-              style={{ transitionDelay: isLoaded ? '200ms' : '0ms' }}
+              style={{ transitionDelay: isLoaded ? '360ms' : '0ms' }}
             >
-              Netrokona University Programming Club
+              {settings?.about_page_department ||
+                'Department of Computer Science and Engineering'}
             </p>
-            <p
-              className={cn(
-                'text-base text-gray-400 transition-all duration-700 md:text-lg lg:text-xl',
-                isLoaded
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-4 opacity-0'
-              )}
-              style={{ transitionDelay: isLoaded ? '300ms' : '0ms' }}
-            >
-              Department of Computer Science and Engineering
-            </p>
+
+            {/* Accent divider */}
             <div
               className={cn(
                 'mt-10 flex justify-center transition-all duration-700',
@@ -326,303 +793,506 @@ export default function AboutClient({ data = {} }) {
               )}
               style={{ transitionDelay: isLoaded ? '500ms' : '0ms' }}
             >
-              <div className="from-primary-400 via-secondary-400 to-primary-400 h-1.5 w-32 bg-linear-to-r shadow-lg" />
+              <div className="from-primary-500/80 via-secondary-500/60 to-primary-500/80 h-px w-28 rounded-full bg-linear-to-r" />
             </div>
           </div>
+
+          {/* ── Description Block ── */}
+          {(description1 || description2) && (
+            <div
+              className={cn(
+                'mx-auto mt-12 max-w-4xl transition-all duration-700 md:mt-16',
+                isLoaded
+                  ? 'translate-y-0 opacity-100'
+                  : 'translate-y-8 opacity-0'
+              )}
+              style={{ transitionDelay: isLoaded ? '600ms' : '0ms' }}
+            >
+              <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-white/3 p-6 backdrop-blur-xl sm:p-8 md:p-10">
+                {/* Decorative corner accents */}
+                <div className="from-primary-500/20 pointer-events-none absolute top-0 left-0 h-20 w-20 bg-linear-to-br to-transparent" />
+                <div className="from-secondary-500/20 pointer-events-none absolute right-0 bottom-0 h-20 w-20 bg-linear-to-tl to-transparent" />
+
+                {/* Quote icon */}
+                <div className="from-primary-500/15 to-secondary-500/15 mb-5 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-linear-to-br">
+                  <svg
+                    className="text-primary-400 h-5 w-5"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10H0z" />
+                  </svg>
+                </div>
+
+                <div className="relative space-y-4">
+                  {description1 && (
+                    <p className="text-sm leading-relaxed text-gray-300 md:text-base lg:text-lg">
+                      {description1}
+                    </p>
+                  )}
+                  {description2 && (
+                    <p className="text-sm leading-relaxed text-gray-400 md:text-base">
+                      {description2}
+                    </p>
+                  )}
+                </div>
+
+                {/* Bottom accent line */}
+                <div className="from-primary-500/40 via-secondary-500/30 mt-6 h-px w-full bg-linear-to-r to-transparent" />
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Introduction Section */}
-      <About variant="on" data={data} />
-
-      {/* Mission & Vision Section */}
-      <section
-        ref={missionRef}
-        className="relative bg-gray-900/50 py-20 md:py-28"
-      >
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-6xl">
-            <div
-              className={cn(
-                'mb-16 text-center transition-all duration-700',
-                missionVisible
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-6 opacity-0'
-              )}
-            >
-              <h2 className="mb-4 text-3xl font-bold text-white md:text-4xl lg:text-5xl">
-                Our Mission & Vision
-              </h2>
-              <p className="mx-auto max-w-2xl text-lg text-gray-400">
-                Driving excellence in programming education and community
-                building
-              </p>
-            </div>
-
-            <div className="grid gap-8 md:grid-cols-2">
-              {/* Mission */}
+      {/* ================================================================ */}
+      {/* Stats ribbon                                                     */}
+      {/* ================================================================ */}
+      {displayStats.length > 0 && (
+        <section ref={statsRef} className="relative py-14 md:py-20">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-5xl">
               <div
                 className={cn(
-                  'group relative overflow-hidden rounded-2xl bg-white/10 p-8 shadow-2xl backdrop-blur-md transition-all duration-700 hover:scale-105 hover:bg-white/15 md:p-10',
+                  'grid gap-4 sm:grid-cols-2',
+                  displayStats.length >= 4
+                    ? 'lg:grid-cols-4'
+                    : displayStats.length === 3
+                      ? 'lg:grid-cols-3'
+                      : 'lg:grid-cols-2'
+                )}
+              >
+                {displayStats.map((stat, i) => (
+                  <StatCard
+                    key={stat.label || i}
+                    stat={stat}
+                    index={i}
+                    isVisible={statsVisible}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ================================================================ */}
+      {/* Mission & Vision                                                 */}
+      {/* ================================================================ */}
+      <section
+        ref={missionRef}
+        className="relative pt-12 pb-24 md:pt-16 md:pb-32"
+      >
+        <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/1.5 via-transparent to-white/1.5" />
+
+        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-6xl">
+            <SectionHeader
+              badge="Our Purpose"
+              title="Mission & Vision"
+              subtitle="Driving excellence in programming education and community building"
+              icon={Target}
+              isVisible={missionVisible}
+            />
+
+            <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
+              {/* Mission card */}
+              <GlassCard
+                accent="primary"
+                className={cn(
+                  'p-8 transition-all duration-700 md:p-10',
                   missionVisible
                     ? 'translate-x-0 opacity-100'
-                    : '-translate-x-12 opacity-0'
+                    : '-translate-x-10 opacity-0'
                 )}
                 style={{ transitionDelay: missionVisible ? '200ms' : '0ms' }}
               >
-                <div className="from-primary-500/20 absolute -top-10 -right-10 h-40 w-40 rounded-full bg-linear-to-br to-transparent blur-2xl transition-all group-hover:scale-150" />
+                {/* Glow blob */}
+                <div className="from-primary-500/15 pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full bg-linear-to-br to-transparent blur-3xl" />
                 <div className="relative">
-                  <div className="mb-6 flex items-center">
-                    <div className="bg-primary-500/20 mr-4 flex h-16 w-16 items-center justify-center rounded-full backdrop-blur-sm transition-all group-hover:scale-110">
-                      <span className="text-4xl">🎯</span>
+                  <div className="mb-7 flex items-center gap-4">
+                    <IconBox
+                      icon={Target}
+                      size={22}
+                      accent="primary"
+                      className="h-12 w-12"
+                    />
+                    <div>
+                      <h3 className="text-xl font-bold text-white md:text-2xl">
+                        Our Mission
+                      </h3>
+                      <div className="from-primary-500 mt-1.5 h-0.5 w-14 rounded-full bg-linear-to-r to-transparent" />
                     </div>
-                    <h2 className="text-2xl font-bold text-white md:text-3xl">
-                      Our Mission
-                    </h2>
                   </div>
-                  <ul className="space-y-4 text-gray-200">
-                    {MISSION_ITEMS.map((item) => (
-                      <li
-                        key={item}
-                        className="flex items-start transition-all hover:translate-x-2"
-                      >
-                        <span className="text-primary-400 mt-1 mr-3 text-lg">
-                          ✓
-                        </span>
-                        <span className="leading-relaxed">{item}</span>
-                      </li>
-                    ))}
+
+                  <ul className="space-y-4">
+                    {missionItems.map((item, i) => {
+                      const text =
+                        typeof item === 'string' ? item : item?.title || '';
+                      return (
+                        <li
+                          key={text || i}
+                          className="flex items-start gap-3 text-gray-300 transition-colors hover:text-white"
+                        >
+                          <CheckCircle
+                            size={16}
+                            className="text-primary-500 mt-0.5 shrink-0"
+                          />
+                          <span className="text-sm leading-relaxed md:text-base">
+                            {text}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
-              </div>
+              </GlassCard>
 
-              {/* Vision */}
-              <div
+              {/* Vision card */}
+              <GlassCard
+                accent="secondary"
                 className={cn(
-                  'from-primary-500 to-secondary-500 group hover:shadow-primary-500/50 relative overflow-hidden rounded-2xl bg-linear-to-br p-8 text-white shadow-2xl transition-all duration-700 hover:scale-105 md:p-10',
+                  'p-8 transition-all duration-700 md:p-10',
                   missionVisible
                     ? 'translate-x-0 opacity-100'
-                    : 'translate-x-12 opacity-0'
+                    : 'translate-x-10 opacity-0'
                 )}
                 style={{ transitionDelay: missionVisible ? '400ms' : '0ms' }}
               >
-                <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-white/10 blur-2xl transition-all group-hover:scale-150" />
+                <div className="from-secondary-500/15 pointer-events-none absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-linear-to-tr to-transparent blur-3xl" />
                 <div className="relative">
-                  <div className="mb-6 flex items-center">
-                    <div className="mr-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/30 backdrop-blur-sm transition-all group-hover:scale-110">
-                      <span className="text-4xl">🚀</span>
+                  <div className="mb-7 flex items-center gap-4">
+                    <IconBox
+                      icon={Rocket}
+                      size={22}
+                      accent="secondary"
+                      className="h-12 w-12"
+                    />
+                    <div>
+                      <h3 className="text-xl font-bold text-white md:text-2xl">
+                        Our Vision
+                      </h3>
+                      <div className="from-secondary-500 mt-1.5 h-0.5 w-14 rounded-full bg-linear-to-r to-transparent" />
                     </div>
-                    <h2 className="text-2xl font-bold md:text-3xl">
-                      Our Vision
-                    </h2>
                   </div>
-                  <p className="text-primary-100 text-lg leading-relaxed md:text-xl">
-                    To become a leading university programming community that
-                    nurtures skilled, ethical, and innovative programmers
-                    capable of competing at national and international levels.
-                  </p>
-                  <div className="mt-6 h-1 w-20 bg-white/50 transition-all group-hover:w-32" />
+
+                  <ul className="space-y-4">
+                    {visionItems.map((item, i) => {
+                      const text =
+                        typeof item === 'string' ? item : item?.title || '';
+                      return (
+                        <li
+                          key={text || i}
+                          className="flex items-start gap-3 text-gray-300 transition-colors hover:text-white"
+                        >
+                          <ArrowRight
+                            size={16}
+                            className="text-secondary-500 mt-0.5 shrink-0"
+                          />
+                          <span className="text-sm leading-relaxed md:text-base">
+                            {text}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </div>
-              </div>
+              </GlassCard>
             </div>
           </div>
         </div>
       </section>
 
-      {/* What We Do Section */}
+      {/* ================================================================ */}
+      {/* What We Do                                                       */}
+      {/* ================================================================ */}
       <section
         ref={activitiesRef}
-        className="relative overflow-hidden py-20 md:py-28"
+        className="relative overflow-hidden py-24 md:py-32"
       >
-        <div className="absolute inset-0 bg-linear-to-b from-black/30 via-transparent to-black/30" />
+        <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/2 via-transparent to-white/2" />
+
         <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-6xl">
+            <SectionHeader
+              badge="Activities"
+              title="What We Do"
+              subtitle="Our activities and initiatives throughout the year"
+              icon={Code}
+              isVisible={activitiesVisible}
+            />
+
             <div
               className={cn(
-                'mb-16 text-center transition-all duration-700',
-                activitiesVisible
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-6 opacity-0'
+                'grid gap-5 sm:grid-cols-2',
+                activityCards.length >= 4
+                  ? 'lg:grid-cols-4'
+                  : activityCards.length === 3
+                    ? 'lg:grid-cols-3'
+                    : 'lg:grid-cols-2'
               )}
             >
-              <h2 className="mb-4 text-3xl font-bold text-white md:text-4xl lg:text-5xl">
-                What We Do
-              </h2>
-              <p className="mx-auto max-w-2xl text-lg text-gray-400">
-                Our activities and initiatives throughout the year
-              </p>
-            </div>
-
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-              {ACTIVITY_CARDS.map((card, index) => (
+              {activityCards.map((card, i) => (
                 <div
                   key={card.title}
                   className={cn(
                     'transition-all duration-700',
                     activitiesVisible
                       ? 'translate-y-0 opacity-100'
-                      : 'translate-y-8 opacity-0'
+                      : 'translate-y-10 opacity-0'
                   )}
                   style={{
                     transitionDelay: activitiesVisible
-                      ? `${200 + index * 100}ms`
+                      ? `${200 + i * 100}ms`
                       : '0ms',
                   }}
                 >
-                  <ActivityCard card={card} index={index} />
+                  <ActivityCard card={card} index={i} />
                 </div>
               ))}
             </div>
+
+            {/* Activity image slideshow */}
+            {galleryImages.length > 0 && (
+              <div
+                className={cn(
+                  'transition-all duration-700',
+                  activitiesVisible
+                    ? 'translate-y-0 opacity-100'
+                    : 'translate-y-10 opacity-0'
+                )}
+                style={{
+                  transitionDelay: activitiesVisible
+                    ? `${200 + activityCards.length * 100 + 100}ms`
+                    : '0ms',
+                }}
+              >
+                <ActivityImageSlider images={galleryImages} />
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Core Values Section */}
-      <section
-        ref={valuesRef}
-        className="relative bg-gray-900/50 py-20 md:py-28"
-      >
+      {/* ================================================================ */}
+      {/* Core Values                                                      */}
+      {/* ================================================================ */}
+      <section ref={valuesRef} className="relative py-24 md:py-32">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-5xl">
-            <div
-              className={cn(
-                'mb-16 text-center transition-all duration-700',
-                valuesVisible
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-6 opacity-0'
-              )}
-            >
-              <h2 className="mb-4 text-3xl font-bold text-white md:text-4xl lg:text-5xl">
-                Our Core Values
-              </h2>
-              <p className="mx-auto max-w-2xl text-lg text-gray-400">
-                The principles that guide our community
-              </p>
-            </div>
+            <SectionHeader
+              badge="Principles"
+              title="Our Core Values"
+              subtitle="The principles that guide our community"
+              icon={Shield}
+              isVisible={valuesVisible}
+            />
 
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {CORE_VALUES.map((value, index) => (
-                <div
-                  key={value}
-                  className={cn(
-                    'transition-all duration-700',
-                    valuesVisible
-                      ? 'translate-y-0 opacity-100'
-                      : 'translate-y-8 opacity-0'
-                  )}
-                  style={{
-                    transitionDelay: valuesVisible
-                      ? `${200 + index * 80}ms`
-                      : '0ms',
-                  }}
-                >
-                  <CoreValueItem label={value} index={index} />
-                </div>
-              ))}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {displayCoreValues.map((value, i) => {
+                const accent = i % 2 === 0 ? 'primary' : 'secondary';
+                const ValueIcon = resolveIconComponent(value.icon);
+                return (
+                  <div
+                    key={value.label}
+                    className={cn(
+                      'transition-all duration-700',
+                      valuesVisible
+                        ? 'translate-y-0 opacity-100'
+                        : 'translate-y-8 opacity-0'
+                    )}
+                    style={{
+                      transitionDelay: valuesVisible
+                        ? `${200 + i * 70}ms`
+                        : '0ms',
+                    }}
+                  >
+                    <GlassCard
+                      accent={accent}
+                      className="flex items-center gap-4 p-5"
+                    >
+                      <IconBox
+                        icon={ValueIcon}
+                        accent={accent}
+                        className="h-10 w-10"
+                      />
+                      <span className="text-sm font-medium text-gray-300 group-hover:text-white md:text-base">
+                        {value.label}
+                      </span>
+                    </GlassCard>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Organizational Structure Section */}
-      <section ref={orgRef} className="relative overflow-hidden py-20 md:py-28">
-        <div className="absolute inset-0 bg-linear-to-b from-transparent via-black/30 to-transparent" />
+      {/* ================================================================ */}
+      {/* Organizational Structure                                         */}
+      {/* ================================================================ */}
+      <section ref={orgRef} className="relative overflow-hidden py-24 md:py-32">
+        <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/2 via-transparent to-white/2" />
+
         <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-5xl">
+          <div className="mx-auto max-w-4xl">
+            <SectionHeader
+              badge="Structure"
+              title="How We're Organized"
+              subtitle="A well-defined hierarchy driving excellence"
+              icon={Briefcase}
+              isVisible={orgVisible}
+            />
+
             <div
               className={cn(
-                'mb-16 text-center transition-all duration-700',
+                'relative transition-all duration-700',
                 orgVisible
                   ? 'translate-y-0 opacity-100'
-                  : 'translate-y-6 opacity-0'
+                  : 'translate-y-10 opacity-0'
               )}
+              style={{ transitionDelay: orgVisible ? '200ms' : '0ms' }}
             >
-              <h2 className="mb-4 text-3xl font-bold text-white md:text-4xl lg:text-5xl">
-                📊 Organizational Structure
-              </h2>
-              <p className="mx-auto max-w-2xl text-lg text-gray-400">
-                A well-defined hierarchy driving excellence
-              </p>
-            </div>
+              {/* Vertical connector */}
+              <div className="from-primary-500/25 via-secondary-500/25 to-primary-500/25 absolute top-0 bottom-0 left-6 w-px bg-linear-to-b md:left-8" />
 
-            <div className="group hover:shadow-3xl relative overflow-hidden rounded-2xl bg-white/10 p-8 shadow-2xl backdrop-blur-md transition-all duration-300 md:p-12">
-              <div className="from-primary-500/10 to-secondary-500/10 absolute -top-20 -right-20 h-60 w-60 rounded-full bg-linear-to-br blur-3xl transition-all group-hover:scale-150" />
-              <div className="relative">
-                <p className="mb-8 text-lg text-gray-200">
-                  The club operates under a well-defined structure:
-                </p>
-                <div className="space-y-6">
-                  {ORG_STRUCTURE.map((item) => (
+              <div className="space-y-4">
+                {displayOrgStructure.map((item, i) => {
+                  const accent =
+                    item.color === 'primary' ? 'primary' : 'secondary';
+                  const OrgIcon = resolveIconComponent(item.icon);
+                  return (
                     <div
                       key={item.title}
-                      className="group/item flex items-start transition-all hover:translate-x-2"
+                      className={cn(
+                        'group relative flex items-start gap-5 rounded-xl border border-white/6 bg-white/3 py-5 pr-6 pl-14 backdrop-blur-xl transition-all duration-500 hover:border-white/12 hover:bg-white/6 md:gap-6 md:py-6 md:pr-8 md:pl-18',
+                        orgVisible
+                          ? 'translate-y-0 opacity-100'
+                          : 'translate-y-6 opacity-0'
+                      )}
+                      style={{
+                        transitionDelay: orgVisible
+                          ? `${300 + i * 120}ms`
+                          : '0ms',
+                      }}
                     >
+                      {/* Node dot */}
                       <div
                         className={cn(
-                          'mt-1 mr-4 h-4 w-4 rounded-full shadow-lg transition-all group-hover/item:scale-125',
-                          item.dotClass
+                          'absolute top-1/2 left-[1.15rem] h-3 w-3 -translate-y-1/2 rounded-full border-2 border-gray-950 shadow-lg transition-transform duration-300 group-hover:scale-150 md:left-[1.6rem]',
+                          accent === 'primary'
+                            ? 'bg-primary-500 shadow-primary-500/30'
+                            : 'bg-secondary-500 shadow-secondary-500/30'
                         )}
                       />
+
+                      <IconBox
+                        icon={OrgIcon}
+                        accent={accent}
+                        className="h-10 w-10"
+                      />
+
                       <div>
-                        <h4 className="text-lg font-semibold text-white">
+                        <h4 className="text-base font-semibold text-white md:text-lg">
                           {item.title}
                         </h4>
-                        <p className="text-gray-300">{item.description}</p>
+                        <p className="mt-0.5 text-sm text-gray-400">
+                          {item.description}
+                        </p>
                       </div>
                     </div>
-                  ))}
-                </div>
-                <p className="bg-primary-500/10 border-primary-500 mt-8 rounded-lg border-l-4 p-4 text-gray-300 italic">
-                  💼 All financial transactions require official signatory
-                  approval and are maintained transparently according to club
-                  policy.
-                </p>
+                  );
+                })}
               </div>
+
+              {/* Financial note */}
+              {displayOrgFinancialNote && (
+                <div className="border-primary-500/20 bg-primary-500/4 mt-7 rounded-xl border-l-2 p-5">
+                  <p className="text-sm leading-relaxed text-gray-400 italic">
+                    {displayOrgFinancialNote}
+                  </p>
+                </div>
+              )}
+
+              {/* Executive committee image slider */}
+              {committeeMembers.length > 0 && (
+                <div className="mt-10">
+                  <h4 className="mb-4 text-center text-lg font-semibold text-white md:text-xl">
+                    Current Executive Committee
+                  </h4>
+                  <CommitteeSlider members={committeeMembers} />
+                </div>
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Why It Matters Section */}
-      <section
-        ref={skillsRef}
-        className="relative bg-gray-900/50 py-20 md:py-28"
-      >
+      {/* ================================================================ */}
+      {/* Why Programming Matters                                          */}
+      {/* ================================================================ */}
+      <section ref={skillsRef} className="relative py-24 md:py-32">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-5xl">
+            <SectionHeader
+              badge="Impact"
+              title="Why Programming Matters"
+              subtitle="More than code — building essential skills for the future"
+              icon={Zap}
+              isVisible={skillsVisible}
+            />
+
             <div
               className={cn(
-                'mb-16 text-center transition-all duration-700',
+                'transition-all duration-700',
                 skillsVisible
                   ? 'translate-y-0 opacity-100'
-                  : 'translate-y-6 opacity-0'
+                  : 'translate-y-10 opacity-0'
               )}
+              style={{ transitionDelay: skillsVisible ? '200ms' : '0ms' }}
             >
-              <h2 className="mb-4 text-3xl font-bold text-white md:text-4xl lg:text-5xl">
-                💡 Why the Programming Club Matters
-              </h2>
-              <p className="mx-auto max-w-2xl text-lg text-gray-400">
-                More than code — building essential skills for the future
-              </p>
-            </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {displaySkills.map((skill, i) => {
+                  const accent = i % 2 === 0 ? 'primary' : 'secondary';
+                  const SkillIcon = resolveIconComponent(skill.icon);
+                  return (
+                    <GlassCard
+                      key={skill.label}
+                      accent={accent}
+                      className={cn(
+                        'flex items-center gap-4 p-5 transition-all duration-700',
+                        skillsVisible
+                          ? 'translate-y-0 opacity-100'
+                          : 'translate-y-6 opacity-0'
+                      )}
+                      style={{
+                        transitionDelay: skillsVisible
+                          ? `${300 + i * 90}ms`
+                          : '0ms',
+                      }}
+                    >
+                      <IconBox
+                        icon={SkillIcon}
+                        size={20}
+                        accent={accent}
+                        className="h-11 w-11"
+                      />
+                      <span className="text-base font-medium text-gray-300 group-hover:text-white">
+                        {skill.label}
+                      </span>
+                    </GlassCard>
+                  );
+                })}
+              </div>
 
-            <div className="group relative overflow-hidden rounded-2xl bg-white/10 p-8 shadow-2xl backdrop-blur-md md:p-12">
-              <div className="from-secondary-500/10 to-primary-500/10 absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-linear-to-tr blur-3xl transition-all group-hover:scale-150" />
-              <div className="relative">
-                <p className="mb-8 text-xl font-medium text-gray-200">
-                  Programming is more than writing code — it develops:
-                </p>
-                <div className="grid gap-6 sm:grid-cols-2">
-                  {SKILLS.map((skill, index) => (
-                    <SkillItem key={skill.label} skill={skill} index={index} />
-                  ))}
-                </div>
-                <div className="from-primary-500/20 to-secondary-500/20 mt-8 rounded-xl bg-linear-to-r p-6">
-                  <p className="text-lg leading-relaxed text-gray-100">
-                    Through consistent practice and mentorship, the Programming
-                    Club helps students transform from beginners into confident
-                    programmers ready for competitive and professional
-                    challenges.
+              {/* Summary callout */}
+              <div className="from-primary-500/4 to-secondary-500/4 mt-7 rounded-xl border border-white/6 bg-linear-to-r p-6 md:p-7">
+                <div className="flex items-start gap-4">
+                  <div className="bg-primary-500/10 mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10">
+                    <TrendingUp size={16} className="text-primary-400" />
+                  </div>
+                  <p className="text-sm leading-relaxed text-gray-300 md:text-base">
+                    {displaySkillsDescription}
                   </p>
                 </div>
               </div>
@@ -631,110 +1301,125 @@ export default function AboutClient({ data = {} }) {
         </div>
       </section>
 
-      {/* WIE & Mentorship Section */}
+      {/* ================================================================ */}
+      {/* Growth & Inclusivity                                             */}
+      {/* ================================================================ */}
       <section
         ref={growthRef}
-        className="relative overflow-hidden py-20 md:py-28"
+        className="relative overflow-hidden py-24 md:py-32"
       >
-        <div className="absolute inset-0 bg-linear-to-b from-transparent via-black/20 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/2 via-transparent to-white/2" />
+
         <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-6xl">
-            <div
-              className={cn(
-                'mb-16 text-center transition-all duration-700',
-                growthVisible
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-6 opacity-0'
-              )}
-            >
-              <h2 className="mb-4 text-3xl font-bold text-white md:text-4xl lg:text-5xl">
-                Fostering Growth & Inclusivity
-              </h2>
-              <p className="mx-auto max-w-2xl text-lg text-gray-400">
-                Building leaders through mentorship and diversity
-              </p>
-            </div>
+            <SectionHeader
+              badge="Community"
+              title="Growth & Inclusivity"
+              subtitle="Building leaders through mentorship and diversity"
+              icon={Users}
+              isVisible={growthVisible}
+            />
 
-            <div className="grid gap-8 md:grid-cols-2">
-              {/* WIE */}
-              <div
+            <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
+              {/* WIE card */}
+              <GlassCard
+                accent="secondary"
                 className={cn(
-                  'from-secondary-500 to-primary-500 group hover:shadow-3xl hover:shadow-secondary-500/30 relative overflow-hidden rounded-2xl bg-linear-to-br p-8 text-white shadow-2xl transition-all duration-700 hover:scale-105 md:p-10',
+                  'p-8 transition-all duration-700 md:p-10',
                   growthVisible
                     ? 'translate-x-0 opacity-100'
-                    : '-translate-x-12 opacity-0'
+                    : '-translate-x-10 opacity-0'
                 )}
                 style={{ transitionDelay: growthVisible ? '200ms' : '0ms' }}
               >
-                <div className="absolute -top-12 -right-12 h-48 w-48 rounded-full bg-white/10 blur-3xl transition-all group-hover:scale-150" />
+                <div className="from-secondary-500/10 pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full bg-linear-to-br to-transparent blur-3xl" />
                 <div className="relative">
-                  <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-white/20 text-5xl backdrop-blur-sm transition-transform group-hover:scale-110">
-                    👩‍💻
+                  <div className="mb-7 flex items-center gap-4">
+                    <IconBox
+                      icon={Heart}
+                      size={22}
+                      accent="secondary"
+                      className="h-12 w-12"
+                    />
+                    <div>
+                      <h3 className="text-xl font-bold text-white md:text-2xl">
+                        {displayWieTitle}
+                      </h3>
+                      <div className="from-secondary-500 mt-1.5 h-0.5 w-14 rounded-full bg-linear-to-r to-transparent" />
+                    </div>
                   </div>
-                  <h2 className="mb-6 text-2xl font-bold md:text-3xl">
-                    Women in Engineering (WIE) Branch
-                  </h2>
-                  <p className="text-primary-100 text-lg leading-relaxed">
-                    The Programming Club also runs a dedicated Women in
-                    Engineering (WIE) branch to encourage female participation
-                    in programming and leadership roles. This branch organizes
-                    focused sessions, mentoring programs, and awareness
-                    initiatives to create an inclusive technical environment.
+                  <p className="text-sm leading-relaxed text-gray-400 md:text-base">
+                    {displayWieDescription}
                   </p>
-                  <div className="mt-6 h-1 w-24 bg-white/50 transition-all group-hover:w-32" />
                 </div>
-              </div>
+              </GlassCard>
 
-              {/* Mentorship */}
-              <div
+              {/* Mentorship card */}
+              <GlassCard
+                accent="primary"
                 className={cn(
-                  'group hover:shadow-3xl relative overflow-hidden rounded-2xl bg-white/10 p-8 shadow-2xl backdrop-blur-md transition-all duration-700 hover:scale-105 hover:bg-white/15 md:p-10',
+                  'p-8 transition-all duration-700 md:p-10',
                   growthVisible
                     ? 'translate-x-0 opacity-100'
-                    : 'translate-x-12 opacity-0'
+                    : 'translate-x-10 opacity-0'
                 )}
                 style={{ transitionDelay: growthVisible ? '400ms' : '0ms' }}
               >
-                <div className="from-primary-500/20 absolute -bottom-12 -left-12 h-48 w-48 rounded-full bg-linear-to-tr to-transparent blur-3xl transition-all group-hover:scale-150" />
+                <div className="from-primary-500/10 pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-linear-to-tr to-transparent blur-3xl" />
                 <div className="relative">
-                  <div className="bg-primary-500/20 mb-6 flex h-16 w-16 items-center justify-center rounded-full text-5xl transition-transform group-hover:scale-110">
-                    🎓
+                  <div className="mb-7 flex items-center gap-4">
+                    <IconBox
+                      icon={GraduationCap}
+                      size={22}
+                      accent="primary"
+                      className="h-12 w-12"
+                    />
+                    <div>
+                      <h3 className="text-xl font-bold text-white md:text-2xl">
+                        {displayMentorshipTitle}
+                      </h3>
+                      <div className="from-primary-500 mt-1.5 h-0.5 w-14 rounded-full bg-linear-to-r to-transparent" />
+                    </div>
                   </div>
-                  <h2 className="mb-6 text-2xl font-bold text-white md:text-3xl">
-                    Mentorship & Guidance
-                  </h2>
-                  <p className="mb-6 text-lg text-gray-200">
-                    The club is supported by faculty advisors and experienced
-                    mentors who guide students in:
+                  <p className="mb-5 text-sm text-gray-400 md:text-base">
+                    {displayMentorshipDescription}
                   </p>
-                  <ul className="space-y-4 text-gray-200">
-                    {MENTORSHIP_AREAS.map((area) => (
+                  <ul className="space-y-3">
+                    {displayMentorshipAreas.map((area) => (
                       <li
                         key={area}
-                        className="flex items-start transition-all hover:translate-x-2"
+                        className="flex items-center gap-3 text-gray-300 transition-colors duration-200 hover:text-white"
                       >
-                        <span className="bg-primary-500/20 shadow-primary-500/50 mt-1 mr-3 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm font-bold shadow-lg">
-                          ▸
-                        </span>
-                        <span className="text-base">{area}</span>
+                        <ChevronRight
+                          size={14}
+                          className="text-primary-500 shrink-0"
+                        />
+                        <span className="text-sm md:text-base">{area}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
-              </div>
+              </GlassCard>
             </div>
           </div>
         </div>
       </section>
 
+      {/* ================================================================ */}
+      {/* CTA                                                              */}
+      {/* ================================================================ */}
       <CTASection
         icon="🎯"
-        title="Ready to Join Us?"
-        description="Become part of a community dedicated to excellence in programming and innovation."
+        title={settings?.about_page_cta_title || 'Ready to Join Us?'}
+        description={
+          settings?.about_page_cta_description ||
+          'Become part of a community dedicated to excellence in programming and innovation.'
+        }
         primaryAction={{ label: 'Join the Club', href: '/join' }}
+        secondaryAction={{ label: 'Meet Our Committee', href: '/committee' }}
       />
 
       <ScrollToTop />
-    </main>
+    </PageShell>
   );
 }

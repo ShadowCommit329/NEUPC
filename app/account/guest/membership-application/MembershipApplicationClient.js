@@ -152,7 +152,7 @@ export default function MembershipApplicationClient({
 
   const [form, setForm] = useState({
     student_id: prefill.student_id || userData?.student_id || '',
-    batch: prefill.batch || '',
+    session: prefill.session || prefill.batch || '',
     department: prefill.department || '',
     phone: prefill.phone || '',
     semester: '',
@@ -176,7 +176,7 @@ export default function MembershipApplicationClient({
     const errs = {};
     if (s === 1) {
       if (!form.student_id.trim()) errs.student_id = 'Student ID is required.';
-      if (!form.batch) errs.batch = 'Batch is required.';
+      if (!form.session) errs.session = 'Session is required.';
       if (!form.department) errs.department = 'Department is required.';
     }
     if (s === 4) {
@@ -467,15 +467,15 @@ export default function MembershipApplicationClient({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <SelectField
-                  label="Batch"
-                  id="batch"
+                  label="Session"
+                  id="session"
                   icon={GraduationCap}
                   required
                   options={BATCHES}
-                  placeholder="Select batch"
-                  value={form.batch}
-                  onChange={set('batch')}
-                  error={errors.batch}
+                  placeholder="Select session"
+                  value={form.session}
+                  onChange={set('session')}
+                  error={errors.session}
                 />
                 <SelectField
                   label="Department"
@@ -651,7 +651,7 @@ export default function MembershipApplicationClient({
                 </p>
                 <div className="grid gap-1.5 text-xs">
                   <SummaryRow label="Student ID" value={form.student_id} />
-                  <SummaryRow label="Batch" value={form.batch} />
+                  <SummaryRow label="Session" value={form.session} />
                   <SummaryRow label="Department" value={form.department} />
                   {form.semester && (
                     <SummaryRow label="Semester" value={form.semester} />
@@ -725,7 +725,7 @@ export default function MembershipApplicationClient({
       </div>
 
       <p className="mt-4 text-center text-xs text-gray-600">
-        By submitting, you agree to abide by NEUPC's community guidelines and
+        By submitting, you agree to abide by NEUPC&apos;s community guidelines and
         code of conduct.
       </p>
     </div>

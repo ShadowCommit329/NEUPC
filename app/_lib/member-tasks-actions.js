@@ -70,6 +70,7 @@ export async function submitTaskAction({ taskId, submissionUrl, code, notes }) {
       return { error: 'Failed to update submission.' };
     }
     revalidatePath('/account/member/problem-set');
+    revalidatePath('/account/mentor/tasks');
     return { success: true, updated: true };
   }
 
@@ -91,5 +92,6 @@ export async function submitTaskAction({ taskId, submissionUrl, code, notes }) {
     return { error: 'Failed to submit task.' };
   }
   revalidatePath('/account/member/problem-set');
+  revalidatePath('/account/mentor/tasks');
   return { success: true, updated: false };
 }

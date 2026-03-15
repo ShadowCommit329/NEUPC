@@ -13,6 +13,7 @@ const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
   ssr: false,
 });
 import PageBackground from '../_components/ui/PageBackground';
+import PageShell from '../_components/ui/PageShell';
 import { useDelayedLoad, useScrollReveal } from '../_lib/hooks';
 import { cn } from '../_lib/utils';
 
@@ -47,7 +48,10 @@ const DEFAULT_FEATURES = [
 /**
  * @param {{ features?: { icon: string, title: string, description: string }[] }} props
  */
-export default function JoinClient({ features: propFeatures = [] }) {
+export default function JoinClient({
+  features: propFeatures = [],
+  settings = {},
+}) {
   const handleGoogleSignIn = () =>
     signIn('google', { callbackUrl: '/account' });
   const publicFeatures =
@@ -56,7 +60,7 @@ export default function JoinClient({ features: propFeatures = [] }) {
   const [featuresRef, featuresVisible] = useScrollReveal({ threshold: 0.1 });
 
   return (
-    <main className="relative min-h-screen bg-linear-to-b from-gray-900 via-black to-gray-900">
+    <PageShell>
       <PageBackground variant="fixed" />
 
       {/* Hero Section */}
@@ -73,7 +77,7 @@ export default function JoinClient({ features: propFeatures = [] }) {
               )}
             >
               <span className="text-base">👤</span>
-              <span>Public Account</span>
+              <span>{settings?.join_page_badge || 'Public Account'}</span>
             </div>
             <h1
               style={{ transitionDelay: '150ms' }}
@@ -84,7 +88,7 @@ export default function JoinClient({ features: propFeatures = [] }) {
                   : 'translate-y-4 opacity-0'
               )}
             >
-              Create Your Public Account
+              {settings?.join_page_title || 'Create Your Public Account'}
             </h1>
             <p
               style={{ transitionDelay: '300ms' }}
@@ -95,8 +99,8 @@ export default function JoinClient({ features: propFeatures = [] }) {
                   : 'translate-y-4 opacity-0'
               )}
             >
-              Stay updated with events, contests, and workshops at Netrokona
-              University Programming Club
+              {settings?.join_page_description ||
+                'Stay updated with events, contests, and workshops at Netrokona University Programming Club'}
             </p>
             <div
               style={{ transitionDelay: '450ms' }}
@@ -230,6 +234,6 @@ export default function JoinClient({ features: propFeatures = [] }) {
       </section>
 
       <ScrollToTop />
-    </main>
+    </PageShell>
   );
 }

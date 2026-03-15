@@ -388,14 +388,7 @@ export default function GuestSettingsClient({ user }) {
               </p>
             </div>
           </div>
-          <a
-            href="/account/guest/membership-application"
-            className="flex shrink-0 items-center gap-2 rounded-xl bg-violet-500/18 px-4 py-2 text-sm font-medium text-violet-300 transition hover:bg-violet-500/28"
-          >
-            <Sparkles className="size-3.5" />
-            Apply Now
-          </a>
-        </div>
+
       </div>
 
       {/* ── Danger Zone ── */}

@@ -1,7 +1,7 @@
 /**
  * @file Member profile page — displays the authenticated member’s
  *   account information and linked member profile data (student ID,
- *   batch, department, competitive handles).
+ *   session, department, competitive handles).
  * @module MemberProfilePage
  * @access member
  */

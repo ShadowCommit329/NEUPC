@@ -16,19 +16,21 @@ import AccountHeader from './_components/AccountHeader';
 import UserAvatar from './_components/UserAvatar';
 import AvailableRoles from './_components/AvailableRoles';
 import AccountStatusMessages from './_components/AccountStatusMessages';
+import PendingRoleAssignment from './_components/PendingRoleAssignment';
 import UpgradeBanner from './_components/UpgradeBanner';
 
+export const dynamic = 'force-dynamic';
 export const metadata = { title: 'My Account | NEUPC' };
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
  * Check whether a user with the given role can access their dashboard.
- * Guests only need `active` account status; other roles also need `is_active`.
+ * Only account_status matters — is_online is a heartbeat/presence flag updated
+ * every 60 s and must NOT gate access (users would get kicked out mid-session).
  */
 function canAccessDashboard(role, user) {
-  if (user?.account_status !== 'active') return false;
-  return role === 'guest' || user?.is_active === true;
+  return user?.account_status === 'active';
 }
 
 /**
@@ -45,31 +47,41 @@ function getAvailableDashboards(roles, user) {
 // ── Page ────────────────────────────────────────────────────────────────────
 
 export default async function AccountPage() {
-  const { session, user, userRoles } = await requireAuth();
+  const { session, user, userRoles: rawRoles } = await requireAuth();
 
-  // Single-role users: auto-redirect to their dashboard
-  if (userRoles.length === 1 && canAccessDashboard(userRoles[0], user)) {
-    redirect(`/account/${userRoles[0]}`);
-  }
+  // Users must have roles explicitly assigned by admin — no default guest role
+  const userRoles = rawRoles;
 
   const availableRoles = getAvailableDashboards(userRoles, user);
 
+  // Single accessible dashboard → smooth client-side redirect
+  const redirectPath =
+    availableRoles.length === 1 ? availableRoles[0].config.path : null;
+
   return (
-    <AccountPageClient>
+    <AccountPageClient redirectPath={redirectPath}>
       <div className="min-h-screen px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-5xl">
-          <AccountHeader session={session.user} />
+          <AccountHeader
+            session={session.user}
+            accountStatus={user?.account_status}
+          />
           <UserAvatar session={session.user} />
           <AvailableRoles
             availableRoles={availableRoles}
             accountStatus={user?.account_status}
           />
+          {userRoles.length === 0 && user?.account_status === 'active' && (
+            <PendingRoleAssignment />
+          )}
           <AccountStatusMessages
             accountStatus={user?.account_status}
             statusReason={user?.status_reason}
             statusChangedBy={user?.status_changed_by}
             suspensionExpiresAt={user?.suspension_expires_at}
             userId={user?.id}
+            userName={session.user?.name ?? ''}
+            userEmail={session.user?.email ?? ''}
           />
           <UpgradeBanner
             accountStatus={user?.account_status}

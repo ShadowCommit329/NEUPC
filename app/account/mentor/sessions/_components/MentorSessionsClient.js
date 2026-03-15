@@ -23,9 +23,11 @@ import {
   updateSessionNotesAction,
   deleteSessionAction,
 } from '@/app/_lib/mentor-actions';
+import { useScrollLock } from '@/app/_lib/hooks';
 
 function SessionModal({ mentorships, onClose, mentorId }) {
   const [loading, setLoading] = useState(false);
+  useScrollLock();
   const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {

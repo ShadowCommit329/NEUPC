@@ -9,12 +9,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Send,
   Loader,
   Clock,
   ShieldOff,
   ShieldX,
+  ShieldAlert,
   Lock,
   XCircle,
   CheckCircle,
@@ -22,6 +24,7 @@ import {
   Mail,
   ChevronRight,
   Timer,
+  ShieldCheck,
 } from 'lucide-react';
 
 // ── Suspension countdown timer ────────────────────────────────────────────────
@@ -119,9 +122,9 @@ function SuspensionTimer({ expiresAt }) {
 
 /** @type {{ label: string, done: boolean }[]} */
 const REVIEW_STEPS = [
-  { label: 'Submitted', done: true },
-  { label: 'Under Review', done: true },
-  { label: 'Decision', done: false },
+  { label: 'Signed Up', done: true },
+  { label: 'Admin Review', done: false },
+  { label: 'Approved', done: false },
 ];
 
 function MessageForm({
@@ -214,28 +217,99 @@ function MessageForm({
   );
 }
 
-// ── Reason block ─────────────────────────────────────────────────────────────
-function ReasonBlock({
-  isFetching,
-  fetchedReason,
-  label = 'Details',
-  accentBorder = 'border-white/10',
+// ── Message thread ────────────────────────────────────────────────────────────
+function MessageThread({
+  messages,
+  isLoading,
+  userId,
+  fallbackReason,
+  fallbackChangedBy,
 }) {
-  if (isFetching) {
+  if (isLoading) {
     return (
       <div className="flex items-center gap-2.5 text-sm text-gray-400">
         <Loader className="h-4 w-4 animate-spin" />
-        <span>Loading details…</span>
+        <span>Loading messages…</span>
       </div>
     );
   }
-  if (!fetchedReason) return null;
+
+  // Normalise: if DB table has no rows yet, synthesise from legacy status_reason
+  const effective =
+    messages.length > 0
+      ? messages
+      : fallbackReason
+        ? [
+            {
+              id: 'legacy',
+              sender_id: fallbackChangedBy,
+              is_admin: fallbackChangedBy !== userId,
+              message: fallbackReason,
+              created_at: null,
+            },
+          ]
+        : [];
+
+  if (effective.length === 0) return null;
+
   return (
-    <div className={`rounded-xl border ${accentBorder} bg-white/5 px-4 py-3.5`}>
-      <p className="mb-2 text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
-        {label}
+    <div className="space-y-2.5">
+      <p className="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">
+        Conversation
       </p>
-      <p className="text-sm leading-relaxed text-gray-200">{fetchedReason}</p>
+      <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+        {effective.map((msg) => {
+          const isAdminMsg = msg.is_admin;
+          return (
+            <div
+              key={msg.id}
+              className={`flex gap-2.5 ${isAdminMsg ? 'flex-row' : 'flex-row-reverse'}`}
+            >
+              <div
+                className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-1 ${
+                  isAdminMsg
+                    ? 'bg-blue-500/15 ring-blue-500/30'
+                    : 'bg-white/8 ring-white/15'
+                }`}
+              >
+                {isAdminMsg ? (
+                  <ShieldCheck className="h-3.5 w-3.5 text-blue-400" />
+                ) : (
+                  <MessageSquare className="h-3.5 w-3.5 text-gray-400" />
+                )}
+              </div>
+              <div
+                className={`max-w-[80%] rounded-xl px-3.5 py-2.5 ${
+                  isAdminMsg
+                    ? 'bg-blue-500/10 ring-1 ring-blue-500/20'
+                    : 'bg-white/6 ring-1 ring-white/10'
+                }`}
+              >
+                <p
+                  className={`mb-1 text-[10px] font-semibold ${
+                    isAdminMsg ? 'text-blue-400' : 'text-gray-400'
+                  }`}
+                >
+                  {isAdminMsg ? 'Team' : 'You'}
+                </p>
+                <p className="text-sm leading-relaxed text-gray-200">
+                  {msg.message}
+                </p>
+                {msg.created_at && (
+                  <p className="mt-1.5 text-[10px] text-gray-600">
+                    {new Date(msg.created_at).toLocaleString(undefined, {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -246,39 +320,39 @@ export default function AccountStatusMessages({
   statusChangedBy,
   suspensionExpiresAt,
   userId,
+  userName = '',
+  userEmail = '',
 }) {
   const [userMessage, setUserMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
-  const [isFetching, setIsFetching] = useState(true);
-  const [fetchedReason, setFetchedReason] = useState(statusReason);
+  const [messages, setMessages] = useState([]);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
 
-  // true when the message was written by the user themselves (no changer, or self-authored)
-  const isMyMessage = !statusChangedBy || statusChangedBy === userId;
-  const reasonLabel = isMyMessage ? 'Your message to us' : 'Message from team';
+  const contactHref = `/contact${
+    userName || userEmail
+      ? `?${new URLSearchParams(
+          Object.fromEntries(
+            [
+              ['name', userName],
+              ['email', userEmail],
+            ].filter(([, v]) => v)
+          )
+        ).toString()}`
+      : ''
+  }`;
 
   useEffect(() => {
-    const fetchReason = async () => {
-      if (!userId) {
-        setIsFetching(false);
-        return;
-      }
-      try {
-        const response = await fetch(
-          `/api/account/status-reason?userId=${userId}`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setFetchedReason(data.reason || statusReason);
-        }
-      } catch {
-        setFetchedReason(statusReason);
-      } finally {
-        setIsFetching(false);
-      }
-    };
-    fetchReason();
-  }, [userId, statusReason]);
+    if (!userId) {
+      setIsLoadingMessages(false);
+      return;
+    }
+    fetch(`/api/account/messages?userId=${userId}`)
+      .then((r) => r.json())
+      .then((d) => setMessages(d.messages ?? []))
+      .catch(() => {})
+      .finally(() => setIsLoadingMessages(false));
+  }, [userId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -290,14 +364,14 @@ export default function AccountStatusMessages({
     }
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/account/status-reason', {
-        method: 'PUT',
+      const response = await fetch('/api/account/messages', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, reason: userMessage }),
+        body: JSON.stringify({ userId, message: userMessage }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to update');
-      setFetchedReason(data.reason || userMessage);
+      if (!response.ok) throw new Error(data.error || 'Failed to send');
+      setMessages((prev) => [...prev, data.message]);
       setFeedback({ type: 'success', message: 'Message sent successfully.' });
       setUserMessage('');
     } catch (error) {
@@ -314,7 +388,19 @@ export default function AccountStatusMessages({
   // ── Pending ────────────────────────────────────────────────────────────────
   if (accountStatus === 'pending') {
     return (
-      <div className="mt-6">
+      <div className="mt-6 space-y-4">
+        {/* Admin access required — prominent callout */}
+        <div className="flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4">
+          <ShieldAlert className="h-6 w-6 shrink-0 text-amber-400" />
+          <p className="text-sm font-semibold text-amber-200">
+            Admin access required —{' '}
+            <span className="font-normal text-amber-300/80">
+              An administrator must approve your account before you can access
+              any dashboard.
+            </span>
+          </p>
+        </div>
+
         <div className="overflow-hidden rounded-2xl border border-amber-500/20 bg-linear-to-b from-amber-500/5 to-transparent shadow-lg shadow-amber-500/5">
           <div className="h-0.5 w-full bg-linear-to-r from-amber-500/60 via-orange-400/60 to-transparent" />
 
@@ -327,22 +413,27 @@ export default function AccountStatusMessages({
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-base font-semibold text-white">
-                    Account Review in Progress
+                    Admin Approval Required
                   </h3>
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-amber-400 ring-1 ring-amber-500/25">
                     <span className="relative flex h-1.5 w-1.5">
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
                       <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-400" />
                     </span>
-                    Pending
+                    Pending Approval
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-gray-400">
-                  We typically review accounts within{' '}
-                  <span className="font-medium text-gray-300">
-                    2–3 business days
+                  Your account is awaiting approval from a{' '}
+                  <span className="font-medium text-amber-300">
+                    NEUPC admin
                   </span>
-                  . You will be notified once reviewed.
+                  . This typically takes{' '}
+                  <span className="font-medium text-gray-300">
+                    1–3 business days
+                  </span>
+                  . You&apos;ll gain access once an admin reviews and activates
+                  your account.
                 </p>
               </div>
             </div>
@@ -374,13 +465,14 @@ export default function AccountStatusMessages({
               ))}
             </div>
 
-            {/* Message / reason from team or user */}
+            {/* Message thread */}
             <div className="mt-6">
-              <ReasonBlock
-                isFetching={isFetching}
-                fetchedReason={fetchedReason}
-                label={reasonLabel}
-                accentBorder="border-amber-500/15"
+              <MessageThread
+                messages={messages}
+                isLoading={isLoadingMessages}
+                userId={userId}
+                fallbackReason={statusReason}
+                fallbackChangedBy={statusChangedBy}
               />
             </div>
 
@@ -431,15 +523,14 @@ export default function AccountStatusMessages({
               </div>
             </div>
 
-            {/* Reason */}
+            {/* Message thread */}
             <div className="mt-6">
-              <ReasonBlock
-                isFetching={isFetching}
-                fetchedReason={fetchedReason}
-                label={
-                  isMyMessage ? 'Your message to us' : 'Reason for rejection'
-                }
-                accentBorder="border-red-500/15"
+              <MessageThread
+                messages={messages}
+                isLoading={isLoadingMessages}
+                userId={userId}
+                fallbackReason={statusReason}
+                fallbackChangedBy={statusChangedBy}
               />
             </div>
 
@@ -447,14 +538,14 @@ export default function AccountStatusMessages({
             <div className="mt-4 flex items-start gap-3 rounded-xl border border-white/5 bg-white/5 px-4 py-3.5">
               <Mail className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
               <p className="text-sm text-gray-400">
-                Think this was a mistake? Email us at{' '}
-                <a
-                  href="mailto:support@neupc.org"
-                  className="font-medium text-white underline decoration-white/30 underline-offset-2 hover:decoration-white/70"
+                Think this was a mistake?{' '}
+                <Link
+                  href={contactHref}
+                  className="inline-flex items-center gap-0.5 font-medium text-white underline decoration-white/30 underline-offset-2 hover:decoration-white/70"
                 >
-                  support@neupc.org
-                </a>
-                .
+                  Contact us
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
               </p>
             </div>
 
@@ -562,13 +653,14 @@ export default function AccountStatusMessages({
               </div>
             </div>
 
-            {/* Reason */}
+            {/* Message thread */}
             <div className="mt-6">
-              <ReasonBlock
-                isFetching={isFetching}
-                fetchedReason={fetchedReason}
-                label={isMyMessage ? 'Your message to us' : 'Message from team'}
-                accentBorder="border-white/10"
+              <MessageThread
+                messages={messages}
+                isLoading={isLoadingMessages}
+                userId={userId}
+                fallbackReason={statusReason}
+                fallbackChangedBy={statusChangedBy}
               />
             </div>
 
@@ -582,13 +674,62 @@ export default function AccountStatusMessages({
               <Mail className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
               <p className="text-sm text-gray-400">
                 Believe this is a mistake?{' '}
-                <a
-                  href="mailto:support@neupc.org"
+                <Link
+                  href={contactHref}
+                  className="inline-flex items-center gap-0.5 font-medium text-white underline decoration-white/30 underline-offset-2 hover:decoration-white/70"
+                >
+                  Contact us
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Inactive ──────────────────────────────────────────────────────────────
+  if (accountStatus === 'inactive') {
+    return (
+      <div className="mt-6">
+        <div className="overflow-hidden rounded-2xl border border-gray-500/20 bg-linear-to-b from-gray-500/5 to-transparent shadow-lg shadow-gray-500/5">
+          <div className="h-0.5 w-full bg-linear-to-r from-gray-500/60 via-slate-400/60 to-transparent" />
+
+          <div className="p-6 sm:p-8">
+            {/* Header */}
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-500/15 ring-1 ring-gray-500/25">
+                <Clock className="h-5 w-5 text-gray-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-base font-semibold text-white">
+                    Account Inactive
+                  </h3>
+                  <span className="inline-flex items-center rounded-full bg-gray-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-gray-400 ring-1 ring-gray-500/25">
+                    Inactive
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-gray-400">
+                  Your account is currently inactive. Please verify your email
+                  or contact support to reactivate it.
+                </p>
+              </div>
+            </div>
+
+            {/* Contact */}
+            <div className="mt-6 flex items-start gap-3 rounded-xl border border-white/5 bg-white/5 px-4 py-3.5">
+              <Mail className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+              <p className="text-sm text-gray-400">
+                Need help?{' '}
+                <Link
+                  href={contactHref}
                   className="inline-flex items-center gap-0.5 font-medium text-white underline decoration-white/30 underline-offset-2 hover:decoration-white/70"
                 >
                   Contact support
                   <ChevronRight className="h-3.5 w-3.5" />
-                </a>
+                </Link>
               </p>
             </div>
           </div>

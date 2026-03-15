@@ -3,7 +3,13 @@
  * @module AchievementsPage
  */
 
-import { getPublicAchievements, getAboutData } from '@/app/_lib/public-actions';
+import {
+  getPublicAchievements,
+  getPublicParticipations,
+  getAboutData,
+  getAllPublicSettings,
+  getPublicJourney,
+} from '@/app/_lib/public-actions';
 import AchievementsClient from './AchievementsClient';
 import { buildMetadata } from '@/app/_lib/seo';
 import {
@@ -21,36 +27,22 @@ export const metadata = buildMetadata({
     'awards',
     'ICPC results',
     'programming contest winners',
-    'hall of fame',
     'milestones',
   ],
 });
 
 export default async function Page() {
-  const [achievements, aboutData] = await Promise.all([
-    getPublicAchievements(),
-    getAboutData(),
-  ]);
+  const [achievements, participations, aboutData, settings, journey] =
+    await Promise.all([
+      getPublicAchievements(),
+      getPublicParticipations(),
+      getAboutData(),
+      getAllPublicSettings(),
+      getPublicJourney(),
+    ]);
 
   // Stats come from about_stats setting (shared with about page)
   const stats = aboutData.stats || [];
-
-  // Extract hall of fame from featured achievements
-  const hallOfFame = achievements
-    .filter((a) => a.is_featured || a.featured)
-    .slice(0, 4)
-    .map((a) => ({
-      name: a.participants || a.title,
-      title: a.title,
-      rating: a.position || '',
-      year: a.date ? new Date(a.date).getFullYear().toString() : '',
-      avatar: (a.participants || a.title || '')
-        .split(' ')
-        .map((w) => w[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2),
-    }));
 
   return (
     <>
@@ -64,8 +56,10 @@ export default async function Page() {
       />
       <AchievementsClient
         achievements={achievements}
-        hallOfFame={hallOfFame}
+        participations={participations}
+        timeline={journey}
         stats={stats}
+        settings={settings}
       />
     </>
   );

@@ -1,8 +1,17 @@
 /**
- * @file Blog configuration constants — category options, status labels,
- *   and colour mappings used across admin blog components.
+ * @file Blog configuration constants — admin UI (status, sort, date helpers, slug).
+ * Category config is sourced from the shared library so admin and public UIs stay in sync.
  * @module adminBlogConfig
  */
+
+// ─── Category config (shared) ─────────────────────────────────────────────────
+// Re-exported so all admin components keep a single import path.
+export {
+  CATEGORY_CONFIG,
+  CATEGORY_KEYS as CATEGORIES,
+  getCategoryConfig,
+  getCategoryLabel,
+} from '@/app/_lib/blog-config';
 
 // ─── Status config ────────────────────────────────────────────────────────────
 
@@ -35,63 +44,10 @@ export const STATUS_CONFIG = {
 
 export const STATUSES = ['draft', 'published', 'archived'];
 
-// ─── Category config ──────────────────────────────────────────────────────────
-
-export const CATEGORY_CONFIG = {
-  CP: {
-    label: 'Competitive Programming',
-    short: 'CP',
-    color: 'bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30',
-    emoji: '🏆',
-  },
-  WebDev: {
-    label: 'Web Dev',
-    short: 'WebDev',
-    color: 'bg-blue-500/20 text-blue-300 ring-1 ring-blue-500/30',
-    emoji: '🌐',
-  },
-  'AI-ML': {
-    label: 'AI / ML',
-    short: 'AI-ML',
-    color: 'bg-pink-500/20 text-pink-300 ring-1 ring-pink-500/30',
-    emoji: '🤖',
-  },
-  Career: {
-    label: 'Career',
-    short: 'Career',
-    color: 'bg-teal-500/20 text-teal-300 ring-1 ring-teal-500/30',
-    emoji: '💼',
-  },
-  News: {
-    label: 'News',
-    short: 'News',
-    color: 'bg-sky-500/20 text-sky-300 ring-1 ring-sky-500/30',
-    emoji: '📰',
-  },
-  Tutorial: {
-    label: 'Tutorial',
-    short: 'Tutorial',
-    color: 'bg-orange-500/20 text-orange-300 ring-1 ring-orange-500/30',
-    emoji: '📚',
-  },
-  Other: {
-    label: 'Other',
-    short: 'Other',
-    color: 'bg-gray-500/20 text-gray-300 ring-1 ring-gray-500/30',
-    emoji: '📄',
-  },
-};
-
-export const CATEGORIES = Object.keys(CATEGORY_CONFIG);
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export function getStatusConfig(status) {
   return STATUS_CONFIG[status] ?? STATUS_CONFIG.draft;
-}
-
-export function getCategoryConfig(category) {
-  return CATEGORY_CONFIG[category] ?? CATEGORY_CONFIG.Other;
 }
 
 export function formatBlogDate(dateStr) {

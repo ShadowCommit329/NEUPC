@@ -35,7 +35,9 @@ import {
   UserCog,
   Wifi,
   AlertCircle,
+  ChevronRight,
 } from 'lucide-react';
+import Link from 'next/link';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -322,7 +324,9 @@ function SessionRow({ user, index }) {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-white/6 bg-white/2 px-4 py-3 transition-colors hover:bg-white/4">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-xs font-bold text-blue-300">
-        {user.avatar_url?.startsWith('http') ? (
+        {user.avatar_url &&
+        (user.avatar_url.startsWith('http') ||
+          user.avatar_url.startsWith('/api/image/')) ? (
           <img
             src={user.avatar_url}
             alt=""
@@ -523,36 +527,53 @@ export default function SecurityClient({ data }) {
   return (
     <>
       {/* ── Page Header ────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">
-            Security
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Monitor platform security and audit trail
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div
-            className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold ${
-              systemStatus === 'secure'
-                ? 'border-green-500/25 bg-green-500/10 text-green-300'
-                : 'border-yellow-500/25 bg-yellow-500/10 text-yellow-300'
-            }`}
-          >
-            {systemStatus === 'secure' ? (
-              <ShieldCheck className="h-4 w-4" />
-            ) : (
-              <ShieldAlert className="h-4 w-4" />
-            )}
-            {systemStatus === 'secure' ? 'System Secure' : 'Needs Attention'}
+      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
+        <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-green-500/10 blur-3xl" />
+        <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-emerald-500/8 blur-3xl" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <nav className="mb-3 flex items-center gap-1.5 text-[11px] text-gray-500">
+              <Link
+                href="/account/admin"
+                className="transition-colors hover:text-gray-300"
+              >
+                Dashboard
+              </Link>
+              <ChevronRight className="h-3 w-3 text-gray-700" />
+              <span className="font-medium text-gray-400">Security</span>
+            </nav>
+            <h1 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white sm:text-2xl">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/15 ring-1 ring-green-500/25">
+                <ShieldCheck className="h-5 w-5 text-green-400" />
+              </div>
+              Security
+            </h1>
+            <p className="mt-2 text-sm text-gray-500">
+              Monitor platform security and audit trail
+            </p>
           </div>
-          {generatedAt && (
-            <div className="flex items-center gap-1.5 rounded-xl border border-white/8 bg-white/3 px-3 py-2 text-[11px] text-gray-600">
-              <RefreshCw className="h-3 w-3" />
-              {timeAgo(generatedAt)}
+          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+            <Link
+              href="/account/admin"
+              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+            >
+              ← Dashboard
+            </Link>
+            <div
+              className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-semibold ${
+                systemStatus === 'secure'
+                  ? 'border-green-500/25 bg-green-500/10 text-green-300'
+                  : 'border-yellow-500/25 bg-yellow-500/10 text-yellow-300'
+              }`}
+            >
+              {systemStatus === 'secure' ? (
+                <ShieldCheck className="h-4 w-4" />
+              ) : (
+                <ShieldAlert className="h-4 w-4" />
+              )}
+              {systemStatus === 'secure' ? 'System Secure' : 'Needs Attention'}
             </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -811,7 +832,7 @@ export default function SecurityClient({ data }) {
           )}
           <div className="mt-4 border-t border-white/6 pt-3 text-[11px] text-gray-600">
             Sessions are determined by{' '}
-            <code className="text-gray-500">is_active = true</code> in the users
+            <code className="text-gray-500">is_online = true</code> in the users
             table, updated on login/logout.
           </div>
         </div>

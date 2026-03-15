@@ -44,6 +44,7 @@ import {
   uploadBlogImageAction,
 } from '@/app/_lib/blog-actions';
 import RichTextEditor from '@/app/_components/ui/RichTextEditor';
+import { useScrollLock } from '@/app/_lib/hooks';
 
 // ─── Segmented select ─────────────────────────────────────────────────────────
 
@@ -100,6 +101,7 @@ export default function BlogFormModal({
   onSaved,
 }) {
   const isEdit = mode === 'edit' && post;
+  useScrollLock();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);

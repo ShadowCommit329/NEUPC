@@ -39,7 +39,7 @@ import {
 } from 'lucide-react';
 
 export function getSidebarNavigation(activeRole, stats, session) {
-  const baseRole = activeRole || 'guest';
+  const baseRole = activeRole || null;
 
   const configs = {
     guest: [
@@ -72,12 +72,6 @@ export function getSidebarNavigation(activeRole, stats, session) {
         href: '/account/guest/notifications',
         badge: stats.notifications,
         badgeType: 'alert',
-      },
-      {
-        id: 'membership',
-        label: 'Apply Membership',
-        icon: UserPlus,
-        href: '/account/guest/membership-application',
       },
       {
         id: 'profile',
@@ -281,6 +275,24 @@ export function getSidebarNavigation(activeRole, stats, session) {
         condition: ({ activeRole }) => activeRole === 'admin',
       },
       {
+        id: 'committee',
+        label: 'Committee Management',
+        icon: Briefcase,
+        href: '/account/admin/committee',
+      },
+      {
+        id: 'applications',
+        label: 'Applications',
+        icon: FileText,
+        href: '/account/admin/applications',
+      },
+      {
+        id: 'notices',
+        label: 'Notices',
+        icon: Megaphone,
+        href: '/account/admin/notices',
+      },
+      {
         id: 'events',
         label: 'Events',
         icon: Calendar,
@@ -291,6 +303,19 @@ export function getSidebarNavigation(activeRole, stats, session) {
         label: 'Blogs',
         icon: PenTool,
         href: '/account/admin/blogs',
+      },
+      {
+        id: 'roadmaps',
+        label: 'Roadmaps',
+        icon: MapPin,
+        href: '/account/admin/roadmaps',
+      },
+      {
+        id: 'bootcamps',
+        label: 'Bootcamps',
+        icon: BookOpen,
+        href: '/account/admin/bootcamps',
+        badge: 'Soon',
       },
       {
         id: 'resources',
@@ -311,22 +336,10 @@ export function getSidebarNavigation(activeRole, stats, session) {
         href: '/account/admin/achievements',
       },
       {
-        id: 'notices',
-        label: 'Notices',
-        icon: Megaphone,
-        href: '/account/admin/notices',
-      },
-      {
         id: 'contact',
         label: 'Contact Submissions',
         icon: Mail,
         href: '/account/admin/contact-submissions',
-      },
-      {
-        id: 'applications',
-        label: 'Applications',
-        icon: FileText,
-        href: '/account/admin/applications',
       },
       {
         id: 'analytics',

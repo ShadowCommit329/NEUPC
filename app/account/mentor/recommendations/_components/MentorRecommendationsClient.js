@@ -146,7 +146,7 @@ export default function MentorRecommendationsClient({
                         {mentee?.full_name}
                       </h3>
                       <p className="text-xs text-gray-400">
-                        {profile?.batch ? `Batch ${profile.batch}` : ''}
+                        {profile?.session ? `Session ${profile.session}` : ''}
                         {profile?.department ? ` · ${profile.department}` : ''}
                       </p>
                     </div>

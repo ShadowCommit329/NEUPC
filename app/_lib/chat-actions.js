@@ -96,9 +96,9 @@ async function requireChatUser() {
     return { error: 'Account not active' };
 
   const roles = await getUserRoles(session.user.email);
-  const role = roles[0] || 'guest';
+  const role = roles[0] || null;
 
-  if (role === 'guest') return { error: 'Guests cannot access chat.' };
+  if (!role) return { error: 'Users must have a role to access chat.' };
 
   return { user, role };
 }
@@ -287,7 +287,7 @@ export async function getConversationsAction() {
         if (otherUserData) {
           otherUser = {
             ...otherUserData,
-            role: userRoleData?.[0]?.roles?.name || 'guest',
+            role: userRoleData?.[0]?.roles?.name || null,
           };
         }
       }
@@ -369,7 +369,7 @@ export async function createDirectConversationAction(targetUserId) {
     .eq('user_id', targetUserId)
     .limit(1);
 
-  const targetRole = targetRoleData?.[0]?.roles?.name || 'guest';
+  const targetRole = targetRoleData?.[0]?.roles?.name || null;
 
   // Permission check
   if (!canChat(role, targetRole))
@@ -1108,7 +1108,7 @@ export async function getChatableUsersAction(search = '') {
   const userIdToRole = {};
   userRoles.forEach((ur) => {
     if (!userIdToRole[ur.user_id]) {
-      userIdToRole[ur.user_id] = roleIdToName[ur.role_id] || 'guest';
+      userIdToRole[ur.user_id] = roleIdToName[ur.role_id] || null;
     }
   });
 
@@ -1117,7 +1117,7 @@ export async function getChatableUsersAction(search = '') {
     full_name: u.full_name,
     avatar_url: u.avatar_url,
     email: u.email,
-    role: userIdToRole[u.id] || 'guest',
+    role: userIdToRole[u.id] || null,
   }));
 
   return { users: result };

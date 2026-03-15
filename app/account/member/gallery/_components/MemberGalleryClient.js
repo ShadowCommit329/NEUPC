@@ -7,6 +7,7 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
+import { useScrollLock } from '@/app/_lib/hooks';
 import {
   Images,
   Video,
@@ -42,6 +43,7 @@ function fmtYear(str) {
 // ─── Lightbox ─────────────────────────────────────────────────────────────────
 
 function Lightbox({ items, index, onClose, onPrev, onNext }) {
+  useScrollLock();
   const item = items[index];
   if (!item) return null;
 

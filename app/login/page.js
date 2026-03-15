@@ -8,6 +8,7 @@
 import { auth } from '@/app/_lib/auth';
 import { redirect } from 'next/navigation';
 import SignInButton from '@/app/_components/ui/SignInButton';
+import PageShell from '@/app/_components/ui/PageShell';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Code2 } from 'lucide-react';
@@ -33,7 +34,7 @@ async function LoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+    <PageShell className="flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
       {/* Background Image */}
       <Image
         src={bg_img}
@@ -195,7 +196,7 @@ async function LoginPage() {
         </div>
       </div>
       <ScrollToTop />
-    </main>
+    </PageShell>
   );
 }
 

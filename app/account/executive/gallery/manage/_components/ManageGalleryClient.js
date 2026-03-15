@@ -25,10 +25,12 @@ import {
   execUpdateGalleryItemAction,
   execDeleteGalleryItemAction,
 } from '@/app/_lib/executive-actions';
+import { useScrollLock } from '@/app/_lib/hooks';
 
 function AddItemModal({ events, onClose, onSuccess }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
+  useScrollLock();
   const [mode, setMode] = useState('single'); // 'single' | 'bulk'
 
   const handleSubmit = (e) => {
@@ -243,6 +245,7 @@ export default function ManageGalleryClient({ initialItems, events }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [lightbox, setLightbox] = useState(null);
+  useScrollLock(!!lightbox);
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState(null);
 

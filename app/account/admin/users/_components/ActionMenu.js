@@ -1,6 +1,6 @@
 /**
  * @file Action menu — dropdown menu for per-user actions (edit, suspend,
- *   ban, delete, change role) with contextual option visibility.
+ *   ban, change role) with contextual option visibility.
  * @module AdminActionMenu
  */
 
@@ -8,7 +8,15 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, ShieldOff, Ban, Lock, ShieldCheck } from 'lucide-react';
+import {
+  MoreVertical,
+  ShieldOff,
+  Ban,
+  Lock,
+  ShieldCheck,
+  MessageSquare,
+  Mail,
+} from 'lucide-react';
 
 export default function ActionMenu({ user, onAction }) {
   const [open, setOpen] = useState(false);
@@ -34,6 +42,23 @@ export default function ActionMenu({ user, onAction }) {
   }, [open]);
 
   const actions = [];
+
+  // Messages is always available for every user
+  actions.push({
+    key: 'messages',
+    label: 'Messages',
+    icon: MessageSquare,
+    color: 'text-sky-400',
+  });
+
+  if (user.email) {
+    actions.push({
+      key: 'email',
+      label: 'Send Email',
+      icon: Mail,
+      color: 'text-blue-400',
+    });
+  }
 
   if (
     user.status === 'Suspended' ||
@@ -81,9 +106,12 @@ export default function ActionMenu({ user, onAction }) {
 
   if (actions.length === 0) return null;
 
-  // Split safe vs destructive for visual grouping
+  // Split into three groups: utility, safe, destructive
+  const utilityActions = actions.filter((a) => a.key === 'messages' || a.key === 'email');
   const safeActions = actions.filter((a) => a.key === 'activate');
-  const destructiveActions = actions.filter((a) => a.key !== 'activate');
+  const destructiveActions = actions.filter(
+    (a) => a.key !== 'activate' && a.key !== 'messages' && a.key !== 'email'
+  );
 
   return (
     <div className="relative">
@@ -107,6 +135,27 @@ export default function ActionMenu({ user, onAction }) {
               style={dropdownStyle}
               className="overflow-hidden rounded-xl border border-white/10 bg-gray-950 shadow-2xl ring-1 ring-black/20"
             >
+              {utilityActions.length > 0 && (
+                <div className="p-1">
+                  {utilityActions.map((a) => (
+                    <button
+                      key={a.key}
+                      onClick={() => {
+                        setOpen(false);
+                        onAction(a.key, user);
+                      }}
+                      className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/6 ${a.color}`}
+                    >
+                      <a.icon className="h-4 w-4 shrink-0" />
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {utilityActions.length > 0 &&
+                (safeActions.length > 0 || destructiveActions.length > 0) && (
+                  <div className="mx-1 border-t border-white/8" />
+                )}
               {safeActions.length > 0 && (
                 <div className="p-1">
                   {safeActions.map((a) => (

@@ -19,12 +19,20 @@ import {
   Loader2,
   RefreshCw,
   ChevronDown,
+  ChevronUp,
   User,
   Filter,
   SquareCheck,
   Square,
   X,
+  ChevronRight,
+  Phone,
+  MapPin,
+  Globe,
+  ExternalLink,
+  HelpCircle,
 } from 'lucide-react';
+import Link from 'next/link';
 import SubmissionDetailModal from './SubmissionDetailModal';
 import { getStatusConfig, ALL_STATUSES } from './contactConfig';
 import {
@@ -404,9 +412,171 @@ function EmptyState({ tab }) {
   );
 }
 
+// ─── Contact Page Live Info Panel ────────────────────────────────────────────
+
+function ContactInfoPanel({ contactInfo, socialLinks, faqs }) {
+  const [open, setOpen] = useState(true);
+
+  const hasSocials = socialLinks && Object.values(socialLinks).some(Boolean);
+
+  const SOCIAL_LABELS = {
+    facebook: 'FB',
+    linkedin: 'LI',
+    github: 'GH',
+    youtube: 'YT',
+    twitter: 'X',
+  };
+
+  return (
+    <div className="rounded-2xl border border-white/8 bg-white/3 backdrop-blur-sm">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-5 py-3.5 text-left"
+      >
+        <span className="flex items-center gap-2 text-xs font-semibold text-gray-400">
+          <Globe className="h-3.5 w-3.5 text-blue-400" />
+          Contact Page Live Info
+          <span className="rounded-full border border-blue-500/25 bg-blue-500/10 px-2 py-0.5 text-[10px] font-medium text-blue-300">
+            Public
+          </span>
+        </span>
+        <div className="flex items-center gap-3">
+          <a
+            href="/contact"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1 text-[10px] text-gray-500 transition-colors hover:text-gray-300"
+          >
+            View page <ExternalLink className="h-3 w-3" />
+          </a>
+          {open ? (
+            <ChevronUp className="h-4 w-4 text-gray-500" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-gray-500" />
+          )}
+        </div>
+      </button>
+
+      {open && (
+        <div className="border-t border-white/8 px-5 py-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {contactInfo?.email && (
+              <div className="flex items-start gap-2.5 rounded-xl border border-white/6 bg-white/3 px-3.5 py-3">
+                <Mail className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-400" />
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold tracking-wider text-gray-600 uppercase">
+                    Email
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-gray-300">
+                    {contactInfo.email}
+                  </p>
+                </div>
+              </div>
+            )}
+            {contactInfo?.phone && (
+              <div className="flex items-start gap-2.5 rounded-xl border border-white/6 bg-white/3 px-3.5 py-3">
+                <Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-400" />
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold tracking-wider text-gray-600 uppercase">
+                    Phone
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-gray-300">
+                    {contactInfo.phone}
+                  </p>
+                </div>
+              </div>
+            )}
+            {contactInfo?.officeHours && (
+              <div className="flex items-start gap-2.5 rounded-xl border border-white/6 bg-white/3 px-3.5 py-3">
+                <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold tracking-wider text-gray-600 uppercase">
+                    Hours
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-gray-300">
+                    {contactInfo.officeHours}
+                  </p>
+                </div>
+              </div>
+            )}
+            {contactInfo?.address && (
+              <div className="flex items-start gap-2.5 rounded-xl border border-white/6 bg-white/3 px-3.5 py-3">
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-400" />
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold tracking-wider text-gray-600 uppercase">
+                    Address
+                  </p>
+                  <p className="mt-0.5 line-clamp-2 text-xs text-gray-300">
+                    {contactInfo.address}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {(hasSocials || (faqs && faqs.length > 0)) && (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              {hasSocials && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-semibold tracking-wider text-gray-600 uppercase">
+                    Social:
+                  </span>
+                  <div className="flex gap-1.5">
+                    {Object.entries(socialLinks).map(([key, url]) =>
+                      url ? (
+                        <a
+                          key={key}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-medium text-gray-400 transition-colors hover:border-white/20 hover:text-gray-200"
+                        >
+                          {SOCIAL_LABELS[key] ?? key}
+                        </a>
+                      ) : null
+                    )}
+                  </div>
+                </div>
+              )}
+              {faqs && faqs.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <HelpCircle className="h-3 w-3 text-gray-600" />
+                  <span className="text-[11px] text-gray-500">
+                    {faqs.length} FAQ{faqs.length !== 1 ? 's' : ''} published
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!contactInfo?.email &&
+            !contactInfo?.phone &&
+            !contactInfo?.address && (
+              <p className="text-xs text-gray-600">
+                No contact info configured yet.{' '}
+                <a
+                  href="/account/admin/settings"
+                  className="text-blue-400 underline hover:text-blue-300"
+                >
+                  Configure in Settings
+                </a>
+              </p>
+            )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Client Component ────────────────────────────────────────────────────
 
-export default function ContactSubmissionsClient({ initialSubmissions }) {
+export default function ContactSubmissionsClient({
+  initialSubmissions,
+  contactInfo,
+  socialLinks,
+  faqs,
+}) {
   const [submissions, setSubmissions] = useState(initialSubmissions ?? []);
   const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
@@ -566,26 +736,58 @@ export default function ContactSubmissionsClient({ initialSubmissions }) {
   return (
     <>
       {/* ─── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">
-            Contact Submissions
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Manage and respond to contact form submissions
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {stats.new > 0 && (
-            <div className="flex items-center gap-2 rounded-xl border border-purple-500/25 bg-purple-500/10 px-3 py-2">
-              <div className="h-2 w-2 animate-pulse rounded-full bg-purple-400" />
-              <span className="text-xs font-semibold text-purple-300">
-                {stats.new} new
+      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-white/5 p-6 sm:p-8">
+        <div className="absolute -top-20 -right-20 h-56 w-56 rounded-full bg-purple-500/10 blur-3xl" />
+        <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-violet-500/8 blur-3xl" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <nav className="mb-3 flex items-center gap-1.5 text-[11px] text-gray-500">
+              <Link
+                href="/account/admin"
+                className="transition-colors hover:text-gray-300"
+              >
+                Dashboard
+              </Link>
+              <ChevronRight className="h-3 w-3 text-gray-700" />
+              <span className="font-medium text-gray-400">
+                Contact Submissions
               </span>
-            </div>
-          )}
+            </nav>
+            <h1 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white sm:text-2xl">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/15 ring-1 ring-purple-500/25">
+                <Mail className="h-5 w-5 text-purple-400" />
+              </div>
+              Contact Submissions
+            </h1>
+            <p className="mt-2 text-sm text-gray-500">
+              Manage and respond to contact form submissions
+              {stats.new > 0 && (
+                <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-purple-500/25 bg-purple-500/10 px-2 py-0.5 text-[10px] font-semibold text-purple-300">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-400" />
+                  {stats.new} new
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="self-start sm:self-auto">
+            <Link
+              href="/account/admin"
+              className="rounded-xl border border-white/8 bg-white/5 px-4 py-2.5 text-xs font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
+            >
+              ← Dashboard
+            </Link>
+          </div>
         </div>
       </div>
+
+      {/* ─── Contact Page Live Info ─────────────────────────────────────────── */}
+      {(contactInfo || socialLinks || (faqs && faqs.length > 0)) && (
+        <ContactInfoPanel
+          contactInfo={contactInfo}
+          socialLinks={socialLinks}
+          faqs={faqs}
+        />
+      )}
 
       {/* ─── Flash message ──────────────────────────────────────────────────── */}
       {flashMsg && (

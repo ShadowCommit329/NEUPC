@@ -3,7 +3,10 @@
  * @module BlogsPage
  */
 
-import { getPublicBlogs } from '@/app/_lib/public-actions';
+import {
+  getPublicBlogs,
+  getAllPublicSettings,
+} from '@/app/_lib/public-actions';
 import BlogsClient from './BlogsClient';
 import { buildMetadata } from '@/app/_lib/seo';
 import {
@@ -27,7 +30,10 @@ export const metadata = buildMetadata({
 });
 
 export default async function BlogsPage() {
-  const blogs = await getPublicBlogs();
+  const [blogs, settings] = await Promise.all([
+    getPublicBlogs(),
+    getAllPublicSettings(),
+  ]);
 
   return (
     <>
@@ -39,7 +45,7 @@ export default async function BlogsPage() {
       <BreadcrumbJsonLd
         items={[{ name: 'Home', url: '/' }, { name: 'Blogs' }]}
       />
-      <BlogsClient initialBlogs={blogs} />
+      <BlogsClient initialBlogs={blogs} settings={settings} />
     </>
   );
 }

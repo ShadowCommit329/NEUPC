@@ -26,23 +26,36 @@ export default async function AccountLayout({ children }) {
     redirect('/login');
   }
 
-  const userRoles = await getCachedUserRoles(session.user.email);
-  const dbUser = await getUserByEmail(session.user.email);
+  const [userRoles, dbUser] = await Promise.all([
+    getCachedUserRoles(session.user.email).catch(() => []),
+    getUserByEmail(session.user.email).catch(() => null),
+  ]);
 
   // Serialize only the fields the client needs
+  // Prefer the DB-stored avatar (Google Drive proxy URL) over the Google session image
   const userData = {
     name: session.user?.name || '',
     email: session.user?.email || '',
-    image: session.user?.image || '',
-    role: session.user?.role || 'guest',
+    avatar_url: dbUser?.avatar_url || session.user?.avatar_url || '',
+    image:
+      dbUser?.avatar_url ||
+      session.user?.avatar_url ||
+      session.user?.image ||
+      '',
+    role: userRoles[0] || null, // primary role from DB (or null if unassigned)
+    roles: userRoles, // full roles array from DB
   };
 
-  const isGuest = userData.role === 'guest';
+  // Derive the initial active role from the DB array (first = highest-priority role)
+  const initialRole = userRoles[0] || null;
+
+  const hasNoRoles = !userRoles.length;
+  const isGuest = hasNoRoles; // true only if NO roles assigned
   const isActive = dbUser?.account_status === 'active';
   const showChat = !isGuest && isActive;
 
   return (
-    <RoleProvider userRoles={userRoles}>
+    <RoleProvider userRoles={userRoles} initialRole={initialRole}>
       <AccountLayoutClient session={userData} userRoles={userRoles}>
         {children}
       </AccountLayoutClient>

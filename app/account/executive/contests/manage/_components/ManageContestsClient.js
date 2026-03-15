@@ -23,6 +23,7 @@ import {
   execUpdateContestAction,
   execDeleteContestAction,
 } from '@/app/_lib/executive-actions';
+import { useScrollLock } from '@/app/_lib/hooks';
 
 const STATUS_CONFIG = {
   upcoming: {
@@ -53,6 +54,7 @@ function ContestModal({ contest, onClose, onSuccess }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const isEdit = !!contest?.id;
+  useScrollLock();
 
   const fmt = (d) => (d ? new Date(d).toISOString().slice(0, 16) : '');
 
@@ -259,6 +261,7 @@ export default function ManageContestsClient({ initialContests }) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [modal, setModal] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  useScrollLock(!!deleteId);
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState(null);
 

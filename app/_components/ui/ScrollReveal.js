@@ -50,7 +50,7 @@ export default function ScrollReveal({
     <Component
       ref={ref}
       className={cn(
-        'transition-all ease-out will-change-[transform,opacity]',
+        'transition-all ease-out',
         isVisible ? VISIBLE : HIDDEN[animation],
         className
       )}

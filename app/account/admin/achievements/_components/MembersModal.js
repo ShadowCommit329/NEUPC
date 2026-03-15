@@ -12,11 +12,13 @@ import {
   addAchievementMemberAction,
   removeAchievementMemberAction,
 } from '@/app/_lib/achievement-actions';
+import { useScrollLock } from '@/app/_lib/hooks';
 
 const POSITIONS = ['Team Lead', 'Member', 'Coach', 'Mentor', 'Co-Lead'];
 
 export default function MembersModal({ achievement, users = [], onClose }) {
   const [members, setMembers] = useState(achievement.member_achievements ?? []);
+  useScrollLock();
   const [selectedUserId, setSelectedUserId] = useState('');
   const [position, setPosition] = useState('');
   const [addError, setAddError] = useState('');
@@ -84,8 +86,8 @@ export default function MembersModal({ achievement, users = [], onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex flex-col bg-black/60 p-2 backdrop-blur-sm sm:p-3">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl">
         {/* ── Header ──────────────────────────────────────────────────────── */}
         <div className="flex shrink-0 items-center justify-between border-b border-slate-700/50 px-6 py-4">
           <div>

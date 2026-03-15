@@ -4,24 +4,17 @@
  */
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
-import { createUser, getUserRoles } from '@/app/_lib/data-service';
+import { requireApiAuth, isAuthError } from '@/app/_lib/api-guard';
+import { createAdminUser } from '@/app/_lib/data-service';
+import { revalidatePath } from 'next/cache';
 
 export async function POST(request) {
   try {
-    const session = await auth();
+    const authResult = await requireApiAuth('admin');
+    if (isAuthError(authResult)) return authResult;
 
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
-
-    const userRoles = await getUserRoles(session.user.email);
-    if (!userRoles.includes('admin')) {
-      return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
-    }
-
-    const adminId = session.user.id;
-    const { fullName, email, role } = await request.json();
+    const adminId = authResult.user.id;
+    const { fullName, email, role, profileData } = await request.json();
 
     if (!fullName || !email || !role) {
       return NextResponse.json(
@@ -30,16 +23,20 @@ export async function POST(request) {
       );
     }
 
-    const { success, userId, error } = await createUser(
+    const { success, userId, error } = await createAdminUser(
       fullName,
       email,
       role,
-      adminId
+      adminId,
+      profileData || {}
     );
 
     if (!success) {
       return NextResponse.json({ error }, { status: 400 });
     }
+
+    revalidatePath('/account/admin/users');
+    revalidatePath('/account/admin/roles');
 
     return NextResponse.json({
       success: true,
@@ -49,7 +46,7 @@ export async function POST(request) {
   } catch (error) {
     console.error(`API Error [${new Date().toISOString()}]:`, error);
     return NextResponse.json(
-      { error: 'An internal server error occurred' },
+      { error: error.message || 'An internal server error occurred' },
       { status: 500 }
     );
   }

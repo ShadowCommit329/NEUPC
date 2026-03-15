@@ -9,81 +9,83 @@ import { cn } from '@/app/_lib/utils';
 import { useScrollReveal } from '@/app/_lib/hooks';
 
 /**
- * SectionHeader — Reusable section header with badge, title, gradient divider,
- * and optional subtitle. Uses scroll-triggered entrance animation.
+ * SectionHeader — Eyebrow flanking-lines style header used across all public
+ * section interfaces.
  *
- * @param {string}  badge     – Badge text (e.g. "Upcoming Events")
- * @param {string}  badgeIcon – Emoji icon for the badge (e.g. "🎯")
- * @param {string}  title     – Main heading text
- * @param {string}  [subtitle] – Optional subtitle/description
- * @param {string}  [badgeClassName] – Custom badge styling
- * @param {string}  [titleClassName] – Custom title styling
- * @param {string}  [dividerClassName] – Custom divider gradient
- * @param {string}  [className] – Additional wrapper classes
+ * @param {string}  badge          – ALL-CAPS eyebrow label (e.g. "Upcoming Events")
+ * @param {string}  [badgeIcon]    – Kept for API compat; not rendered in eyebrow
+ * @param {string}  title          – Main heading text
+ * @param {string}  [subtitle]     – Optional paragraph below the title
+ * @param {string}  [lineClassName]  – Tailwind `to-*` colour for the eyebrow lines
+ *                                    (defaults to `to-white/20`)
+ * @param {string}  [titleClassName] – Override gradient classes on the h2
+ * @param {string}  [className]    – Additional wrapper classes
  */
 export default function SectionHeader({
   badge,
-  badgeIcon,
+  badgeIcon, // eslint-disable-line no-unused-vars
   title,
   subtitle,
-  badgeClassName,
+  lineClassName,
   titleClassName,
-  dividerClassName,
+  // legacy props — silently ignored so old callers don't break
+  badgeClassName, // eslint-disable-line no-unused-vars
+  dividerClassName, // eslint-disable-line no-unused-vars
   className,
 }) {
-  const [ref, isVisible] = useScrollReveal({ threshold: 0.2 });
+  const [ref, isVisible] = useScrollReveal({ threshold: 0.05 });
 
   return (
     <div
       ref={ref}
-      className={cn('mb-12 text-center md:mb-16 lg:mb-20', className)}
+      className={cn('mb-10 text-center sm:mb-12 md:mb-16 lg:mb-20', className)}
     >
-      {/* Badge */}
+      {/* Eyebrow — flanking hairlines + tracking label */}
       {badge && (
         <div
           className={cn(
-            'mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-6 py-2.5 text-sm font-medium shadow-lg backdrop-blur-md transition-all duration-700 hover:bg-white/15 hover:shadow-xl md:mb-6',
-            isVisible
-              ? 'translate-y-0 opacity-100'
-              : '-translate-y-4 opacity-0',
-            badgeClassName
+            'mb-5 flex items-center justify-center gap-4 transition-all duration-700',
+            isVisible ? 'translate-y-0 opacity-100' : '-translate-y-3 opacity-0'
           )}
         >
-          {badgeIcon && <span className="text-2xl">{badgeIcon}</span>}
-          <span className="text-primary-300">{badge}</span>
+          <div
+            className={cn(
+              'h-px w-16 bg-linear-to-r from-transparent',
+              lineClassName ?? 'to-white/20'
+            )}
+          />
+          <span className="text-[11px] font-bold tracking-[0.35em] text-gray-500 uppercase">
+            {badge}
+          </span>
+          <div
+            className={cn(
+              'h-px w-16 bg-linear-to-l from-transparent',
+              lineClassName ?? 'to-white/20'
+            )}
+          />
         </div>
       )}
 
       {/* Title */}
       <h2
         className={cn(
-          'mb-4 text-3xl font-bold text-white transition-all duration-700 sm:text-4xl md:mb-6 md:text-5xl lg:text-6xl',
+          'mb-4 bg-linear-to-r bg-clip-text text-4xl font-bold text-transparent transition-all duration-700 md:text-5xl',
           isVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0',
-          titleClassName
+          titleClassName ?? 'from-white via-gray-100 to-gray-300'
         )}
-        style={{ transitionDelay: isVisible ? '150ms' : '0ms' }}
+        style={{ transitionDelay: isVisible ? '120ms' : '0ms' }}
       >
         {title}
       </h2>
-
-      {/* Gradient Divider */}
-      <div
-        className={cn(
-          'from-primary-500 via-secondary-300 to-primary-500 shadow-glow mx-auto h-1.5 rounded-full bg-linear-to-r transition-all duration-700 md:w-40',
-          isVisible ? 'w-32 opacity-100' : 'w-0 opacity-0',
-          dividerClassName
-        )}
-        style={{ transitionDelay: isVisible ? '300ms' : '0ms' }}
-      />
 
       {/* Subtitle */}
       {subtitle && (
         <p
           className={cn(
-            'mx-auto mt-6 max-w-2xl text-base text-gray-300 transition-all duration-700 md:text-lg lg:text-xl',
+            'mx-auto max-w-xl text-sm leading-relaxed text-gray-500 transition-all duration-700 sm:text-base',
             isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
           )}
-          style={{ transitionDelay: isVisible ? '400ms' : '0ms' }}
+          style={{ transitionDelay: isVisible ? '220ms' : '0ms' }}
         >
           {subtitle}
         </p>

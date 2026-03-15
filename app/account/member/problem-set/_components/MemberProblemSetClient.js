@@ -37,6 +37,7 @@ import {
   Star,
 } from 'lucide-react';
 import { submitTaskAction } from '@/app/_lib/member-tasks-actions';
+import { useScrollLock } from '@/app/_lib/hooks';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -165,6 +166,7 @@ function Flash({ msg, onClose }) {
 // ─── Submit Modal ─────────────────────────────────────────────────────────────
 
 function SubmitModal({ task, existing, userId, onClose, onDone }) {
+  useScrollLock();
   const [pending, start] = useTransition();
   const [url, setUrl] = useState(existing?.submission_url ?? '');
   const [code, setCode] = useState(existing?.code ?? '');

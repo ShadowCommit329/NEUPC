@@ -27,7 +27,7 @@ export default async function MembersPage() {
       .from('users')
       .select(
         `id, email, full_name, avatar_url, account_status, created_at,
-        member_profiles(student_id, batch, department, github, codeforces_handle)`
+        member_profiles(student_id, academic_session, department, github, codeforces_handle)`
       )
       .in('account_status', ['active', 'pending'])
       .order('created_at', { ascending: false })

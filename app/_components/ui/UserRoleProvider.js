@@ -7,33 +7,35 @@
 
 import { createContext, useContext } from 'react';
 
-const UserRoleContext = createContext(null);
+const UserRoleContext = createContext({ role: null, isLoggedIn: false });
 
 /**
  * Provides user role info to all client components.
  * Wrap in root layout with the session's user role.
  *
- * @param {string|null} role – User role from session (null if not logged in)
+ * @param {string|null} role – User role from session (null if not logged in or no role)
+ * @param {boolean} isLoggedIn - Whether the user is currently authenticated
  */
-export function UserRoleProvider({ role = null, children }) {
+export function UserRoleProvider({ role = null, isLoggedIn = false, children }) {
   return (
-    <UserRoleContext.Provider value={role}>{children}</UserRoleContext.Provider>
+    <UserRoleContext.Provider value={{ role, isLoggedIn }}>{children}</UserRoleContext.Provider>
   );
 }
 
 /**
  * Returns the current user's role, or null if not logged in.
- * Roles: 'guest' | 'member' | 'admin' | 'executive' | 'advisor' | 'mentor'
+ * Roles: 'member' | 'admin' | 'executive' | 'advisor' | 'mentor'
  */
 export function useUserRole() {
-  return useContext(UserRoleContext);
+  const { role } = useContext(UserRoleContext);
+  return role;
 }
 
 /**
- * Returns true if the user is a non-guest member (already joined).
- * When true, "Join" CTAs should be hidden.
+ * Returns true if the user is authenticated (logged in).
+ * When true, "Join" CTAs should be hidden throughout the application.
  */
 export function useIsMember() {
-  const role = useUserRole();
-  return role !== null && role !== 'guest';
+  const { isLoggedIn } = useContext(UserRoleContext);
+  return isLoggedIn;
 }

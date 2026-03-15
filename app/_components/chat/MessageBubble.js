@@ -37,6 +37,7 @@ import {
   File,
   ExternalLink,
 } from 'lucide-react';
+import { useScrollLock } from '@/app/_lib/hooks';
 
 /* ── Time formatter ────────────────────────────────────── */
 function formatTime(dateStr) {
@@ -120,6 +121,7 @@ export default function MessageBubble({ message, isOwn, showTail = false }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [imgExpanded, setImgExpanded] = useState(false);
+  useScrollLock(imgExpanded);
   const confirmTimerRef = useRef(null);
 
   // Local state to avoid direct prop mutation

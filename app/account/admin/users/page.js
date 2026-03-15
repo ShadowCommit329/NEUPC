@@ -14,53 +14,48 @@ import UserManagementClient from './_components/UserManagementClient';
 
 export const metadata = { title: 'Users | Admin | NEUPC' };
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-/** Format a join date as "MMM DD, YYYY". */
-function formatJoinDate(dateStr) {
-  if (!dateStr) return 'Unknown';
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
-/** Convert a last-active timestamp to a human-friendly relative string. */
-function formatLastActive(dateStr) {
-  if (!dateStr) return 'Never';
-  const diffMs = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diffMs / 60_000);
-  const hrs = Math.floor(diffMs / 3_600_000);
-  const days = Math.floor(diffMs / 86_400_000);
-
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins} min${mins > 1 ? 's' : ''} ago`;
-  if (hrs < 24) return `${hrs} hour${hrs > 1 ? 's' : ''} ago`;
-  if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
-  if (days < 30) {
-    const weeks = Math.floor(days / 7);
-    return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
-  }
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-}
+// Revalidate every 0 seconds (on-demand via revalidatePath from actions)
+export const revalidate = 0;
 
 // ── Page ────────────────────────────────────────────────────────────────────
 
-export default async function AdminUsersPage() {
+export default async function AdminUsersPage({ searchParams }) {
+  const params = await searchParams;
   const [users, stats] = await Promise.all([
     getAllUsers().catch(() => []),
     getUserStats().catch(() => ({})),
   ]);
 
-  const formattedUsers = users.map((user) => ({
-    ...user,
-    joined: formatJoinDate(user.joined),
-    lastActive: formatLastActive(user.lastActive),
-  }));
+  // Normalise URL params so the client can pre-apply filters.
+  // ?role=guest  → 'Guest'   ?status=active → 'Active'   ?search=foo → 'foo'
+  const rawRole = params?.role ?? '';
+  const rawStatus = params?.status ?? '';
+  const rawSearch = params?.search ?? '';
+  const VALID_ROLES = [
+    'guest',
+    'member',
+    'mentor',
+    'executive',
+    'advisor',
+    'admin',
+  ];
+  const VALID_STATUSES = [
+    'active',
+    'inactive',
+    'suspended',
+    'banned',
+    'blocked',
+    'locked',
+    'pending',
+    'rejected',
+  ];
+  const initialFilterRole = VALID_ROLES.includes(rawRole.toLowerCase())
+    ? rawRole.charAt(0).toUpperCase() + rawRole.slice(1).toLowerCase()
+    : 'All';
+  const initialFilterStatus = VALID_STATUSES.includes(rawStatus.toLowerCase())
+    ? rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase()
+    : 'All';
+  const initialSearch = rawSearch.slice(0, 100); // basic length guard
 
   return (
     <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
@@ -79,7 +74,13 @@ export default async function AdminUsersPage() {
           Add User
         </Link>
       </div>
-      <UserManagementClient initialUsers={formattedUsers} stats={stats} />
+      <UserManagementClient
+        initialUsers={users}
+        stats={stats}
+        initialFilterRole={initialFilterRole}
+        initialFilterStatus={initialFilterStatus}
+        initialSearch={initialSearch}
+      />
     </div>
   );
 }

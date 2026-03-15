@@ -1,6 +1,6 @@
 /**
- * @file Blog card — displays a single post’s thumbnail, title, author,
- *   status badge, view / like counts, and edit / delete actions.
+ * @file Blog card — displays a single post in the admin grid with a
+ *   VS Code / GitHub-inspired "code file" aesthetic.
  * @module AdminBlogCard
  */
 
@@ -49,6 +49,15 @@ export default function BlogCard({
 
   const sc = getStatusConfig(post.status);
   const cc = getCategoryConfig(post.category);
+
+  const filename =
+    (
+      post.slug ||
+      (post.title ?? 'untitled')
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+    ).slice(0, 36) + '.md';
 
   function showFlash(type) {
     setFlash(type);
@@ -104,15 +113,45 @@ export default function BlogCard({
 
   return (
     <div
-      className={`group relative flex flex-col overflow-hidden rounded-2xl border bg-gray-900 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-black/40 ${sc.cardBorder}`}
+      className={`group relative flex flex-col overflow-hidden rounded-xl border bg-[#0d1117] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/60 ${sc.cardBorder}`}
     >
-      {/* Flash overlay */}
+      {/* Flash ring */}
       {flash && (
-        <div className="pointer-events-none absolute inset-0 z-20 animate-pulse rounded-2xl ring-2 ring-white/30" />
+        <div className="pointer-events-none absolute inset-0 z-20 animate-pulse rounded-xl ring-2 ring-white/25" />
       )}
 
-      {/* Thumbnail / Placeholder */}
-      <div className="relative h-44 w-full shrink-0 overflow-hidden bg-linear-to-br from-gray-800 to-gray-900">
+      {/* ── Window chrome ──────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 border-b border-white/6 bg-[#161b22] px-3 py-2">
+        <div className="flex shrink-0 items-center gap-1">
+          <span className="block h-2.5 w-2.5 rounded-full bg-[#ff5f56]/60 transition-opacity group-hover:bg-[#ff5f56]" />
+          <span className="block h-2.5 w-2.5 rounded-full bg-[#ffbd2e]/60 transition-opacity group-hover:bg-[#ffbd2e]" />
+          <span className="block h-2.5 w-2.5 rounded-full bg-[#27c93f]/60 transition-opacity group-hover:bg-[#27c93f]" />
+        </div>
+        <span className="flex-1 truncate font-mono text-[10px] text-gray-600">
+          {filename}
+        </span>
+        <button
+          onClick={handleToggleFeatured}
+          disabled={featuredPending}
+          title={post.is_featured ? 'Remove from featured' : 'Mark as featured'}
+          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded transition-colors ${
+            post.is_featured
+              ? 'text-amber-400'
+              : 'text-gray-700 hover:text-amber-400'
+          }`}
+        >
+          {featuredPending ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Star
+              className={`h-3 w-3 ${post.is_featured ? 'fill-current' : ''}`}
+            />
+          )}
+        </button>
+      </div>
+
+      {/* ── Thumbnail ──────────────────────────────────────────────── */}
+      <div className="relative h-40 w-full shrink-0 overflow-hidden bg-[#161b22]">
         {post.thumbnail ? (
           <img
             src={post.thumbnail}
@@ -123,131 +162,123 @@ export default function BlogCard({
           <div
             className={`flex h-full w-full items-center justify-center bg-linear-to-br ${sc.gradient}`}
           >
-            <span className="text-5xl opacity-50">{cc.emoji}</span>
+            <span className="text-5xl opacity-30 select-none">{cc.emoji}</span>
           </div>
         )}
+        <div className="absolute inset-0 bg-linear-to-t from-[#0d1117]/80 via-transparent to-transparent" />
 
-        {/* Featured star */}
-        <button
-          onClick={handleToggleFeatured}
-          disabled={featuredPending}
-          className={`absolute top-2.5 left-2.5 flex h-8 w-8 items-center justify-center rounded-xl border transition-all ${
-            post.is_featured
-              ? 'border-amber-400/60 bg-amber-400/20 text-amber-300 hover:bg-amber-400/30'
-              : 'border-white/10 bg-black/30 text-gray-500 opacity-0 group-hover:opacity-100 hover:border-amber-400/40 hover:bg-amber-400/10 hover:text-amber-400'
-          }`}
-          title={post.is_featured ? 'Remove from featured' : 'Mark as featured'}
-        >
-          {featuredPending ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Star
-              className={`h-3.5 w-3.5 ${post.is_featured ? 'fill-current' : ''}`}
-            />
-          )}
-        </button>
-
-        {/* Category badge */}
+        {/* Category — code-language chip */}
         {post.category && (
           <span
-            className={`absolute top-2.5 right-2.5 rounded-lg px-2 py-0.5 text-[11px] font-semibold ${cc.color}`}
+            className={`absolute top-2 right-2 flex items-center gap-0.5 rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold ${cc.color}`}
           >
+            <span className="opacity-50">&lt;</span>
             {cc.short}
+            <span className="opacity-50">/&gt;</span>
           </span>
         )}
 
-        {/* Status overlay (mini) */}
-        <div className="absolute right-0 bottom-0 left-0 bg-linear-to-t from-black/70 to-transparent px-3 py-2">
-          <div className="flex items-center gap-1.5">
-            <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
-            <span className="text-[10px] font-medium text-white/80">
-              {sc.label}
+        {/* Status line at bottom */}
+        <div className="absolute right-0 bottom-0 left-0 flex items-center gap-1.5 bg-linear-to-r from-black/50 to-transparent px-3 py-1.5">
+          <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${sc.dot}`} />
+          <span className="font-mono text-[10px] text-white/50">
+            {sc.label.toLowerCase()}
+          </span>
+          {post.is_featured && (
+            <span className="ml-auto flex items-center gap-0.5 font-mono text-[10px] text-amber-400/70">
+              <Star className="h-2.5 w-2.5 fill-current" />
+              featured
             </span>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Body */}
-      <div className="flex flex-1 flex-col gap-2 p-4">
+      {/* ── Body ───────────────────────────────────────────────────── */}
+      <div className="flex flex-1 flex-col p-4">
         {/* Title */}
-        <h3 className="line-clamp-2 text-sm leading-snug font-semibold text-white">
-          {post.title}
-        </h3>
+        <div className="mb-2.5 flex items-start gap-1.5">
+          <span className="mt-0.5 shrink-0 font-mono text-xs font-bold text-gray-700">
+            //
+          </span>
+          <h3 className="line-clamp-2 text-sm leading-snug font-semibold text-gray-100">
+            {post.title}
+          </h3>
+        </div>
 
         {/* Excerpt */}
         {post.excerpt && (
-          <p className="line-clamp-2 text-xs leading-relaxed text-gray-500">
+          <p className="mb-3 line-clamp-2 text-xs leading-relaxed text-gray-600">
             {post.excerpt}
           </p>
         )}
 
-        {/* Tags */}
+        {/* Tags — code token style */}
         {post.tags?.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {post.tags.slice(0, 4).map((tag) => (
-              <span
+          <div className="mb-3 flex flex-wrap gap-1">
+            {post.tags.slice(0, 3).map((tag) => (
+              <code
                 key={tag}
-                className="rounded-md bg-white/5 px-1.5 py-0.5 text-[10px] text-gray-500"
+                className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-gray-500 ring-1 ring-white/5"
               >
                 #{tag}
-              </span>
+              </code>
             ))}
-            {post.tags.length > 4 && (
-              <span className="rounded-md bg-white/5 px-1.5 py-0.5 text-[10px] text-gray-600">
-                +{post.tags.length - 4}
-              </span>
+            {post.tags.length > 3 && (
+              <code className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-gray-700 ring-1 ring-white/5">
+                +{post.tags.length - 3}
+              </code>
             )}
           </div>
         )}
 
-        {/* Stats row */}
-        <div className="mt-auto flex items-center gap-3 pt-2 text-[11px] text-gray-500">
-          <span className="flex items-center gap-1">
-            <Eye className="h-3 w-3" />
-            {(post.views ?? 0).toLocaleString()}
-          </span>
-          <span className="flex items-center gap-1">
-            <Heart className="h-3 w-3" />
-            {post.likes ?? 0}
-          </span>
-          <button
-            onClick={() => onViewComments(post)}
-            className="flex items-center gap-1 transition-colors hover:text-blue-400"
-          >
-            <MessageSquare className="h-3 w-3" />
-            {post.commentCount ?? 0}
-            {post.pendingComments > 0 && (
-              <span className="rounded-full bg-amber-500/20 px-1 text-[9px] text-amber-400">
-                {post.pendingComments} pending
-              </span>
-            )}
-          </button>
-          {post.read_time && (
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              {post.read_time}m
+        {/* Metrics — monospace table */}
+        <div className="mt-auto overflow-hidden rounded-lg border border-white/6 bg-[#161b22] font-mono text-[10px] text-gray-600">
+          <div className="flex divide-x divide-white/6">
+            <span className="flex flex-1 items-center justify-center gap-1 py-1.5 transition-colors hover:text-gray-400">
+              <Eye className="h-2.5 w-2.5" />
+              {(post.views ?? 0).toLocaleString()}
             </span>
-          )}
+            <span className="flex flex-1 items-center justify-center gap-1 py-1.5 transition-colors hover:text-gray-400">
+              <Heart className="h-2.5 w-2.5" />
+              {post.likes ?? 0}
+            </span>
+            <button
+              onClick={() => onViewComments(post)}
+              className="flex flex-1 items-center justify-center gap-1 py-1.5 transition-colors hover:text-blue-400"
+            >
+              <MessageSquare className="h-2.5 w-2.5" />
+              {post.commentCount ?? 0}
+              {post.pendingComments > 0 && (
+                <span className="rounded bg-amber-500/20 px-1 text-[9px] text-amber-400">
+                  !{post.pendingComments}
+                </span>
+              )}
+            </button>
+            <span className="flex flex-1 items-center justify-center gap-1 py-1.5 transition-colors hover:text-gray-400">
+              <Clock className="h-2.5 w-2.5" />
+              {post.read_time ?? '?'}m
+            </span>
+          </div>
         </div>
 
-        {/* Author + date */}
-        <div className="flex items-center gap-2 border-t border-white/6 pt-2">
+        {/* Author — git blame style */}
+        <div className="mt-3 flex items-center gap-2 border-t border-white/5 pt-3">
           {author?.avatar_url ? (
             <img
               src={author.avatar_url}
-              alt={author.full_name}
-              className="h-5 w-5 rounded-full object-cover"
+              alt=""
+              className="h-5 w-5 rounded-full object-cover ring-1 ring-white/10"
             />
           ) : (
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-700">
-              <User className="h-3 w-3 text-gray-400" />
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-800 ring-1 ring-white/10">
+              <User className="h-2.5 w-2.5 text-gray-500" />
             </div>
           )}
-          <span className="flex-1 truncate text-[11px] text-gray-500">
-            {author?.full_name ?? 'Unknown'}
+          <span className="flex-1 truncate font-mono text-[10px] text-gray-600">
+            @{(author?.full_name ?? 'unknown').split(' ')[0].toLowerCase()}
           </span>
           <span
-            className="shrink-0 text-[10px] text-gray-600"
+            className="shrink-0 font-mono text-[10px] text-gray-700"
             title={formatBlogDate(post.created_at)}
           >
             {formatRelativeDate(post.created_at)}
@@ -255,24 +286,30 @@ export default function BlogCard({
         </div>
       </div>
 
-      {/* Footer actions */}
-      <div className="flex items-center gap-1 border-t border-white/6 bg-white/2 px-3 py-2">
-        {/* Status change dropdown */}
+      {/* ── Status bar (VS Code–inspired) ──────────────────────────── */}
+      <div className="flex items-center gap-1 border-t border-white/5 bg-[#161b22] px-2 py-1.5">
+        {/* Status dropdown */}
         <div className="relative flex-1">
           <button
             onClick={() => setStatusOpen((o) => !o)}
             disabled={isPending}
-            aria-label={`Change status — currently ${sc.label}`}
-            className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-gray-400 transition-colors hover:bg-white/6 hover:text-white"
+            aria-label={`Status: ${sc.label}`}
+            className={`flex items-center gap-1 rounded px-2 py-1 font-mono text-[10px] font-medium transition-colors hover:bg-white/6 ${
+              post.status === 'published'
+                ? 'text-emerald-400'
+                : post.status === 'archived'
+                  ? 'text-amber-400'
+                  : 'text-gray-500'
+            }`}
           >
             {isPending ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
+              <Loader2 className="h-2.5 w-2.5 animate-spin" />
             ) : (
               <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
             )}
             {sc.label}
             <ChevronDown
-              className={`h-3 w-3 transition-transform ${statusOpen ? 'rotate-180' : ''}`}
+              className={`h-2.5 w-2.5 opacity-50 transition-transform ${statusOpen ? 'rotate-180' : ''}`}
             />
           </button>
 
@@ -282,15 +319,17 @@ export default function BlogCard({
                 className="fixed inset-0 z-10"
                 onClick={() => setStatusOpen(false)}
               />
-              <div className="absolute bottom-full left-0 z-20 mb-1 w-36 overflow-hidden rounded-xl border border-white/10 bg-gray-900 shadow-2xl">
+              <div className="absolute bottom-full left-0 z-20 mb-1 w-36 overflow-hidden rounded-lg border border-white/10 bg-[#1c2128] shadow-2xl">
                 {STATUSES.map((s) => {
                   const c = getStatusConfig(s);
                   return (
                     <button
                       key={s}
                       onClick={() => handleStatusChange(s)}
-                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors hover:bg-white/6 ${
-                        s === post.status ? 'text-white' : 'text-gray-400'
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-left font-mono text-[11px] transition-colors hover:bg-white/5 ${
+                        s === post.status
+                          ? 'bg-white/5 text-white'
+                          : 'text-gray-400'
                       }`}
                     >
                       <span className={`h-1.5 w-1.5 rounded-full ${c.dot}`} />
@@ -303,62 +342,72 @@ export default function BlogCard({
           )}
         </div>
 
-        {/* Divider */}
-        <span className="h-4 w-px bg-white/8" />
+        <div className="flex items-center gap-0.5">
+          {/* View live */}
+          {post.status === 'published' && (
+            <a
+              href={`/blogs/${post.slug || post.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="View live"
+              className="flex h-6 w-6 items-center justify-center rounded text-gray-600 transition-colors hover:bg-white/6 hover:text-emerald-400"
+            >
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
 
-        {/* View live (published only) */}
-        {post.status === 'published' && (
+          {/* GitHub Discussions */}
           <a
-            href={`/blogs/${post.id}`}
+            href={`https://github.com/eyasir329/NEUPC/discussions?discussions_q=pathname%3A%2Fblogs%2F${encodeURIComponent(post.slug || post.id)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] text-gray-400 transition-colors hover:bg-white/6 hover:text-emerald-400"
-            title="View live post"
+            title="View GitHub Discussion"
+            className="flex h-6 w-6 items-center justify-center rounded text-gray-600 transition-colors hover:bg-white/6 hover:text-violet-400"
           >
-            <ExternalLink className="h-3 w-3" />
+            <MessageSquare className="h-3 w-3" />
           </a>
-        )}
 
-        {/* Edit */}
-        <button
-          onClick={() => onEdit(post)}
-          aria-label="Edit post"
-          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] text-gray-400 transition-colors hover:bg-white/6 hover:text-blue-400"
-        >
-          <Edit3 className="h-3 w-3" />
-          Edit
-        </button>
-
-        {/* Delete */}
-        {deleteConfirm ? (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={handleDelete}
-              disabled={deletePending}
-              className="rounded-lg px-2 py-1.5 text-[11px] text-red-400 transition-colors hover:bg-red-500/10"
-            >
-              {deletePending ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                'Confirm'
-              )}
-            </button>
-            <button
-              onClick={() => setDeleteConfirm(false)}
-              className="rounded-lg px-2 py-1.5 text-[11px] text-gray-500 transition-colors hover:bg-white/6"
-            >
-              ✕
-            </button>
-          </div>
-        ) : (
+          {/* Edit */}
           <button
-            onClick={() => setDeleteConfirm(true)}
-            aria-label="Delete post"
-            className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] text-gray-500 transition-colors hover:bg-red-500/8 hover:text-red-400"
+            onClick={() => onEdit(post)}
+            title="Edit"
+            className="flex items-center gap-1 rounded px-2 py-1 font-mono text-[10px] text-gray-500 transition-colors hover:bg-white/6 hover:text-blue-400"
           >
-            <Trash2 className="h-3 w-3" />
+            <Edit3 className="h-3 w-3" />
+            edit
           </button>
-        )}
+
+          {/* Delete */}
+          {deleteConfirm ? (
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={handleDelete}
+                disabled={deletePending}
+                className="rounded px-1.5 py-1 font-mono text-[10px] text-red-400 transition-colors hover:bg-red-500/10"
+              >
+                {deletePending ? (
+                  <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                ) : (
+                  'rm?'
+                )}
+              </button>
+              <button
+                onClick={() => setDeleteConfirm(false)}
+                className="rounded px-1.5 py-1 font-mono text-[10px] text-gray-600 transition-colors hover:bg-white/6"
+              >
+                no
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setDeleteConfirm(true)}
+              title="Delete"
+              className="flex h-6 w-6 items-center justify-center rounded text-gray-600 transition-colors hover:bg-red-500/8 hover:text-red-400"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

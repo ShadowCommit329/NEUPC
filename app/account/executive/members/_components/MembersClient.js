@@ -62,7 +62,7 @@ function ApprovalCard({ req, onApprove, onReject, isPending }) {
         <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
           {req.batch && (
             <span className="flex items-center gap-1">
-              <GraduationCap className="h-3 w-3" /> Batch {req.batch}
+              <GraduationCap className="h-3 w-3" /> Session {req.batch}
             </span>
           )}
           {req.department && <span>{req.department}</span>}
@@ -110,7 +110,7 @@ export default function MembersClient({
   const [tab, setTab] = useState('pending');
   const [requests, setRequests] = useState(initialRequests);
   const [search, setSearch] = useState('');
-  const [batchFilter, setBatchFilter] = useState('all');
+  const [sessionFilter, setSessionFilter] = useState('all');
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState(null);
 
@@ -141,9 +141,11 @@ export default function MembersClient({
     });
   };
 
-  const batches = [
+  const sessions = [
     ...new Set(
-      initialMembers.map((m) => m.member_profiles?.[0]?.batch).filter(Boolean)
+      initialMembers
+        .map((m) => m.member_profiles?.[0]?.academic_session)
+        .filter(Boolean)
     ),
   ].sort();
 
@@ -155,15 +157,16 @@ export default function MembersClient({
       m.full_name?.toLowerCase().includes(query) ||
       m.email?.toLowerCase().includes(query) ||
       profile?.student_id?.toLowerCase().includes(query);
-    const matchBatch =
-      batchFilter === 'all' || String(profile?.batch) === batchFilter;
-    return matchSearch && matchBatch;
+    const matchSession =
+      sessionFilter === 'all' ||
+      String(profile?.academic_session) === sessionFilter;
+    return matchSearch && matchSession;
   });
 
   const stats = {
     pending: requests.length,
     total: initialMembers.length,
-    batches: batches.length,
+    sessions: sessions.length,
   };
 
   return (
@@ -185,7 +188,11 @@ export default function MembersClient({
             value: stats.total,
             color: 'text-blue-400',
           },
-          { label: 'Batches', value: stats.batches, color: 'text-emerald-400' },
+          {
+            label: 'Sessions',
+            value: stats.sessions,
+            color: 'text-emerald-400',
+          },
         ].map((s) => (
           <div
             key={s.label}
@@ -270,14 +277,14 @@ export default function MembersClient({
             <div className="relative">
               <Filter className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <select
-                value={batchFilter}
-                onChange={(e) => setBatchFilter(e.target.value)}
+                value={sessionFilter}
+                onChange={(e) => setSessionFilter(e.target.value)}
                 className="appearance-none rounded-xl border border-white/10 bg-gray-900 py-2.5 pr-9 pl-9 text-sm text-white focus:outline-none"
               >
-                <option value="all">All Batches</option>
-                {batches.map((b) => (
-                  <option key={b} value={String(b)}>
-                    Batch {b}
+                <option value="all">All Sessions</option>
+                {sessions.map((s) => (
+                  <option key={s} value={String(s)}>
+                    Session {s}
                   </option>
                 ))}
               </select>
@@ -300,7 +307,9 @@ export default function MembersClient({
                       <th className="hidden px-4 py-3 sm:table-cell">
                         Student ID
                       </th>
-                      <th className="hidden px-4 py-3 md:table-cell">Batch</th>
+                      <th className="hidden px-4 py-3 md:table-cell">
+                        Session
+                      </th>
                       <th className="hidden px-4 py-3 lg:table-cell">
                         Department
                       </th>
@@ -332,9 +341,9 @@ export default function MembersClient({
                             {profile?.student_id || '—'}
                           </td>
                           <td className="hidden px-4 py-3 text-gray-400 md:table-cell">
-                            {profile?.batch ? (
+                            {profile?.academic_session ? (
                               <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-xs text-blue-400">
-                                Batch {profile.batch}
+                                Session {profile.academic_session}
                               </span>
                             ) : (
                               '—'

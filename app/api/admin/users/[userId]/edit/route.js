@@ -4,12 +4,8 @@
  */
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
-import {
-  updateUser,
-  getUserRoles,
-  getUserByEmail,
-} from '@/app/_lib/data-service';
+import { requireApiAuth, isAuthError } from '@/app/_lib/api-guard';
+import { updateUser } from '@/app/_lib/data-service';
 import { pickAllowedFields } from '@/app/_lib/validation';
 
 /** Fields that can be updated via this endpoint. */
@@ -22,7 +18,7 @@ const ALLOWED_USER_FIELDS = [
   'account_status',
   'status_reason',
   'department',
-  'batch',
+  'session',
   'student_id',
   'linkedin',
   'github',
@@ -34,25 +30,8 @@ const ALLOWED_USER_FIELDS = [
 
 export async function POST(request, { params }) {
   try {
-    const session = await auth();
-
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
-
-    const userRoles = await getUserRoles(session.user.email);
-    if (!userRoles.includes('admin')) {
-      return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
-    }
-
-    // Verify admin account is active
-    const adminUser = await getUserByEmail(session.user.email);
-    if (!adminUser || adminUser.account_status !== 'active') {
-      return NextResponse.json(
-        { error: 'Admin account not active' },
-        { status: 403 }
-      );
-    }
+    const authResult = await requireApiAuth('admin');
+    if (isAuthError(authResult)) return authResult;
 
     const { userId } = await params;
     const body = await request.json();
@@ -74,7 +53,7 @@ export async function POST(request, { params }) {
       );
     }
 
-    await updateUser(userId, updates, adminUser.id);
+    await updateUser(userId, updates, authResult.user.id);
 
     return NextResponse.json({
       success: true,

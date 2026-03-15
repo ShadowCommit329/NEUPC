@@ -16,12 +16,25 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     // Limit concurrent image optimizations to prevent memory spikes
     minimumCacheTTL: 60,
+    // Allow static assets and internal proxy route
+    localPatterns: [
+      {
+        pathname: '/**',
+      },
+      {
+        pathname: '/api/image/proxy',
+      },
+    ],
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'fgfvuckrafohyjiuidnw.supabase.co',
         port: '',
-        pathname: '/storage/v1/object/sign/club-images/**',
+        pathname: '/storage/v1/object/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'storage.googleapis.com',
       },
       {
         protocol: 'https',
@@ -30,6 +43,18 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'avatars.githubusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.fbcdn.net',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cse.neu.ac.bd',
+      },
+      {
+        protocol: 'https',
+        hostname: 'robohash.org',
       },
     ],
   },
@@ -70,7 +95,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://giscus.app",
+              "script-src 'self' 'unsafe-inline' https://giscus.app",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https://fgfvuckrafohyjiuidnw.supabase.co https://lh3.googleusercontent.com https://avatars.githubusercontent.com",
@@ -96,10 +121,12 @@ const nextConfig = {
 
   // ── Experimental ──────────────────────────────────────────────────────────
   experimental: {
-    // Enable server actions size limit (default 1MB)
+    // Server actions body size limit (unlimited storage — allow large uploads)
     serverActions: {
-      bodySizeLimit: '2mb',
+      bodySizeLimit: '100mb',
     },
+    // Proxy request body size limit
+    proxyClientMaxBodySize: '100mb',
   },
 };
 

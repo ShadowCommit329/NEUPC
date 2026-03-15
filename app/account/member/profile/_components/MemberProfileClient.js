@@ -27,11 +27,18 @@ import {
   Tag,
   FileText,
   BadgeCheck,
+  Upload,
+  Trash2,
+  Camera,
 } from 'lucide-react';
 import {
   updateMemberInfoAction,
   updateMemberProfileAction,
 } from '@/app/_lib/member-profile-actions';
+import {
+  uploadAvatarAction,
+  removeAvatarAction,
+} from '@/app/_lib/avatar-actions';
 
 // ─── Field Row ─────────────────────────────────────────────────────────────
 function InfoRow({ icon: Icon, label, value, mono = false }) {
@@ -147,18 +154,6 @@ function EditAccountForm({ user, onDone }) {
             className="w-full rounded-xl border border-white/8 bg-white/4 px-3.5 py-2.5 text-sm text-white placeholder-white/25 transition outline-none focus:border-white/20 focus:bg-white/6"
           />
         </div>
-      </div>
-
-      <div>
-        <label className="mb-1.5 block text-xs font-medium text-white/50">
-          Avatar URL
-        </label>
-        <input
-          name="avatar_url"
-          defaultValue={user.avatar_url ?? ''}
-          placeholder="https://…"
-          className="w-full rounded-xl border border-white/8 bg-white/4 px-3.5 py-2.5 text-sm text-white placeholder-white/25 transition outline-none focus:border-white/20 focus:bg-white/6"
-        />
       </div>
 
       {error && (
@@ -342,12 +337,126 @@ function EditProfileForm({ profile, onDone }) {
   );
 }
 
+// ─── Avatar Upload Widget ────────────────────────────────────────────────────
+function AvatarUploader({ user }) {
+  const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [error, setError] = useState(null);
+  const isImage = user.avatar_url?.startsWith('/api/image/');
+
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError(null);
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.set('file', file);
+      const result = await uploadAvatarAction(fd);
+      if (result?.error) setError(result.error);
+    } catch {
+      setError('Upload failed. Please try again.');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  }
+
+  async function handleRemove() {
+    setError(null);
+    setRemoving(true);
+    try {
+      const result = await removeAvatarAction();
+      if (result?.error) setError(result.error);
+    } catch {
+      setError('Failed to remove avatar.');
+    } finally {
+      setRemoving(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
+      {/* avatar with overlay */}
+      <div className="group relative shrink-0">
+        {isImage ? (
+          <img
+            src={user.avatar_url}
+            alt={user.full_name}
+            className="size-20 rounded-full object-cover ring-2 ring-white/10"
+          />
+        ) : (
+          <div className="flex size-20 items-center justify-center rounded-full border border-white/10 bg-white/8 text-2xl font-bold text-white/60">
+            {user.avatar_url && user.avatar_url.length <= 3
+              ? user.avatar_url
+              : user.full_name?.charAt(0)?.toUpperCase() ?? 'M'}
+          </div>
+        )}
+        <label className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/50 opacity-0 transition group-hover:opacity-100">
+          {uploading ? (
+            <Loader2 className="size-5 animate-spin text-white" />
+          ) : (
+            <Camera className="size-5 text-white" />
+          )}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            disabled={uploading}
+            onChange={handleFileChange}
+          />
+        </label>
+      </div>
+
+      <div className="flex flex-col items-center gap-1.5 sm:items-start">
+        <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/8 bg-white/4 px-3 py-1.5 text-xs text-white/60 transition hover:bg-white/8 hover:text-white/80">
+          {uploading ? (
+            <Loader2 className="size-3 animate-spin" />
+          ) : (
+            <Upload className="size-3" />
+          )}
+          {uploading ? 'Uploading…' : 'Upload new avatar'}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            disabled={uploading}
+            onChange={handleFileChange}
+          />
+        </label>
+        {isImage && (
+          <button
+            type="button"
+            onClick={handleRemove}
+            disabled={removing}
+            className="flex items-center gap-1.5 rounded-lg border border-red-400/15 bg-red-400/5 px-3 py-1.5 text-xs text-red-400/70 transition hover:bg-red-400/10 hover:text-red-400 disabled:opacity-50"
+          >
+            {removing ? (
+              <Loader2 className="size-3 animate-spin" />
+            ) : (
+              <Trash2 className="size-3" />
+            )}
+            {removing ? 'Removing…' : 'Remove avatar'}
+          </button>
+        )}
+        <p className="text-[10px] text-white/25">
+          JPEG, PNG, WebP, or GIF · Max 5 MB
+        </p>
+        {error && (
+          <p className="text-[11px] text-red-400">{error}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function MemberProfileClient({ user, memberProfile }) {
   const [editingAccount, setEditingAccount] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
 
   const approved = memberProfile?.approved === true;
+  const isImage = user.avatar_url?.startsWith('/api/image/');
 
   return (
     <div className="space-y-6">
@@ -371,7 +480,7 @@ export default function MemberProfileClient({ user, memberProfile }) {
 
       {/* avatar + name hero */}
       <div className="flex items-center gap-4 rounded-2xl border border-white/8 bg-white/3 p-5">
-        {user.avatar_url ? (
+        {isImage ? (
           <img
             src={user.avatar_url}
             alt={user.full_name}
@@ -379,7 +488,9 @@ export default function MemberProfileClient({ user, memberProfile }) {
           />
         ) : (
           <div className="flex size-16 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/8 text-xl font-bold text-white/60">
-            {user.full_name?.charAt(0)?.toUpperCase() ?? 'M'}
+            {user.avatar_url && user.avatar_url.length <= 3
+              ? user.avatar_url
+              : user.full_name?.charAt(0)?.toUpperCase() ?? 'M'}
           </div>
         )}
         <div className="min-w-0">
@@ -389,7 +500,7 @@ export default function MemberProfileClient({ user, memberProfile }) {
           <p className="truncate text-sm text-white/40">{user.email}</p>
           {memberProfile && (
             <p className="mt-0.5 text-xs text-white/30">
-              {memberProfile.department} · Batch {memberProfile.batch}
+              {memberProfile.department} · Session {memberProfile.session}
             </p>
           )}
         </div>
@@ -410,6 +521,12 @@ export default function MemberProfileClient({ user, memberProfile }) {
               <InfoRow icon={User} label="Full Name" value={user.full_name} />
               <InfoRow icon={Mail} label="Email" value={user.email} />
               <InfoRow icon={Phone} label="Phone" value={user.phone} />
+              <div className="border-t border-white/5 py-4">
+                <p className="mb-3 text-[10px] tracking-wider text-white/30 uppercase">
+                  Avatar
+                </p>
+                <AvatarUploader user={user} />
+              </div>
               <div className="flex justify-end py-3">
                 <button
                   onClick={() => setEditingAccount(true)}
@@ -440,8 +557,8 @@ export default function MemberProfileClient({ user, memberProfile }) {
               />
               <InfoRow
                 icon={Layers}
-                label="Batch"
-                value={memberProfile.batch}
+                label="Session"
+                value={memberProfile.session}
               />
               <InfoRow
                 icon={BookOpen}

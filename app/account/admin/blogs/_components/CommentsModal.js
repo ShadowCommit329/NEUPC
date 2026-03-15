@@ -26,9 +26,11 @@ import {
   toggleCommentApprovalAction,
   deleteCommentAction,
 } from '@/app/_lib/blog-actions';
+import { useScrollLock } from '@/app/_lib/hooks';
 
 export default function CommentsModal({ post, onClose }) {
   const [comments, setComments] = useState([]);
+  useScrollLock();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');

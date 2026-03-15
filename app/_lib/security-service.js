@@ -25,13 +25,13 @@ export async function getSecurityData() {
   const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const results = await Promise.allSettled([
-    // Users currently marked online (is_active = true)
+    // Users currently marked online (is_online = true)
     supabaseAdmin
       .from('users')
       .select(
         'id, full_name, email, avatar_url, account_status, last_login, created_at'
       )
-      .eq('is_active', true)
+      .eq('is_online', true)
       .order('last_login', { ascending: false })
       .limit(50),
 

@@ -7,6 +7,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useScrollLock } from '@/app/_lib/hooks';
 import {
   Award,
   Download,
@@ -116,6 +117,7 @@ function CertificateCard({ cert, onOpen }) {
 }
 
 function CertificateModal({ cert, onClose }) {
+  useScrollLock();
   if (!cert) return null;
   const meta = TYPE_META[cert.certificate_type] ?? TYPE_META.participation;
   const TypeIcon = meta.icon;

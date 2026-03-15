@@ -28,6 +28,7 @@ import {
   ListChecks,
   BarChart3,
 } from 'lucide-react';
+import { driveImageUrl } from '@/app/_lib/utils';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatDate(iso) {
@@ -132,8 +133,12 @@ function RegistrationCard({ reg }) {
       <div className="relative h-36 overflow-hidden bg-white/4">
         {reg.events?.cover_image ? (
           <img
-            src={reg.events.cover_image}
+            src={driveImageUrl(reg.events.cover_image)}
             alt={reg.events.title}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = '/placeholder-event.svg';
+            }}
             className="h-full w-full object-cover"
           />
         ) : (
@@ -384,13 +389,6 @@ export default function GuestParticipationClient({
             Track your event registrations and activity history
           </p>
         </div>
-        <a
-          href="/account/guest/membership-application"
-          className="flex shrink-0 items-center gap-2 self-start rounded-xl border border-violet-400/25 bg-violet-500/12 px-4 py-2 text-sm font-medium text-violet-300 transition hover:bg-violet-500/20 sm:self-auto"
-        >
-          <Sparkles className="size-4" />
-          Become a Member
-        </a>
       </div>
 
       {/* ── Stats row ── */}
@@ -630,13 +628,6 @@ export default function GuestParticipationClient({
           <p className="text-xs text-white/35">
             Members unlock complete participation tracking, ratings, and more.
           </p>
-          <a
-            href="/account/guest/membership-application"
-            className="flex shrink-0 items-center gap-2 rounded-xl bg-violet-500/18 px-4 py-2 text-sm font-medium text-violet-300 transition hover:bg-violet-500/28"
-          >
-            <Sparkles className="size-3.5" />
-            Apply Now
-          </a>
         </div>
       </div>
     </div>

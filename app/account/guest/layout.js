@@ -1,6 +1,6 @@
 /**
  * @file Guest dashboard layout.
- * Enforces `guest` role (skips `is_active` check since guests
+ * Enforces `guest` role (skips `is_online` check since guests
  * don't require member activation), syncs the role to context.
  *
  * @module GuestLayout

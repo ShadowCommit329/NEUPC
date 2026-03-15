@@ -4,7 +4,7 @@
  * @module AdminFilterBar
  */
 
-import { Search, ChevronDown } from 'lucide-react';
+import { Search, ChevronDown, Wifi } from 'lucide-react';
 
 const selectOptionStyles = `
   select {
@@ -32,6 +32,8 @@ export default function FilterBar({
   onRoleChange,
   filterStatus,
   onStatusChange,
+  filterOnline,
+  onOnlineChange,
   filteredCount,
   totalCount,
 }) {
@@ -79,9 +81,11 @@ export default function FilterBar({
             <option value="All">All Statuses</option>
             {[
               'Active',
+              'Inactive',
               'Pending',
               'Suspended',
               'Banned',
+              'Blocked',
               'Locked',
               'Rejected',
             ].map((s) => (
@@ -96,6 +100,20 @@ export default function FilterBar({
         <span className="shrink-0 text-sm text-gray-500">
           {filteredCount} of {totalCount}
         </span>
+
+        {/* online only toggle */}
+        <button
+          onClick={() => onOnlineChange(!filterOnline)}
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-medium transition-all ${
+            filterOnline
+              ? 'border-green-500/50 bg-green-500/15 text-green-400'
+              : 'border-white/8 bg-white/4 text-gray-500 hover:border-white/12 hover:bg-white/5 hover:text-gray-300'
+          }`}
+          title="Show online users only"
+        >
+          <Wifi className="h-3.5 w-3.5" />
+          Online
+        </button>
       </div>
     </>
   );

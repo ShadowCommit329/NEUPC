@@ -3,10 +3,34 @@
  * @module EventCard
  */
 
-import Image from 'next/image';
+import { driveImageUrl } from '@/app/_lib/utils';
+import SafeImg from '@/app/_components/ui/SafeImg';
+
+/**
+ * Format a date for display.
+ * @param {string} dateStr
+ * @returns {{ date: string, time: string }}
+ */
+function formatEventDateTime(dateStr) {
+  if (!dateStr) return { date: '', time: '' };
+  const d = new Date(dateStr);
+  const date = d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+  const time = d.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  return { date, time };
+}
 
 function EventCard({ event, index }) {
   const isOdd = index % 2 === 1;
+  const image = event.cover_image || event.image;
+  const { date, time } = formatEventDateTime(event.start_date || event.date);
 
   return (
     <div
@@ -43,12 +67,10 @@ function EventCard({ event, index }) {
             ></div>
             {/* Image */}
             <div className="relative h-full w-full overflow-hidden rounded-full shadow-2xl ring-4 ring-white/10 transition-all duration-500 group-hover:scale-110 group-hover:ring-white/20">
-              <Image
-                src={event.image || '/placeholder-event.jpg'}
+              <SafeImg
+                src={driveImageUrl(image) || '/placeholder-event.svg'}
                 alt={event.title}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 192px, (max-width: 1024px) 224px, 256px"
+                className="absolute inset-0 h-full w-full object-cover"
               />
             </div>
           </div>
@@ -58,26 +80,54 @@ function EventCard({ event, index }) {
         <div className="flex-1 space-y-4">
           {/* Date and Time */}
           <div className="flex flex-wrap items-center gap-4 text-sm font-medium">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">📅</span>
+            {date && (
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📅</span>
+                <span
+                  className={`${
+                    isOdd ? 'text-secondary-300' : 'text-primary-300'
+                  }`}
+                >
+                  {date}
+                </span>
+              </div>
+            )}
+            {time && (
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🕒</span>
+                <span
+                  className={`${
+                    isOdd ? 'text-secondary-300' : 'text-primary-300'
+                  }`}
+                >
+                  {time}
+                </span>
+              </div>
+            )}
+            {event.category && (
               <span
-                className={`${
-                  isOdd ? 'text-secondary-300' : 'text-primary-300'
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  isOdd
+                    ? 'bg-secondary-500/20 text-secondary-300'
+                    : 'bg-primary-500/20 text-primary-300'
                 }`}
               >
-                {event.date}
+                {event.category}
               </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🕒</span>
+            )}
+            {event.eligibility && (
               <span
-                className={`${
-                  isOdd ? 'text-secondary-300' : 'text-primary-300'
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  event.eligibility === 'Everyone'
+                    ? 'bg-emerald-500/20 text-emerald-300'
+                    : 'bg-amber-500/20 text-amber-300'
                 }`}
               >
-                {event.time}
+                {event.eligibility === 'Everyone'
+                  ? '🌐 Everyone'
+                  : `🔒 ${event.eligibility}`}
               </span>
-            </div>
+            )}
           </div>
 
           {/* Title with Gradient */}
@@ -96,6 +146,21 @@ function EventCard({ event, index }) {
             {event.description}
           </p>
 
+          {/* Prerequisites */}
+          {/* {event.prerequisites && (
+            <div className="flex items-start gap-2 rounded-lg bg-white/5 px-4 py-2.5">
+              <span className="mt-0.5 text-base">📋</span>
+              <div>
+                <span className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                  Prerequisites
+                </span>
+                <p className="text-sm leading-relaxed text-gray-300">
+                  {event.prerequisites}
+                </p>
+              </div>
+            </div>
+          )} */}
+
           {/* Footer: Location and Link */}
           <div className="flex flex-wrap items-center justify-between gap-4 pt-4">
             <div className="flex items-center gap-2 text-gray-300">
@@ -103,7 +168,7 @@ function EventCard({ event, index }) {
               <span className="text-sm md:text-base">{event.location}</span>
             </div>
             <a
-              href={`/events/${event.id}`}
+              href={`/events/${event.slug || event.id}`}
               className={`group/link inline-flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-semibold shadow-lg transition-all hover:scale-105 hover:shadow-xl md:text-base ${
                 isOdd
                   ? 'from-secondary-500 to-secondary-600 hover:from-secondary-600 hover:to-secondary-700 bg-linear-to-r text-white'

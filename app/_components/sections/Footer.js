@@ -47,10 +47,10 @@ export default function Footer({
   social = {},
   contact = {},
   footer = {},
+  settings = {},
 }) {
   const currentYear = new Date().getFullYear();
-  const userRole = session?.user?.role || null;
-  const isMember = userRole !== null && userRole !== 'guest';
+  const isLoggedIn = !!session?.user;
 
   const socialLinks = { ...defaultSocial, ...social };
   const contactInfo = { ...defaultContact, ...contact };
@@ -66,7 +66,7 @@ export default function Footer({
             <div className="flex items-center gap-2">
               <Code2 className="text-primary-500 h-8 w-8" />
               <h3 className="font-heading text-primary-50 text-xl font-bold">
-                NEUPC
+                {settings?.site_name || 'NEUPC'}
               </h3>
             </div>
             <p className="text-primary-300 text-sm leading-relaxed">
@@ -131,7 +131,7 @@ export default function Footer({
               {[
                 { href: '/blogs', label: 'Blogs' },
                 { href: '/roadmaps', label: 'Roadmaps' },
-                ...(!isMember ? [{ href: '/join', label: 'Join Us' }] : []),
+                ...(!isLoggedIn ? [{ href: '/join', label: 'Join Us' }] : []),
                 { href: '/contact', label: 'Contact' },
                 { href: '/developers', label: 'Developers' },
               ].map((link) => (
@@ -194,7 +194,7 @@ export default function Footer({
                 </li>
               )}
             </ul>
-            {!session?.user && !isMember && (
+            {!isLoggedIn && (
               <div className="mt-6">
                 <Link
                   href="/join"
@@ -213,15 +213,18 @@ export default function Footer({
         <div className="border-primary-800 border-t py-6">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
             <p className="text-primary-400 text-center text-sm md:text-left">
-              &copy; {currentYear} Netrokona University Programming Club. All
-              rights reserved.
+              &copy; {currentYear}{' '}
+              {settings?.site_name_full ||
+                'Netrokona University Programming Club'}
+              . All rights reserved.
             </p>
             <div className="flex items-center gap-6">
               <Link
                 href="/developers"
                 className="text-primary-400 hover:text-secondary-400 text-sm transition-colors duration-200"
               >
-                Made with ❤️ by NEUPC Developers
+                {settings?.footer_developer_credit ||
+                  'Made with ❤️ by NEUPC Developers'}
               </Link>
             </div>
           </div>

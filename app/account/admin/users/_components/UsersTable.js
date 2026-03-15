@@ -33,10 +33,36 @@ function formatDate(iso) {
   });
 }
 
+function formatLastActive(iso) {
+  if (!iso) return 'Never';
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs / 60_000);
+  const hrs = Math.floor(diffMs / 3_600_000);
+  const days = Math.floor(diffMs / 86_400_000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  if (hrs < 24) return `${hrs}h ago`;
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 const DESKTOP_OPTIONS = [10, 25, 50, 100];
 const MOBILE_OPTIONS = [5, 10, 25, 50];
 
-export default function UsersTable({ filtered, users, onAction }) {
+function isInactiveUser(user) {
+  return (user.status || '').toLowerCase() === 'inactive';
+}
+
+export default function UsersTable({
+  filtered,
+  users,
+  onAction,
+  onVerifyEmail,
+}) {
   const [isMobile, setIsMobile] = useState(false);
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -111,7 +137,15 @@ export default function UsersTable({ filtered, users, onAction }) {
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <Avatar user={user} />
+                        <div className="relative shrink-0">
+                          <Avatar user={user} />
+                          {user.isOnline && (
+                            <span
+                              className="absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-gray-900"
+                              title="Online"
+                            />
+                          )}
+                        </div>
                         <div className="min-w-0">
                           <p className="truncate font-medium text-white">
                             {user.name}
@@ -158,11 +192,19 @@ export default function UsersTable({ filtered, users, onAction }) {
                             : ''
                         }
                       >
-                        {user.lastActive}
+                        {formatLastActive(user.lastActive)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        {isInactiveUser(user) && (
+                          <button
+                            onClick={() => onVerifyEmail?.(user.id)}
+                            className="text-xs font-semibold text-cyan-400 transition-colors hover:text-cyan-300"
+                          >
+                            Verify
+                          </button>
+                        )}
                         <button
                           onClick={() => onAction('edit', user)}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2.5 py-1.5 text-xs font-medium whitespace-nowrap text-blue-400 transition-colors hover:border-blue-500/60 hover:bg-blue-500/20"
@@ -190,7 +232,15 @@ export default function UsersTable({ filtered, users, onAction }) {
               <div key={user.id} className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-start gap-3">
-                    <Avatar user={user} />
+                    <div className="relative shrink-0">
+                      <Avatar user={user} />
+                      {user.isOnline && (
+                        <span
+                          className="absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-gray-900"
+                          title="Online"
+                        />
+                      )}
+                    </div>
                     <div className="min-w-0">
                       <p className="truncate font-medium text-white">
                         {user.name}
@@ -201,6 +251,14 @@ export default function UsersTable({ filtered, users, onAction }) {
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
+                    {isInactiveUser(user) && (
+                      <button
+                        onClick={() => onVerifyEmail?.(user.id)}
+                        className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-300 transition-all hover:bg-cyan-500/20 hover:text-cyan-200"
+                      >
+                        Verify
+                      </button>
+                    )}
                     <button
                       onClick={() => onAction('edit', user)}
                       className="inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2 py-1.5 text-xs font-medium text-blue-400 transition-colors hover:border-blue-500/60 hover:bg-blue-500/20"
@@ -222,7 +280,7 @@ export default function UsersTable({ filtered, users, onAction }) {
                   Joined {formatDate(user.joined)}
                   {user.lastActive && (
                     <span className="ml-3 text-gray-700">
-                      Active {formatDate(user.lastActive)}
+                      Active {formatLastActive(user.lastActive)}
                     </span>
                   )}
                 </p>

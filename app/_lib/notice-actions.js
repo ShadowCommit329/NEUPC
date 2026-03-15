@@ -6,14 +6,18 @@
 'use server';
 
 import { supabaseAdmin } from '@/app/_lib/supabase';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { requireAdmin, createLogger } from '@/app/_lib/helpers';
 
 const logActivity = createLogger('notice');
 
 function revalidate() {
+  revalidateTag('notices');
+  revalidateTag('homepage');
   revalidatePath('/account/admin/notices');
   revalidatePath('/notices');
+  revalidatePath('/account');
+  revalidatePath('/');
 }
 
 // =============================================================================

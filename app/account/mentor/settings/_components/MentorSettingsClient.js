@@ -140,9 +140,9 @@ export default function MentorSettingsClient({ user }) {
               <p className="text-xs text-gray-500">{user?.account_status}</p>
             </div>
             <span
-              className={`rounded-full px-2 py-0.5 text-xs ${user?.is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}
+              className={`rounded-full px-2 py-0.5 text-xs ${user?.is_online ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}
             >
-              {user?.is_active ? 'Active' : 'Inactive'}
+              {user?.is_online ? 'Active' : 'Inactive'}
             </span>
           </div>
         </div>

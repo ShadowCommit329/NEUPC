@@ -7,6 +7,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useScrollLock } from '@/app/_lib/hooks';
 import {
   User,
   Mail,
@@ -30,8 +31,16 @@ import {
   Link as LinkIcon,
   Clock,
   ArrowRight,
+  Upload,
+  Trash2,
+  Camera,
+  Loader2,
 } from 'lucide-react';
 import { updateGuestInfoAction } from '@/app/_lib/guest-actions';
+import {
+  uploadAvatarAction,
+  removeAvatarAction,
+} from '@/app/_lib/avatar-actions';
 import { signOutAction } from '@/app/_lib/actions';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -87,6 +96,7 @@ function StatusBadge({ status }) {
 // ─── Delete Confirmation Modal ────────────────────────────────────────────────
 function DeleteModal({ onClose }) {
   const [confirmed, setConfirmed] = useState('');
+  useScrollLock();
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
@@ -183,20 +193,7 @@ function EditInfoForm({ user, onCancel, onSaved }) {
           />
         </div>
       </div>
-      <div>
-        <label className="mb-1.5 block text-xs font-medium text-white/40">
-          Avatar URL
-        </label>
-        <input
-          name="avatar_url"
-          defaultValue={user.avatar_url ?? ''}
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white placeholder-white/25 transition outline-none focus:border-white/25 focus:bg-white/8"
-          placeholder="https://example.com/avatar.jpg"
-        />
-        <p className="mt-1 text-[11px] text-white/25">
-          Paste a direct image URL (HTTPS)
-        </p>
-      </div>
+
       {error && (
         <div className="flex items-center gap-2 rounded-xl border border-red-400/20 bg-red-400/8 px-3 py-2 text-xs text-red-400">
           <XCircle className="size-3.5 shrink-0" />
@@ -247,6 +244,105 @@ function SectionCard({ icon: Icon, iconColor, title, action, children }) {
         {action}
       </div>
       <div className="p-5">{children}</div>
+    </div>
+  );
+}
+
+// ─── Guest Avatar Uploader ────────────────────────────────────────────────────
+function GuestAvatarUploader({ user, initials }) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+  const isImage = user.avatar_url?.startsWith('/api/image/');
+
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError(null);
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.set('file', file);
+      const result = await uploadAvatarAction(fd);
+      if (result?.error) setError(result.error);
+    } catch {
+      setError('Upload failed.');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  }
+
+  async function handleRemove() {
+    setError(null);
+    setUploading(true);
+    try {
+      const result = await removeAvatarAction();
+      if (result?.error) setError(result.error);
+    } catch {
+      setError('Failed to remove avatar.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="group relative">
+        {isImage ? (
+          <img
+            src={user.avatar_url}
+            alt={user.full_name ?? 'Avatar'}
+            className="size-24 rounded-2xl border border-white/12 object-cover"
+          />
+        ) : (
+          <div className="flex size-24 items-center justify-center rounded-2xl border border-white/10 bg-linear-to-br from-violet-500/35 to-blue-500/35">
+            <span className="text-3xl font-bold text-white">{initials}</span>
+          </div>
+        )}
+        <label className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-2xl bg-black/50 opacity-0 transition group-hover:opacity-100">
+          {uploading ? (
+            <Loader2 className="size-6 animate-spin text-white" />
+          ) : (
+            <Camera className="size-6 text-white" />
+          )}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            disabled={uploading}
+            onChange={handleFileChange}
+          />
+        </label>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <label className="flex cursor-pointer items-center gap-1 rounded-lg border border-white/8 bg-white/4 px-2 py-1 text-[10px] text-white/50 transition hover:bg-white/8 hover:text-white/70">
+          {uploading ? (
+            <Loader2 className="size-2.5 animate-spin" />
+          ) : (
+            <Upload className="size-2.5" />
+          )}
+          Upload
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            disabled={uploading}
+            onChange={handleFileChange}
+          />
+        </label>
+        {isImage && (
+          <button
+            type="button"
+            onClick={handleRemove}
+            disabled={uploading}
+            className="flex items-center gap-1 rounded-lg border border-red-400/15 bg-red-400/5 px-2 py-1 text-[10px] text-red-400/60 transition hover:bg-red-400/10 hover:text-red-400 disabled:opacity-50"
+          >
+            <Trash2 className="size-2.5" />
+            Remove
+          </button>
+        )}
+      </div>
+      {error && <p className="text-[10px] text-red-400">{error}</p>}
     </div>
   );
 }
@@ -332,19 +428,7 @@ export default function GuestProfileClient({ user, stats }) {
         <div className="relative flex flex-col items-center gap-5 sm:flex-row sm:items-start">
           {/* Avatar */}
           <div className="relative shrink-0">
-            {user.avatar_url ? (
-              <img
-                src={user.avatar_url}
-                alt={user.full_name ?? 'Avatar'}
-                className="size-24 rounded-2xl border border-white/12 object-cover"
-              />
-            ) : (
-              <div className="flex size-24 items-center justify-center rounded-2xl border border-white/10 bg-linear-to-br from-violet-500/35 to-blue-500/35">
-                <span className="text-3xl font-bold text-white">
-                  {initials}
-                </span>
-              </div>
-            )}
+            <GuestAvatarUploader user={user} initials={initials} />
             <div className="absolute -right-1.5 -bottom-1.5 flex size-7 items-center justify-center rounded-xl border border-amber-400/30 bg-amber-400/20">
               <Star className="size-3.5 text-amber-400" />
             </div>
@@ -631,15 +715,6 @@ export default function GuestProfileClient({ user, stats }) {
               </div>
             ))}
           </div>
-
-          <a
-            href="/account/guest/membership-application"
-            className="inline-flex items-center gap-2 rounded-xl bg-violet-500/22 px-6 py-3 text-sm font-semibold text-violet-300 transition hover:bg-violet-500/32"
-          >
-            <Star className="size-4" />
-            Apply for Membership
-            <ArrowRight className="size-4" />
-          </a>
         </div>
       </div>
 

@@ -34,6 +34,8 @@ import {
   execUpdateEventAction,
   execDeleteEventAction,
 } from '@/app/_lib/executive-actions';
+import { driveImageUrl } from '@/app/_lib/utils';
+import { useScrollLock } from '@/app/_lib/hooks';
 
 const STATUS_CONFIG = {
   draft: {
@@ -73,6 +75,7 @@ function EventModal({ event, onClose, onSuccess }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState(null);
   const isEdit = !!event?.id;
+  useScrollLock();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -320,6 +323,7 @@ export default function ManageEventsClient({ initialEvents }) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [modal, setModal] = useState(null); // null | 'create' | event object
   const [deleteId, setDeleteId] = useState(null);
+  useScrollLock(!!deleteId);
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState(null);
 
@@ -443,8 +447,12 @@ export default function ManageEventsClient({ initialEvents }) {
                 {ev.cover_image && (
                   <div className="h-36 overflow-hidden bg-gray-800">
                     <img
-                      src={ev.cover_image}
+                      src={driveImageUrl(ev.cover_image)}
                       alt={ev.title}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/placeholder-event.svg';
+                      }}
                       className="h-full w-full object-cover opacity-70 transition-opacity group-hover:opacity-90"
                     />
                   </div>

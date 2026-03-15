@@ -6,7 +6,7 @@
 function SVG() {
   return (
     <svg
-      className="h-auto w-full max-w-lg drop-shadow-2xl"
+      className="h-auto w-full max-w-xs drop-shadow-2xl sm:max-w-sm md:max-w-lg"
       viewBox="0 0 600 650"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"

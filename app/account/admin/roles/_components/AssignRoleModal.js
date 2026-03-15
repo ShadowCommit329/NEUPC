@@ -23,8 +23,33 @@ import {
 } from '@/app/_lib/role-actions';
 import { getRoleConfig } from './roleConfig';
 
+const MANAGED_ROLES = ['member', 'advisor', 'admin', 'mentor', 'executive'];
+
+function buildEmptyDraft(roleName) {
+  if (roleName === 'member') {
+    return { student_id: '', academic_session: '', department: '' };
+  }
+  if (roleName === 'advisor') {
+    return { position: '', profile_link: '', department: '' };
+  }
+  if (roleName === 'executive') {
+    return {
+      position_id: '',
+      term_start: '',
+      term_end: '',
+      is_current: true,
+      bio: '',
+    };
+  }
+  if (roleName === 'admin' || roleName === 'mentor') {
+    return { bio: '' };
+  }
+  return {};
+}
+
 function UserAvatar({ user, size = 'md' }) {
-  const isUrl = user.avatar?.startsWith('http');
+  const isUrl =
+    user.avatar?.startsWith('http') || user.avatar?.startsWith('/api/image/');
   const sz = size === 'sm' ? 'h-8 w-8 text-xs' : 'h-10 w-10 text-sm';
   if (isUrl) {
     return (
@@ -35,9 +60,18 @@ function UserAvatar({ user, size = 'md' }) {
       />
     );
   }
+  const colors = [
+    'from-blue-500 to-blue-600',
+    'from-purple-500 to-purple-600',
+    'from-emerald-500 to-emerald-600',
+    'from-orange-500 to-orange-600',
+    'from-pink-500 to-pink-600',
+    'from-cyan-500 to-cyan-600',
+  ];
+  const color = colors[(user.name?.charCodeAt(0) || 0) % colors.length];
   return (
     <div
-      className={`${sz} flex shrink-0 items-center justify-center rounded-full bg-white/10 font-semibold text-gray-300`}
+      className={`${sz} flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${color} font-semibold text-white ring-1 ring-white/10`}
     >
       {user.avatar ?? '?'}
     </div>
@@ -72,6 +106,8 @@ export default function AssignRoleModal({
   );
   const [errorMap, setErrorMap] = useState({});
   const [successIds, setSuccessIds] = useState(new Set());
+  const [expandedUserId, setExpandedUserId] = useState(null);
+  const [profileDrafts, setProfileDrafts] = useState({});
   const [, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
@@ -115,6 +151,55 @@ export default function AssignRoleModal({
   }
 
   function handleAssign(user) {
+    const isManagedRole = MANAGED_ROLES.includes(role.name);
+    const draft = profileDrafts[user.id] || buildEmptyDraft(role.name);
+
+    if (isManagedRole) {
+      if (
+        role.name === 'member' &&
+        (!draft.student_id.trim() ||
+          !draft.academic_session.trim() ||
+          !draft.department.trim())
+      ) {
+        setExpandedUserId(user.id);
+        setErrorMap((prev) => ({
+          ...prev,
+          [user.id]:
+            'Member requires Student ID, Academic Session, and Department.',
+        }));
+        return;
+      }
+
+      if (
+        role.name === 'advisor' &&
+        (!draft.position.trim() ||
+          !draft.profile_link.trim() ||
+          !draft.department.trim())
+      ) {
+        setExpandedUserId(user.id);
+        setErrorMap((prev) => ({
+          ...prev,
+          [user.id]: 'Advisor requires Position, Profile Link, and Department.',
+        }));
+        return;
+      }
+
+      if (
+        role.name === 'executive' &&
+        (!draft.position_id.trim() ||
+          !draft.term_start.trim() ||
+          !draft.term_end.trim())
+      ) {
+        setExpandedUserId(user.id);
+        setErrorMap((prev) => ({
+          ...prev,
+          [user.id]:
+            'Executive requires Position ID, Term Start, and Term End.',
+        }));
+        return;
+      }
+    }
+
     setLoading(user.id, true);
     setErrorMap((prev) => ({ ...prev, [user.id]: null }));
 
@@ -122,6 +207,30 @@ export default function AssignRoleModal({
     fd.set('userId', user.id);
     fd.set('roleId', role.id);
     fd.set('roleName', role.name);
+
+    if (role.name === 'member') {
+      fd.set('student_id', draft.student_id.trim());
+      fd.set('academic_session', draft.academic_session.trim());
+      fd.set('department', draft.department.trim());
+    }
+
+    if (role.name === 'advisor') {
+      fd.set('position', draft.position.trim());
+      fd.set('profile_link', draft.profile_link.trim());
+      fd.set('department', draft.department.trim());
+    }
+
+    if (role.name === 'admin' || role.name === 'mentor') {
+      fd.set('bio', draft.bio?.trim() || '');
+    }
+
+    if (role.name === 'executive') {
+      fd.set('position_id', draft.position_id.trim());
+      fd.set('term_start', draft.term_start.trim());
+      fd.set('term_end', draft.term_end.trim());
+      fd.set('is_current', draft.is_current ? 'true' : 'false');
+      fd.set('bio', draft.bio?.trim() || '');
+    }
 
     startTransition(async () => {
       try {
@@ -272,93 +381,322 @@ export default function AssignRoleModal({
           ) : (
             <ul className="divide-y divide-white/5">
               {filtered.map((user) => {
-                const isAssigned = user.currentRoleId === role.id;
+                const isAssigned = user.roleIds?.includes(role.id) ?? false;
                 const isLoading = loadingIds.has(user.id);
                 const isSuccess = successIds.has(user.id);
                 const err = errorMap[user.id];
-                const currentCfg = getRoleConfig(user.currentRoleName);
+                const isManagedRole = MANAGED_ROLES.includes(role.name);
+                const draft =
+                  profileDrafts[user.id] || buildEmptyDraft(role.name);
+                const isExpanded = expandedUserId === user.id;
 
                 return (
                   <li
                     key={user.id}
-                    className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/3 ${
+                    className={`px-4 py-3 transition-colors hover:bg-white/3 ${
                       isAssigned ? 'bg-white/2' : ''
                     }`}
                   >
-                    <UserAvatar user={user} />
+                    <div className="flex items-center gap-3">
+                      <UserAvatar user={user} />
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate text-sm font-medium text-white">
-                          {user.name}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-sm font-medium text-white">
+                            {user.name}
+                          </p>
+                          {isAssigned && (
+                            <CheckCircle2
+                              className={`h-3.5 w-3.5 shrink-0 ${cfg.iconColor}`}
+                            />
+                          )}
+                        </div>
+                        <p className="truncate text-xs text-gray-500">
+                          {user.email}
                         </p>
-                        {isAssigned && (
-                          <CheckCircle2
-                            className={`h-3.5 w-3.5 shrink-0 ${cfg.iconColor}`}
-                          />
+                        {/* all current role badges */}
+                        {user.roleNames?.length > 0 && (
+                          <div className="mt-0.5 flex flex-wrap gap-1">
+                            {user.roleNames.map((rn) => {
+                              const rc = getRoleConfig(rn);
+                              return (
+                                <span
+                                  key={rn}
+                                  className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-semibold capitalize ${rc.badge}`}
+                                >
+                                  {rn}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {err && (
+                          <p className="mt-0.5 text-[10px] text-red-400">
+                            {err}
+                          </p>
                         )}
                       </div>
-                      <p className="truncate text-xs text-gray-500">
-                        {user.email}
-                      </p>
-                      {/* all current role badges */}
-                      {user.roleNames?.length > 0 && (
-                        <div className="mt-0.5 flex flex-wrap gap-1">
-                          {user.roleNames.map((rn) => {
-                            const rc = getRoleConfig(rn);
-                            return (
-                              <span
-                                key={rn}
-                                className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-semibold capitalize ${rc.badge}`}
-                              >
-                                {rn}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      )}
-                      {err && (
-                        <p className="mt-0.5 text-[10px] text-red-400">{err}</p>
+
+                      {/* role count badge */}
+                      <span className="shrink-0 rounded-md bg-white/8 px-2 py-0.5 text-[10px] text-gray-400">
+                        {user.roleIds?.length ?? 0} role
+                        {user.roleIds?.length !== 1 ? 's' : ''}
+                      </span>
+
+                      {/* action button */}
+                      {isAssigned ? (
+                        <button
+                          onClick={() => handleRemove(user)}
+                          disabled={isLoading}
+                          className="flex shrink-0 items-center gap-1 rounded-lg bg-white/6 px-2.5 py-1.5 text-xs font-medium text-gray-400 transition-colors hover:bg-red-500/15 hover:text-red-400 disabled:opacity-40"
+                        >
+                          {isLoading ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : isSuccess ? (
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                          ) : (
+                            <UserMinus className="h-3.5 w-3.5" />
+                          )}
+                          Remove
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            if (isManagedRole) setExpandedUserId(user.id);
+                            handleAssign(user);
+                          }}
+                          disabled={isLoading}
+                          className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-40 ${cfg.badge} hover:opacity-90`}
+                        >
+                          {isLoading ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : isSuccess ? (
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          ) : (
+                            <UserCheck className="h-3.5 w-3.5" />
+                          )}
+                          Assign
+                        </button>
                       )}
                     </div>
 
-                    {/* role count badge */}
-                    <span className="shrink-0 rounded-md bg-white/8 px-2 py-0.5 text-[10px] text-gray-400">
-                      {user.roleIds?.length ?? 0} role
-                      {user.roleIds?.length !== 1 ? 's' : ''}
-                    </span>
+                    {isManagedRole && !isAssigned && isExpanded && (
+                      <div className="mt-3 rounded-xl border border-white/10 bg-white/3 p-3">
+                        <p className="mb-2 text-[11px] font-semibold text-gray-400 uppercase">
+                          {role.name} Profile Details
+                        </p>
 
-                    {/* action button */}
-                    {isAssigned ? (
-                      <button
-                        onClick={() => handleRemove(user)}
-                        disabled={isLoading}
-                        className="flex shrink-0 items-center gap-1 rounded-lg bg-white/6 px-2.5 py-1.5 text-xs font-medium text-gray-400 transition-colors hover:bg-red-500/15 hover:text-red-400 disabled:opacity-40"
-                      >
-                        {isLoading ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : isSuccess ? (
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                        ) : (
-                          <UserMinus className="h-3.5 w-3.5" />
+                        {role.name === 'member' && (
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                            <input
+                              value={draft.student_id}
+                              onChange={(e) =>
+                                setProfileDrafts((prev) => ({
+                                  ...prev,
+                                  [user.id]: {
+                                    ...buildEmptyDraft(role.name),
+                                    ...prev[user.id],
+                                    student_id: e.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder="Student ID"
+                              className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500/40"
+                            />
+                            <input
+                              value={draft.academic_session}
+                              onChange={(e) =>
+                                setProfileDrafts((prev) => ({
+                                  ...prev,
+                                  [user.id]: {
+                                    ...buildEmptyDraft(role.name),
+                                    ...prev[user.id],
+                                    academic_session: e.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder="Academic Session"
+                              className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500/40"
+                            />
+                            <input
+                              value={draft.department}
+                              onChange={(e) =>
+                                setProfileDrafts((prev) => ({
+                                  ...prev,
+                                  [user.id]: {
+                                    ...buildEmptyDraft(role.name),
+                                    ...prev[user.id],
+                                    department: e.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder="Department"
+                              className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500/40"
+                            />
+                          </div>
                         )}
-                        Remove
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleAssign(user)}
-                        disabled={isLoading}
-                        className={`flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors disabled:opacity-40 ${cfg.badge} hover:opacity-90`}
-                      >
-                        {isLoading ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : isSuccess ? (
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        ) : (
-                          <UserCheck className="h-3.5 w-3.5" />
+
+                        {role.name === 'advisor' && (
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                            <input
+                              value={draft.position}
+                              onChange={(e) =>
+                                setProfileDrafts((prev) => ({
+                                  ...prev,
+                                  [user.id]: {
+                                    ...buildEmptyDraft(role.name),
+                                    ...prev[user.id],
+                                    position: e.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder="Position"
+                              className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500/40"
+                            />
+                            <input
+                              value={draft.profile_link}
+                              onChange={(e) =>
+                                setProfileDrafts((prev) => ({
+                                  ...prev,
+                                  [user.id]: {
+                                    ...buildEmptyDraft(role.name),
+                                    ...prev[user.id],
+                                    profile_link: e.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder="Profile Link"
+                              className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500/40"
+                            />
+                            <input
+                              value={draft.department}
+                              onChange={(e) =>
+                                setProfileDrafts((prev) => ({
+                                  ...prev,
+                                  [user.id]: {
+                                    ...buildEmptyDraft(role.name),
+                                    ...prev[user.id],
+                                    department: e.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder="Department"
+                              className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500/40"
+                            />
+                          </div>
                         )}
-                        Assign
-                      </button>
+
+                        {(role.name === 'admin' || role.name === 'mentor') && (
+                          <textarea
+                            rows={2}
+                            value={draft.bio}
+                            onChange={(e) =>
+                              setProfileDrafts((prev) => ({
+                                ...prev,
+                                [user.id]: {
+                                  ...buildEmptyDraft(role.name),
+                                  ...prev[user.id],
+                                  bio: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder="Bio (optional)"
+                            className="w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500/40"
+                          />
+                        )}
+
+                        {role.name === 'executive' && (
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                              <input
+                                value={draft.position_id}
+                                onChange={(e) =>
+                                  setProfileDrafts((prev) => ({
+                                    ...prev,
+                                    [user.id]: {
+                                      ...buildEmptyDraft(role.name),
+                                      ...prev[user.id],
+                                      position_id: e.target.value,
+                                    },
+                                  }))
+                                }
+                                placeholder="Position ID"
+                                className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500/40"
+                              />
+                              <input
+                                type="date"
+                                value={draft.term_start}
+                                onChange={(e) =>
+                                  setProfileDrafts((prev) => ({
+                                    ...prev,
+                                    [user.id]: {
+                                      ...buildEmptyDraft(role.name),
+                                      ...prev[user.id],
+                                      term_start: e.target.value,
+                                    },
+                                  }))
+                                }
+                                className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500/40"
+                              />
+                              <input
+                                type="date"
+                                value={draft.term_end}
+                                onChange={(e) =>
+                                  setProfileDrafts((prev) => ({
+                                    ...prev,
+                                    [user.id]: {
+                                      ...buildEmptyDraft(role.name),
+                                      ...prev[user.id],
+                                      term_end: e.target.value,
+                                    },
+                                  }))
+                                }
+                                className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500/40"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <input
+                                id={`isCurrent-${user.id}`}
+                                type="checkbox"
+                                checked={Boolean(draft.is_current)}
+                                onChange={(e) =>
+                                  setProfileDrafts((prev) => ({
+                                    ...prev,
+                                    [user.id]: {
+                                      ...buildEmptyDraft(role.name),
+                                      ...prev[user.id],
+                                      is_current: e.target.checked,
+                                    },
+                                  }))
+                                }
+                                className="h-3.5 w-3.5 rounded border-white/30 bg-white/5"
+                              />
+                              <label
+                                htmlFor={`isCurrent-${user.id}`}
+                                className="text-xs text-gray-400"
+                              >
+                                Is Current
+                              </label>
+                            </div>
+                            <textarea
+                              rows={2}
+                              value={draft.bio}
+                              onChange={(e) =>
+                                setProfileDrafts((prev) => ({
+                                  ...prev,
+                                  [user.id]: {
+                                    ...buildEmptyDraft(role.name),
+                                    ...prev[user.id],
+                                    bio: e.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder="Bio (optional)"
+                              className="w-full rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500/40"
+                            />
+                          </div>
+                        )}
+                      </div>
                     )}
                   </li>
                 );

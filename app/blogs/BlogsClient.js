@@ -1,182 +1,229 @@
 /**
- * @file Blogs listing page client component.
- * Displays categorized, searchable blog cards with featured article highlight.
+ * @file Blogs listing page client component — refactored to use shared components.
+ * Searchable, filterable, paginated blog cards with featured spotlight,
+ * grid/list view toggle, animated transitions, and polished filter UX.
  *
  * @module BlogsClient
  */
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import PageHero from '../_components/ui/PageHero';
-import EmptyState from '../_components/ui/EmptyState';
-import { useScrollReveal } from '../_lib/hooks';
+import PageShell from '../_components/ui/PageShell';
+import CTASection from '../_components/ui/CTASection';
+import FilterPanel from '../_components/ui/FilterPanel';
+import FeaturedSpotlight from '../_components/ui/FeaturedSpotlight';
+import InlinePagination from '../_components/ui/InlinePagination';
+import SafeImg from '../_components/ui/SafeImg';
+import { fadeUp, staggerContainer, cardHover, buttonTap, viewportConfig } from '../_components/motion/motion';
+import { cn, driveImageUrl } from '../_lib/utils';
+import { getCategoryConfig, getCategoryLabel } from '../_lib/blog-config';
+import { getColorClasses } from '../_lib/category-colors';
 import dynamic from 'next/dynamic';
+
 const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
   ssr: false,
 });
-import { cn } from '../_lib/utils';
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-/** Blog category filter buttons */
+// Keys MUST match DB check constraint: ['CP','Programming','WebDev','AI-ML','Career','News','Tutorial','Other']
 const CATEGORIES = [
-  { name: 'All', icon: '📚' },
-  { name: 'Tutorials', icon: '📘' },
-  { name: 'Contests', icon: '🏆' },
-  { name: 'Career', icon: '🚀' },
-  { name: 'Announcements', icon: '📢' },
-  { name: 'WIE', icon: '👩‍💻' },
+  { key: 'CP', label: 'Competitive Programming', icon: '🏆', color: 'violet' },
+  { key: 'Programming', label: 'Programming', icon: '💻', color: 'indigo' },
+  { key: 'WebDev', label: 'Web Dev', icon: '🌐', color: 'blue' },
+  { key: 'AI-ML', label: 'AI / ML', icon: '🤖', color: 'rose' },
+  { key: 'Career', label: 'Career', icon: '💼', color: 'teal' },
+  { key: 'News', label: 'News', icon: '📰', color: 'sky' },
+  { key: 'Tutorial', label: 'Tutorial', icon: '📚', color: 'amber' },
+  { key: 'Other', label: 'Other', icon: '📌', color: 'gray' },
 ];
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+const SORT_OPTIONS = [
+  { key: 'newest', label: 'Newest First' },
+  { key: 'oldest', label: 'Oldest First' },
+  { key: 'popular', label: 'Most Views' },
+  { key: 'title', label: 'Title A–Z' },
+];
 
-/**
- * Normalize a raw blog object from the API into a consistent shape.
- * @param {object} b - Raw blog record
- * @returns {object} Normalized blog
- */
+const LIST_PER_PAGE = 6;
+const GRID_PER_PAGE = 9;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function normalizeBlog(b) {
+  const authorObj = b.users || {};
   return {
     ...b,
-    excerpt: b.excerpt || b.description || '',
-    author: b.author || b.author_name || 'NEUPC Team',
-    date:
-      b.date ||
-      (b.published_at
-        ? new Date(b.published_at).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-          })
-        : ''),
-    readTime: b.readTime || b.read_time || '5 min',
-    tags: b.tags || [],
-    featured: b.featured ?? b.is_featured ?? false,
+    excerpt: b.excerpt || '',
+    author: authorObj.full_name || 'NEUPC Team',
+    authorAvatar: authorObj.avatar_url || null,
+    thumbnail: b.thumbnail || null,
+    date: b.published_at
+      ? new Date(b.published_at).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        })
+      : '',
+    readTime: b.read_time || '5 min',
+    tags: Array.isArray(b.tags) ? b.tags : [],
+    featured: b.is_featured ?? false,
+    views: b.views ?? 0,
+    likes: b.likes ?? 0,
   };
 }
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-/**
- * Featured blog hero card.
- * @param {{ blog: object }} props
- */
-function FeaturedBlogCard({ blog }) {
-  return (
-    <div className="mb-12 md:mb-16">
-      <h2 className="mb-6 text-2xl font-bold text-white md:text-3xl">
-        Featured Article
-      </h2>
-      <div className="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-8 shadow-xl backdrop-blur-md transition-all duration-300 hover:border-white/30 md:p-12">
-        <div className="from-primary-500/20 absolute -top-20 -right-20 h-64 w-64 rounded-full bg-linear-to-br to-transparent opacity-0 blur-3xl transition-opacity duration-300 group-hover:opacity-100" />
-
-        <div className="relative">
-          <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
-            <span className="from-primary-500/20 to-primary-600/20 text-primary-300 border-primary-500/30 rounded-full border bg-linear-to-br px-4 py-1.5 font-semibold">
-              {blog.category}
-            </span>
-            <span className="text-gray-400">{blog.date}</span>
-            <span className="text-gray-400">•</span>
-            <span className="text-gray-400">{blog.readTime} read</span>
-          </div>
-
-          <h3 className="from-primary-300 to-secondary-300 mb-4 bg-linear-to-r via-white bg-clip-text text-3xl font-bold text-transparent md:text-4xl lg:text-5xl">
-            {blog.title}
-          </h3>
-
-          <p className="mb-6 text-base leading-relaxed text-gray-300 md:text-lg">
-            {blog.excerpt}
-          </p>
-
-          {blog.tags.length > 0 && (
-            <div className="mb-6 flex flex-wrap gap-2">
-              {blog.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-lg bg-white/10 px-3 py-1 text-xs text-gray-300"
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="from-primary-500/30 to-secondary-500/30 flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br text-xl font-bold text-white">
-                {blog.author.charAt(0)}
-              </div>
-              <div>
-                <p className="font-semibold text-white">{blog.author}</p>
-                <p className="text-sm text-gray-400">Author</p>
-              </div>
-            </div>
-
-            <Link
-              href={`/blogs/${blog.slug || blog.id}`}
-              className="from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 group/link hover:shadow-primary-500/50 inline-flex items-center gap-2 rounded-xl bg-linear-to-r px-6 py-3 font-semibold text-white shadow-lg transition-all hover:scale-105"
-            >
-              Read Article
-              <svg
-                className="h-5 w-5 transition-transform group-hover/link:translate-x-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 8l4 4m0 0l-4 4m4-4H3"
-                />
-              </svg>
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+function getBlogCategoryColor(category) {
+  const match = CATEGORIES.find((c) => c.key === category);
+  return match ? getColorClasses(match.color) : getColorClasses('gray');
 }
 
-/**
- * Regular blog card.
- * @param {{ blog: object }} props
- */
-function BlogCard({ blog }) {
+// ─── Grid Card ────────────────────────────────────────────────────────────────
+
+function GridCard({ blog }) {
+  const catColor = getBlogCategoryColor(blog.category);
+
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/10 p-6 shadow-xl backdrop-blur-md transition-all duration-300 hover:border-white/20">
-      <div className="from-primary-500/20 absolute -top-10 -right-10 h-32 w-32 rounded-full bg-linear-to-br to-transparent opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100" />
-
-      <div className="relative">
-        <div className="mb-3 flex items-center gap-2 text-xs">
-          <span className="from-primary-500/20 to-primary-600/20 text-primary-300 border-primary-500/30 rounded-full border bg-linear-to-br px-3 py-1 font-semibold">
-            {blog.category}
+    <motion.div variants={fadeUp} whileHover={cardHover} whileTap={buttonTap}>
+    <Link
+      href={`/blogs/${blog.slug || blog.id}`}
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-white/3 transition-colors duration-300 hover:border-white/15 hover:shadow-xl hover:shadow-black/30"
+    >
+      {/* Thumbnail */}
+      <div className="relative h-44 overflow-hidden bg-white/5">
+        {blog.thumbnail ? (
+          <SafeImg
+            src={driveImageUrl(blog.thumbnail)}
+            alt={blog.title || ''}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            fallback="/placeholder-blog.svg"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-4xl opacity-20">
+            📝
+          </div>
+        )}
+        <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
+        {blog.featured && (
+          <span className="absolute top-3 right-3 rounded-full bg-amber-500/80 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
+            ✨ Featured
           </span>
-          <span className="text-gray-400">{blog.readTime}</span>
-        </div>
+        )}
+      </div>
 
-        <h3 className="from-primary-300 mb-3 bg-linear-to-r to-white bg-clip-text text-xl leading-tight font-bold text-transparent transition-all duration-300 group-hover:scale-[1.02]">
+      {/* Body */}
+      <div className="flex flex-1 flex-col gap-2.5 p-5">
+        {blog.category && (
+          <span
+            className={cn(
+              'flex w-fit items-center gap-1.5 rounded-lg border px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase',
+              catColor.badge
+            )}
+          >
+            <span>{getCategoryConfig(blog.category).emoji}</span>
+            {getCategoryLabel(blog.category)}
+          </span>
+        )}
+        <h3 className="line-clamp-2 text-sm leading-snug font-bold text-white transition-colors group-hover:text-primary-300">
           {blog.title}
         </h3>
-
-        <p className="mb-4 line-clamp-3 text-sm leading-relaxed text-gray-300 transition-colors group-hover:text-gray-200">
-          {blog.excerpt}
-        </p>
-
+        {blog.excerpt && (
+          <p className="line-clamp-2 text-xs leading-relaxed text-gray-500">
+            {blog.excerpt}
+          </p>
+        )}
         {blog.tags.length > 0 && (
-          <div className="mb-4 flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1">
             {blog.tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="rounded-md bg-white/10 px-2 py-0.5 text-xs text-gray-400"
+                className="rounded-md bg-white/6 px-1.5 py-0.5 text-[10px] text-gray-500"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="mt-auto flex items-center justify-between border-t border-white/6 pt-3 text-[11px] text-gray-600">
+          <span className="flex items-center gap-1.5 truncate">
+            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-[10px] font-bold text-white">
+              {blog.author.charAt(0)}
+            </div>
+            <span className="truncate">{blog.author}</span>
+          </span>
+          <span className="shrink-0">{blog.readTime}</span>
+        </div>
+      </div>
+    </Link>
+    </motion.div>
+  );
+}
+
+// ─── List Card ────────────────────────────────────────────────────────────────
+
+function ListCard({ blog }) {
+  const catColor = getBlogCategoryColor(blog.category);
+
+  return (
+    <motion.div variants={fadeUp} whileHover={{ y: -2, transition: { duration: 0.2 } }}>
+    <Link
+      href={`/blogs/${blog.slug || blog.id}`}
+      className="group relative flex flex-col gap-4 overflow-hidden rounded-2xl border border-white/8 bg-white/3 p-6 transition-colors duration-300 hover:border-white/15 hover:bg-white/5 sm:flex-row"
+    >
+      {/* Thumbnail */}
+      {blog.thumbnail && (
+        <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl sm:h-auto sm:w-52">
+          <SafeImg
+            src={driveImageUrl(blog.thumbnail)}
+            alt={blog.title || ''}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            fallback="/placeholder-blog.svg"
+          />
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="flex min-w-0 flex-1 flex-col justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {blog.category && (
+            <span
+              className={cn(
+                'flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold',
+                catColor.badge
+              )}
+            >
+              <span>{getCategoryConfig(blog.category).emoji}</span>
+              {getCategoryLabel(blog.category)}
+            </span>
+          )}
+          {blog.featured && (
+            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-300">
+              ✨ Featured
+            </span>
+          )}
+        </div>
+
+        <div>
+          <h3 className="line-clamp-2 text-base leading-snug font-bold text-white transition-colors group-hover:text-primary-300">
+            {blog.title}
+          </h3>
+          {blog.excerpt && (
+            <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-gray-500">
+              {blog.excerpt}
+            </p>
+          )}
+        </div>
+
+        {blog.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {blog.tags.slice(0, 4).map((tag) => (
+              <span
+                key={tag}
+                className="rounded-md bg-white/6 px-2 py-0.5 text-[11px] text-gray-500"
               >
                 #{tag}
               </span>
@@ -184,198 +231,338 @@ function BlogCard({ blog }) {
           </div>
         )}
 
-        <div className="flex items-center justify-between border-t border-white/10 pt-4">
+        <div className="flex items-center justify-between text-[12px] text-gray-600">
           <div className="flex items-center gap-2">
-            <div className="from-secondary-500/30 to-primary-500/30 flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br text-sm font-bold text-white">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-[11px] font-bold text-white">
               {blog.author.charAt(0)}
             </div>
-            <div>
-              <p className="text-xs font-medium text-white">{blog.author}</p>
-              <p className="text-xs text-gray-400">{blog.date}</p>
-            </div>
+            <span>{blog.author}</span>
+            {blog.date && <span className="text-gray-700">·</span>}
+            {blog.date && <span>{blog.date}</span>}
           </div>
-
-          <Link
-            href={`/blogs/${blog.slug || blog.id}`}
-            className="from-primary-500/20 to-primary-600/20 hover:from-primary-500/30 hover:to-primary-600/30 group/arrow flex h-9 w-9 items-center justify-center rounded-lg bg-linear-to-br transition-all"
-          >
-            <svg
-              className="text-primary-300 h-4 w-4 transition-transform group-hover/arrow:translate-x-0.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </Link>
+          <div className="flex shrink-0 items-center gap-3">
+            {blog.views > 0 && <span>👁 {blog.views.toLocaleString()}</span>}
+            <span>⏱ {blog.readTime}</span>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Arrow */}
+      <div className="absolute top-5 right-5 flex h-8 w-8 items-center justify-center rounded-xl border border-white/8 bg-white/5 text-gray-600 opacity-0 transition-all group-hover:text-white group-hover:opacity-100">
+        <svg
+          className="h-3.5 w-3.5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 5l7 7-7 7"
+          />
+        </svg>
+      </div>
+    </Link>
+    </motion.div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main component
-// ---------------------------------------------------------------------------
+// ─── Main component ───────────────────────────────────────────────────────────
 
-/**
- * Blogs listing page client component.
- *
- * @param {{ initialBlogs?: Array }} props
- */
-export default function BlogsClient({ initialBlogs = [] }) {
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchRef, searchVisible] = useScrollReveal({ threshold: 0.2 });
-  const [gridRef, gridVisible] = useScrollReveal({ threshold: 0.05 });
+/** @param {{ initialBlogs?: Array, settings?: Object }} props */
+export default function BlogsClient({ initialBlogs = [], settings = {} }) {
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
+  const [view, setView] = useState('grid');
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Memoize normalized blogs to avoid re-computing on every render
+  const listAnchor = useRef(null);
+
+  // Normalize all blogs once
   const blogs = useMemo(() => initialBlogs.map(normalizeBlog), [initialBlogs]);
 
-  const filteredBlogs = useMemo(() => {
-    const q = searchQuery.toLowerCase();
-    return blogs.filter((blog) => {
-      const matchesCategory =
-        activeCategory === 'All' || blog.category === activeCategory;
-      const matchesSearch =
-        !q ||
-        blog.title.toLowerCase().includes(q) ||
-        blog.excerpt.toLowerCase().includes(q) ||
-        blog.tags.some((tag) => tag.toLowerCase().includes(q));
-      return matchesCategory && matchesSearch;
-    });
-  }, [blogs, activeCategory, searchQuery]);
+  // Featured blogs (for spotlight)
+  const featuredBlogs = useMemo(() => blogs.filter((b) => b.featured), [blogs]);
 
-  const featuredBlog = blogs.find((blog) => blog.featured);
-  const regularBlogs = filteredBlogs.filter((blog) => !blog.featured);
+  // Category counts
+  const counts = useMemo(() => {
+    const map = { all: blogs.length };
+    CATEGORIES.forEach(({ key }) => {
+      map[key] = blogs.filter((b) => b.category === key).length;
+    });
+    return map;
+  }, [blogs]);
+
+  // Build categories for FilterPanel
+  const filterCategories = useMemo(
+    () =>
+      CATEGORIES.map(({ key, label, icon, color }) => ({
+        key,
+        label,
+        icon,
+        color,
+        count: counts[key] ?? 0,
+      })),
+    [counts]
+  );
+
+  // Filter + sort
+  const filtered = useMemo(() => {
+    let list = blogs;
+    if (category) list = list.filter((b) => b.category === category);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(
+        (b) =>
+          b.title?.toLowerCase().includes(q) ||
+          b.excerpt?.toLowerCase().includes(q) ||
+          b.author?.toLowerCase().includes(q) ||
+          b.tags?.some((t) => t.toLowerCase().includes(q))
+      );
+    }
+    return [...list].sort((a, b) => {
+      if (sortBy === 'oldest')
+        return new Date(a.published_at) - new Date(b.published_at);
+      if (sortBy === 'popular') return (b.views ?? 0) - (a.views ?? 0);
+      if (sortBy === 'title')
+        return (a.title ?? '').localeCompare(b.title ?? '');
+      return new Date(b.published_at) - new Date(a.published_at);
+    });
+  }, [blogs, category, search, sortBy]);
+
+  const perPage = view === 'grid' ? GRID_PER_PAGE : LIST_PER_PAGE;
+  const totalPages = Math.ceil(filtered.length / perPage);
+  const pageBlogs = filtered.slice(
+    (currentPage - 1) * perPage,
+    currentPage * perPage
+  );
+
+  const hasFilters = !!(search || category);
+  const activeFilterCount = [search, category].filter(Boolean).length;
+
+  // Handlers
+  function goToPage(p) {
+    setCurrentPage(p);
+    listAnchor.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function setViewMode(v) {
+    setView(v);
+    setCurrentPage(1);
+  }
+  function resetFilters() {
+    setSearch('');
+    setCategory('');
+    setSortBy('newest');
+    setCurrentPage(1);
+  }
+  function handleCategory(cat) {
+    setCategory((p) => (p === cat ? '' : cat));
+    setCurrentPage(1);
+  }
+  function handleSearch(e) {
+    setSearch(e.target.value);
+    setCurrentPage(1);
+  }
 
   return (
-    <main className="min-h-screen bg-linear-to-b from-gray-900 via-black to-gray-900">
+    <PageShell>
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <PageHero
         badgeIcon="📝"
-        badge="Knowledge Hub"
-        title="Programming Insights & Updates"
-        description="Explore tutorials, contest insights, club updates, and career guidance from our programming community"
+        badge={settings?.blogs_page_badge || 'Knowledge Hub'}
+        title={settings?.blogs_page_title || 'Programming Insights & Updates'}
+        description={
+          settings?.blogs_page_description ||
+          'Tutorials, contest insights, career guidance, and community stories from NEUPC members and mentors.'
+        }
+        subtitle={settings?.blogs_page_subtitle || ''}
+        stats={[
+          { value: String(blogs.length), label: 'Articles' },
+          { value: String(featuredBlogs.length), label: 'Featured' },
+          { value: String(counts['Tutorials'] ?? 0), label: 'Tutorials' },
+          { value: String(counts['Contests'] ?? 0), label: 'Contests' },
+        ]}
       />
 
-      {/* Content Section */}
-      <section className="relative px-4 py-8 sm:px-6 lg:px-8">
-        <div className="container mx-auto">
-          <div className="mx-auto max-w-7xl">
-            {/* Search Bar */}
-            <div
-              ref={searchRef}
-              className={cn(
-                'mb-12 transition-all duration-700 md:mb-16',
-                searchVisible
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-6 opacity-0'
-              )}
-            >
-              <div className="relative mx-auto max-w-2xl">
-                <input
-                  type="text"
-                  placeholder="Search blogs by title, content, or tags..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="focus:border-primary-500/50 focus:ring-primary-500/50 w-full rounded-xl border border-white/20 bg-white/10 px-6 py-4 pl-14 text-white placeholder-gray-400 backdrop-blur-md transition-all focus:bg-white/15 focus:ring-2 focus:outline-none"
-                />
-                <svg
-                  className="absolute top-1/2 left-5 h-5 w-5 -translate-y-1/2 text-gray-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-              </div>
-            </div>
-
-            {/* Category Filters */}
-            <div className="mb-12 flex flex-wrap justify-center gap-3 md:mb-16">
-              {CATEGORIES.map((category) => (
-                <button
-                  key={category.name}
-                  onClick={() => setActiveCategory(category.name)}
+      {/* ── Content ──────────────────────────────────────────────────────── */}
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 md:py-16 lg:px-8">
+        {/* ── Featured spotlight ── */}
+        {featuredBlogs.length > 0 && (
+          <FeaturedSpotlight
+            items={featuredBlogs}
+            getImage={(b) => b.thumbnail}
+            getTitle={(b) => b.title}
+            getDescription={(b) => b.excerpt}
+            getHref={(b) => `/blogs/${b.slug || b.id}`}
+            ctaLabel="Read Article"
+            sectionTitle="Featured Articles"
+            renderBadges={(b) =>
+              b.category ? (
+                <span
                   className={cn(
-                    'group relative overflow-hidden rounded-full px-6 py-3 text-sm font-semibold transition-all duration-300',
-                    activeCategory === category.name
-                      ? 'from-primary-500 to-secondary-500 bg-linear-to-r text-white shadow-lg'
-                      : 'hover:border-primary-500/50 border border-white/20 bg-white/10 text-gray-300 backdrop-blur-md hover:bg-white/15'
+                    'flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium',
+                    getBlogCategoryColor(b.category).badge
                   )}
                 >
-                  <span className="relative flex items-center gap-2">
-                    <span>{category.icon}</span>
-                    <span>{category.name}</span>
+                  <span>{getCategoryConfig(b.category).emoji}</span>
+                  {getCategoryLabel(b.category)}
+                </span>
+              ) : null
+            }
+            renderMeta={(b) => (
+              <>
+                <span className="flex items-center gap-1.5">
+                  <span>✍️</span>
+                  {b.author}
+                </span>
+                {b.date && (
+                  <span className="flex items-center gap-1.5">
+                    <span>📅</span>
+                    {b.date}
                   </span>
-                </button>
-              ))}
-            </div>
+                )}
+                {b.readTime && (
+                  <span className="flex items-center gap-1.5">
+                    <span>⏱</span>
+                    {b.readTime} read
+                  </span>
+                )}
+              </>
+            )}
+          />
+        )}
 
-            {/* Featured Blog */}
-            {activeCategory === 'All' && featuredBlog && (
-              <FeaturedBlogCard blog={featuredBlog} />
+        {/* ── Filter panel ── */}
+        <FilterPanel
+          search={search}
+          onSearchChange={handleSearch}
+          searchPlaceholder="Search by title, excerpt, author, or tag…"
+          sortBy={sortBy}
+          onSortChange={(e) => {
+            setSortBy(e.target.value);
+            setCurrentPage(1);
+          }}
+          sortOptions={SORT_OPTIONS}
+          categories={filterCategories}
+          activeCategory={category}
+          onCategoryChange={handleCategory}
+          getCategoryClasses={(cat, isActive) => {
+            const cls = getColorClasses(cat.color);
+            return isActive ? cls.active : cls.pill + ' hover:opacity-80';
+          }}
+          showViewToggle
+          view={view}
+          onViewChange={setViewMode}
+          hasFilters={hasFilters}
+          activeFilterCount={activeFilterCount}
+          onReset={resetFilters}
+        />
+
+        {/* ── Results header ── */}
+        <div ref={listAnchor} className="mb-6">
+          <p className="text-sm text-gray-500">
+            {hasFilters ? (
+              <>
+                <span className="font-semibold text-gray-300">
+                  {filtered.length}
+                </span>{' '}
+                result{filtered.length !== 1 ? 's' : ''} found
+              </>
+            ) : (
+              <>
+                <span className="font-semibold text-gray-300">
+                  {blogs.length}
+                </span>{' '}
+                article{blogs.length !== 1 ? 's' : ''} total
+              </>
+            )}
+          </p>
+        </div>
+
+        {/* ── Blog list / grid ── */}
+        {pageBlogs.length > 0 ? (
+          <>
+            {view === 'grid' ? (
+              <motion.div
+                variants={staggerContainer(0.07)}
+                initial="hidden"
+                whileInView="visible"
+                viewport={viewportConfig}
+                className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+              >
+              {pageBlogs.map((blog) => (
+                <GridCard
+                  key={blog.id}
+                  blog={blog}
+                />
+              ))}
+              </motion.div>
+            ) : (
+              <motion.div
+                variants={staggerContainer(0.08)}
+                initial="hidden"
+                whileInView="visible"
+                viewport={viewportConfig}
+                className="space-y-4"
+              >
+                {pageBlogs.map((blog) => (
+                  <ListCard
+                    key={blog.id}
+                    blog={blog}
+                  />
+                ))}
+              </motion.div>
             )}
 
-            {/* Blog Grid */}
-            <div ref={gridRef}>
-              <h2
-                className={cn(
-                  'mb-6 text-2xl font-bold text-white transition-all duration-700 md:text-3xl',
-                  gridVisible
-                    ? 'translate-y-0 opacity-100'
-                    : 'translate-y-4 opacity-0'
-                )}
-              >
-                {activeCategory === 'All'
-                  ? 'All Articles'
-                  : `${activeCategory} Articles`}
-              </h2>
-
-              {regularBlogs.length > 0 ? (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {regularBlogs.map((blog, index) => (
-                    <div
-                      key={blog.id}
-                      className={cn(
-                        'transition-all duration-700',
-                        gridVisible
-                          ? 'translate-y-0 opacity-100'
-                          : 'translate-y-8 opacity-0'
-                      )}
-                      style={{
-                        transitionDelay: gridVisible
-                          ? `${index * 100}ms`
-                          : '0ms',
-                      }}
-                    >
-                      <BlogCard blog={blog} />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState
-                  icon="📝"
-                  title="No blogs found"
-                  description="Try adjusting your search or filters"
-                />
-              )}
+            <InlinePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              total={filtered.length}
+              perPage={perPage}
+              onPageChange={goToPage}
+              itemLabel="article"
+            />
+          </>
+        ) : (
+          /* ── Empty state ── */
+          <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-white/8 bg-white/2 py-24 text-center">
+            <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-white/5 text-4xl">
+              {hasFilters ? '🔍' : '📝'}
             </div>
+            <h3 className="text-lg font-bold text-gray-200">
+              {hasFilters ? 'No matching articles' : 'No articles yet'}
+            </h3>
+            <p className="mt-2 max-w-sm text-sm text-gray-500">
+              {hasFilters
+                ? 'Try adjusting your search or category filter.'
+                : 'Blog posts will appear here once published. Check back soon!'}
+            </p>
+            {hasFilters && (
+              <button
+                onClick={resetFilters}
+                className="mt-7 rounded-xl border border-white/10 bg-white/5 px-6 py-2.5 text-sm font-medium text-gray-300 transition-all hover:bg-white/10 hover:text-white"
+              >
+                Clear all filters
+              </button>
+            )}
           </div>
-        </div>
+        )}
       </section>
 
+      <CTASection
+        icon="✍️"
+        title={settings?.blogs_page_cta_title || 'Share Your Knowledge'}
+        description={
+          settings?.blogs_page_cta_description ||
+          'Are you a member with insights to share? Contribute a tutorial, contest editorial, or career story to the community.'
+        }
+        primaryAction={{ label: 'Join the Club', href: '/join' }}
+        secondaryAction={{ label: 'Contact Us', href: '/contact' }}
+      />
+
       <ScrollToTop />
-    </main>
+    </PageShell>
   );
 }

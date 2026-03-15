@@ -5,7 +5,10 @@
 
 import { auth } from '@/app/_lib/auth';
 import { redirect } from 'next/navigation';
-import { getJoinPageData } from '@/app/_lib/public-actions';
+import {
+  getJoinPageData,
+  getAllPublicSettings,
+} from '@/app/_lib/public-actions';
 import JoinClient from './JoinClient';
 import { buildMetadata } from '@/app/_lib/seo';
 import { BreadcrumbJsonLd } from '@/app/_components/ui/JsonLd';
@@ -33,14 +36,17 @@ export default async function Page() {
     redirect('/account');
   }
 
-  const joinData = await getJoinPageData();
+  const [joinData, settings] = await Promise.all([
+    getJoinPageData(),
+    getAllPublicSettings(),
+  ]);
 
   return (
     <>
       <BreadcrumbJsonLd
         items={[{ name: 'Home', url: '/' }, { name: 'Join' }]}
       />
-      <JoinClient features={joinData.features || []} />
+      <JoinClient features={joinData.features || []} settings={settings} />
     </>
   );
 }

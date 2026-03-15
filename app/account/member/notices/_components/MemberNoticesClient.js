@@ -7,6 +7,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { useScrollLock } from '@/app/_lib/hooks';
 import {
   Bell,
   Pin,
@@ -150,6 +151,7 @@ function getTypeConfig(type) {
 // ─── Notice Detail Modal ──────────────────────────────────────────────────────
 
 function NoticeModal({ notice, onClose }) {
+  useScrollLock();
   const badge = getBadge(notice.priority);
   const typeConf = getTypeConfig(notice.notice_type);
   const TypeIcon = typeConf.icon;

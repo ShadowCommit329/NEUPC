@@ -21,16 +21,23 @@ import {
   getTrendingBlogPosts,
   getAllAchievements,
   getAchievementsByCategory,
+  getPublicParticipationRecords,
   getAllGalleryItems,
   getFeaturedGalleryItems,
   getGalleryItemsByCategory,
+  getGalleryItemsByEvent,
+  getEventGallery,
+  getAllEventGalleryPublic,
   getCurrentCommittee,
   getCommitteePositions,
   getPublishedRoadmaps,
   getRoadmapBySlug,
+  getRoadmapsByCategory,
   getSettingsByCategory,
   getSetting,
+  getAllSettings,
   getActiveNotices,
+  getPublicJourneyItems,
 } from './data-service';
 
 // ============================================================================
@@ -68,6 +75,29 @@ async function getSettingsMap(category) {
     return {};
   }
 }
+
+// ============================================================================
+// Helper: Get ALL settings as a flat key-value map
+// Used to pass a single settings object to public pages
+// ============================================================================
+export const getAllPublicSettings = unstable_cache(
+  async () => {
+    try {
+      const rows = await getAllSettings();
+      const map = {};
+      if (rows) {
+        rows.forEach((r) => {
+          map[r.key] = r.value;
+        });
+      }
+      return map;
+    } catch {
+      return {};
+    }
+  },
+  ['all-public-settings'],
+  { revalidate: 3600, tags: ['settings'] }
+);
 
 // ============================================================================
 // Site Settings (Hero, About, Social, Contact, Footer, Stats)
@@ -116,6 +146,16 @@ export const getAboutData = unstable_cache(
         vision: parseJsonSetting(settings.about_vision, []),
         whatWeDo: parseJsonSetting(settings.about_what_we_do, []),
         stats: parseJsonSetting(settings.about_stats, []),
+        coreValues: parseJsonSetting(settings.about_core_values, []),
+        orgStructure: parseJsonSetting(settings.about_org_structure, []),
+        skills: parseJsonSetting(settings.about_skills, []),
+        skillsDescription: settings.about_skills_description || '',
+        wieTitle: settings.about_wie_title || '',
+        wieDescription: settings.about_wie_description || '',
+        mentorshipTitle: settings.about_mentorship_title || '',
+        mentorshipDescription: settings.about_mentorship_description || '',
+        mentorshipAreas: parseJsonSetting(settings.about_mentorship_areas, []),
+        orgFinancialNote: settings.about_org_financial_note || '',
       };
     } catch {
       return {
@@ -126,6 +166,16 @@ export const getAboutData = unstable_cache(
         vision: [],
         whatWeDo: [],
         stats: [],
+        coreValues: [],
+        orgStructure: [],
+        skills: [],
+        skillsDescription: '',
+        wieTitle: '',
+        wieDescription: '',
+        mentorshipTitle: '',
+        mentorshipDescription: '',
+        mentorshipAreas: [],
+        orgFinancialNote: '',
       };
     }
   },
@@ -259,11 +309,11 @@ export const getDevelopersData = unstable_cache(
         getSetting('github_stats'),
       ]);
       return {
-        coreDevelopers: parseJsonSetting(coreSetting?.value, []),
-        contributors: parseJsonSetting(contributorsSetting?.value, []),
-        techStack: parseJsonSetting(techStackSetting?.value, {}),
-        timeline: parseJsonSetting(timelineSetting?.value, []),
-        githubStats: parseJsonSetting(githubStatsSetting?.value, {}),
+        coreDevelopers: parseJsonSetting(coreSetting, []),
+        contributors: parseJsonSetting(contributorsSetting, []),
+        techStack: parseJsonSetting(techStackSetting, {}),
+        timeline: parseJsonSetting(timelineSetting, []),
+        githubStats: parseJsonSetting(githubStatsSetting, {}),
       };
     } catch {
       return {
@@ -308,58 +358,96 @@ export const getPublicFeaturedEvents = unstable_cache(
   { revalidate: 300, tags: ['events'] }
 );
 
-export const getPublicUpcomingEvents = unstable_cache(
-  async (limit = 3) => {
-    try {
-      const events = await getUpcomingEvents(limit);
-      return events || [];
-    } catch {
-      return [];
-    }
-  },
-  ['public-upcoming-events'],
-  { revalidate: 300, tags: ['events'] }
-);
+export const getPublicUpcomingEvents = (limit = 3) =>
+  unstable_cache(
+    async () => {
+      try {
+        const events = await getUpcomingEvents(limit);
+        return events || [];
+      } catch {
+        return [];
+      }
+    },
+    [`public-upcoming-events-${limit}`],
+    { revalidate: 300, tags: ['events'] }
+  )();
 
-export const getPublicEventBySlug = unstable_cache(
-  async (slug) => {
-    try {
-      return await getEventBySlug(slug);
-    } catch {
-      return null;
-    }
-  },
-  ['public-event-by-slug'],
-  { revalidate: 120, tags: ['events'] }
-);
+export const getPublicRecentEvents = (limit = 3) =>
+  unstable_cache(
+    async () => {
+      try {
+        const { getRecentNonFeaturedEvents } = await import('./data-service');
+        const events = await getRecentNonFeaturedEvents(limit);
+        return events || [];
+      } catch {
+        return [];
+      }
+    },
+    [`public-recent-events-${limit}`],
+    { revalidate: 300, tags: ['events'] }
+  )();
 
-export const getPublicEventById = unstable_cache(
-  async (id) => {
-    try {
-      return await getEventById(id);
-    } catch {
-      return null;
-    }
-  },
-  ['public-event-by-id'],
-  { revalidate: 120, tags: ['events'] }
-);
+export const getPublicEventBySlug = (slug) =>
+  unstable_cache(
+    async () => {
+      try {
+        return await getEventBySlug(slug);
+      } catch {
+        return null;
+      }
+    },
+    [`public-event-by-slug-${slug}`],
+    { revalidate: 120, tags: ['events'] }
+  )();
+
+export const getPublicEventById = (id) =>
+  unstable_cache(
+    async () => {
+      try {
+        return await getEventById(id);
+      } catch {
+        return null;
+      }
+    },
+    [`public-event-by-id-${id}`],
+    { revalidate: 120, tags: ['events'] }
+  )();
+
+// Gallery items for a specific event — merged from both event_gallery and gallery_items tables.
+export const getPublicEventGallery = (eventId) =>
+  unstable_cache(
+    async () => {
+      try {
+        const [dedicated, general] = await Promise.all([
+          getEventGallery(eventId).catch(() => []),
+          getGalleryItemsByEvent(eventId).catch(() => []),
+        ]);
+        // Merge: dedicated event_gallery first (by display_order), then general gallery_items
+        return [...(dedicated ?? []), ...(general ?? [])];
+      } catch {
+        return [];
+      }
+    },
+    [`public-event-gallery-${eventId}`],
+    { revalidate: 300, tags: ['gallery', 'events'] }
+  )();
 
 // ============================================================================
 // Blog Posts — cached for 5 minutes
 // ============================================================================
-export const getPublicBlogs = unstable_cache(
-  async (limit) => {
-    try {
-      const blogs = await getPublishedBlogPosts(limit);
-      return blogs || [];
-    } catch {
-      return [];
-    }
-  },
-  ['public-blogs'],
-  { revalidate: 300, tags: ['blogs'] }
-);
+export const getPublicBlogs = (limit) =>
+  unstable_cache(
+    async () => {
+      try {
+        const blogs = await getPublishedBlogPosts(limit);
+        return blogs || [];
+      } catch {
+        return [];
+      }
+    },
+    [`public-blogs-${limit ?? 'all'}`],
+    { revalidate: 300, tags: ['blogs'] }
+  )();
 
 export const getPublicFeaturedBlogs = unstable_cache(
   async () => {
@@ -374,43 +462,62 @@ export const getPublicFeaturedBlogs = unstable_cache(
   { revalidate: 300, tags: ['blogs'] }
 );
 
-export const getPublicBlogBySlug = unstable_cache(
-  async (slug) => {
-    try {
-      return await getBlogPostBySlug(slug);
-    } catch {
-      return null;
-    }
-  },
-  ['public-blog-by-slug'],
-  { revalidate: 120, tags: ['blogs'] }
-);
+export const getPublicRecentBlogs = (limit = 6) =>
+  unstable_cache(
+    async () => {
+      try {
+        const { getRecentNonFeaturedBlogPosts } =
+          await import('./data-service');
+        const blogs = await getRecentNonFeaturedBlogPosts(limit);
+        return blogs || [];
+      } catch {
+        return [];
+      }
+    },
+    [`public-recent-blogs-${limit}`],
+    { revalidate: 300, tags: ['blogs'] }
+  )();
 
-export const getPublicBlogsByCategory = unstable_cache(
-  async (category) => {
-    try {
-      const blogs = await getBlogPostsByCategory(category);
-      return blogs || [];
-    } catch {
-      return [];
-    }
-  },
-  ['public-blogs-by-category'],
-  { revalidate: 300, tags: ['blogs'] }
-);
+export const getPublicBlogBySlug = (slug) =>
+  unstable_cache(
+    async () => {
+      try {
+        return await getBlogPostBySlug(slug);
+      } catch {
+        return null;
+      }
+    },
+    [`public-blog-by-slug-${slug}`],
+    { revalidate: 120, tags: ['blogs'] }
+  )();
 
-export const getPublicTrendingBlogs = unstable_cache(
-  async (limit = 5) => {
-    try {
-      const blogs = await getTrendingBlogPosts(limit);
-      return blogs || [];
-    } catch {
-      return [];
-    }
-  },
-  ['public-trending-blogs'],
-  { revalidate: 300, tags: ['blogs'] }
-);
+export const getPublicBlogsByCategory = (category) =>
+  unstable_cache(
+    async () => {
+      try {
+        const blogs = await getBlogPostsByCategory(category);
+        return blogs || [];
+      } catch {
+        return [];
+      }
+    },
+    [`public-blogs-by-category-${category}`],
+    { revalidate: 300, tags: ['blogs'] }
+  )();
+
+export const getPublicTrendingBlogs = (limit = 5) =>
+  unstable_cache(
+    async () => {
+      try {
+        const blogs = await getTrendingBlogPosts(limit);
+        return blogs || [];
+      } catch {
+        return [];
+      }
+    },
+    [`public-trending-blogs-${limit}`],
+    { revalidate: 300, tags: ['blogs'] }
+  )();
 
 // ============================================================================
 // Achievements — cached for 5 minutes
@@ -428,18 +535,44 @@ export const getPublicAchievements = unstable_cache(
   { revalidate: 300, tags: ['achievements'] }
 );
 
-export const getPublicAchievementsByCategory = unstable_cache(
-  async (category) => {
+export const getPublicParticipations = unstable_cache(
+  async () => {
     try {
-      const achievements = await getAchievementsByCategory(category);
-      return achievements || [];
+      const records = await getPublicParticipationRecords();
+      return records || [];
     } catch {
       return [];
     }
   },
-  ['public-achievements-by-category'],
-  { revalidate: 300, tags: ['achievements'] }
+  ['public-participations'],
+  { revalidate: 300, tags: ['participations', 'achievements'] }
 );
+
+export const getPublicJourney = unstable_cache(
+  async () => {
+    try {
+      return await getPublicJourneyItems();
+    } catch {
+      return [];
+    }
+  },
+  ['public-journey'],
+  { revalidate: 3600, tags: ['site-content'] }
+);
+
+export const getPublicAchievementsByCategory = (category) =>
+  unstable_cache(
+    async () => {
+      try {
+        const achievements = await getAchievementsByCategory(category);
+        return achievements || [];
+      } catch {
+        return [];
+      }
+    },
+    [`public-achievements-by-category-${category}`],
+    { revalidate: 300, tags: ['achievements'] }
+  )();
 
 // ============================================================================
 // Gallery — cached for 5 minutes
@@ -447,14 +580,34 @@ export const getPublicAchievementsByCategory = unstable_cache(
 export const getPublicGallery = unstable_cache(
   async () => {
     try {
-      const items = await getAllGalleryItems();
-      return items || [];
+      const [galleryItems, eventItems] = await Promise.all([
+        getAllGalleryItems().catch(() => []),
+        getAllEventGalleryPublic().catch(() => []),
+      ]);
+
+      // Normalize event_gallery items to match gallery_items shape
+      const normalizedEventItems = (eventItems ?? []).map((item) => ({
+        ...item,
+        _source: 'event_gallery',
+        // Map event_gallery fields to gallery_items-compatible fields
+        title: item.caption || item.events?.title || 'Event Photo',
+        description: item.caption || '',
+        image: item.url,
+        image_url: item.url,
+        category: item.events?.category || 'Activity',
+        event_date: item.events?.start_date || item.created_at,
+        date: item.events?.start_date || item.created_at,
+        tags: [],
+        is_featured: false,
+      }));
+
+      return [...(galleryItems ?? []), ...normalizedEventItems];
     } catch {
       return [];
     }
   },
   ['public-gallery'],
-  { revalidate: 300, tags: ['gallery'] }
+  { revalidate: 300, tags: ['gallery', 'events'] }
 );
 
 export const getPublicFeaturedGallery = unstable_cache(
@@ -470,18 +623,19 @@ export const getPublicFeaturedGallery = unstable_cache(
   { revalidate: 300, tags: ['gallery'] }
 );
 
-export const getPublicGalleryByCategory = unstable_cache(
-  async (category) => {
-    try {
-      const items = await getGalleryItemsByCategory(category);
-      return items || [];
-    } catch {
-      return [];
-    }
-  },
-  ['public-gallery-by-category'],
-  { revalidate: 300, tags: ['gallery'] }
-);
+export const getPublicGalleryByCategory = (category) =>
+  unstable_cache(
+    async () => {
+      try {
+        const items = await getGalleryItemsByCategory(category);
+        return items || [];
+      } catch {
+        return [];
+      }
+    },
+    [`public-gallery-by-category-${category}`],
+    { revalidate: 300, tags: ['gallery'] }
+  )();
 
 // ============================================================================
 // Committee — cached for 10 minutes
@@ -497,12 +651,16 @@ export const getPublicCommittee = unstable_cache(
         members: members || [],
         positions: positions || [],
       };
-    } catch {
+    } catch (error) {
+      console.error(
+        '[getPublicCommittee] Failed to fetch committee data:',
+        error
+      );
       return { members: [], positions: [] };
     }
   },
   ['public-committee'],
-  { revalidate: 600, tags: ['committee'] }
+  { revalidate: 60, tags: ['committee'] }
 );
 
 // ============================================================================
@@ -521,17 +679,32 @@ export const getPublicRoadmaps = unstable_cache(
   { revalidate: 600, tags: ['roadmaps'] }
 );
 
-export const getPublicRoadmapBySlug = unstable_cache(
-  async (slug) => {
-    try {
-      return await getRoadmapBySlug(slug);
-    } catch {
-      return null;
-    }
-  },
-  ['public-roadmap-by-slug'],
-  { revalidate: 120, tags: ['roadmaps'] }
-);
+export const getPublicRoadmapBySlug = (slug) =>
+  unstable_cache(
+    async () => {
+      try {
+        return await getRoadmapBySlug(slug);
+      } catch {
+        return null;
+      }
+    },
+    [`public-roadmap-by-slug-${slug}`],
+    { revalidate: 120, tags: ['roadmaps'] }
+  )();
+
+export const getPublicRoadmapsByCategory = (category) =>
+  unstable_cache(
+    async () => {
+      try {
+        const roadmaps = await getRoadmapsByCategory(category);
+        return roadmaps || [];
+      } catch {
+        return [];
+      }
+    },
+    [`public-roadmaps-category-${category}`],
+    { revalidate: 600, tags: ['roadmaps'] }
+  )();
 
 // ============================================================================
 // Notices — cached for 2 minutes (time-sensitive)
@@ -556,33 +729,59 @@ export const getPublicNotices = unstable_cache(
 export const getHomePageData = unstable_cache(
   async () => {
     try {
-      const [hero, about, events, achievements, blogs, joinData] =
-        await Promise.all([
-          getHeroData(),
-          getAboutData(),
-          getPublicUpcomingEvents(3),
-          getPublicAchievements(),
-          getPublicBlogs(6),
-          getJoinPageData(),
-        ]);
+      const [
+        hero,
+        about,
+        events,
+        featuredEvents,
+        recentEvents,
+        achievements,
+        participations,
+        featuredBlogs,
+        recentBlogs,
+        joinData,
+        settings,
+      ] = await Promise.all([
+        getHeroData(),
+        getAboutData(),
+        getPublicUpcomingEvents(6),
+        getPublicFeaturedEvents(),
+        getPublicRecentEvents(3),
+        getPublicAchievements(),
+        getPublicParticipations(),
+        getPublicFeaturedBlogs(),
+        getPublicRecentBlogs(6),
+        getJoinPageData(),
+        getAllPublicSettings(),
+      ]);
       return {
         hero,
         about,
         events,
+        featuredEvents,
+        recentEvents,
         achievements,
-        blogs,
+        participations,
+        featuredBlogs,
+        recentBlogs,
         stats: about.stats || [],
         joinBenefits: joinData.benefits,
+        settings,
       };
     } catch {
       return {
         hero: await getHeroData(),
         about: await getAboutData(),
         events: [],
+        featuredEvents: [],
+        recentEvents: [],
         achievements: [],
-        blogs: [],
+        participations: [],
+        featuredBlogs: [],
+        recentBlogs: [],
         stats: [],
         joinBenefits: [],
+        settings: {},
       };
     }
   },
