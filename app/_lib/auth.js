@@ -41,29 +41,17 @@ async function withTimeout(
   }
 }
 
-const authConfig = {
-  providers: [
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET,
-    }),
-  ],
+import { authConfig } from './auth.config';
 
+export const {
+  auth,
+  signIn,
+  signOut,
+  handlers: { GET, POST },
+} = NextAuth({
+  ...authConfig,
   callbacks: {
-    authorized({ auth, request }) {
-      const isLoggedIn = !!auth?.user;
-      const pathname = request?.nextUrl?.pathname || '';
-
-      // Paths that require authentication
-      const isProtected = pathname.startsWith('/account');
-
-      if (isProtected && !isLoggedIn) {
-        return NextResponse.redirect(new URL('/login', request.nextUrl));
-      }
-
-      return true;
-    },
-
+    ...authConfig.callbacks,
     async signIn({ user, account }) {
       try {
         const existingUser = await getUserByEmail(user.email);
@@ -228,15 +216,4 @@ const authConfig = {
       return session;
     },
   },
-
-  pages: {
-    signIn: '/login',
-  },
-};
-
-export const {
-  auth,
-  signIn,
-  signOut,
-  handlers: { GET, POST },
-} = NextAuth(authConfig);
+});

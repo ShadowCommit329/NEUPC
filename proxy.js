@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@/app/_lib/auth';
+import NextAuth from 'next-auth';
+import { authConfig } from '@/app/_lib/auth.config';
 
-// Paths that require authentication
+const { auth } = NextAuth(authConfig);
+
 const protectedPrefixes = ['/account'];
 
 export default auth((req) => {
@@ -15,22 +16,13 @@ export default auth((req) => {
     const loginUrl = new URL('/login', nextUrl.origin);
     // Optionally preserve the intended destination
     loginUrl.searchParams.set('callbackUrl', nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
+    return Response.redirect(loginUrl);
   }
-
-  return NextResponse.next();
 });
 
 // Matcher to optimize middleware execution
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };
