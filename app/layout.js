@@ -145,16 +145,21 @@ export default async function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} ${sora.variable} ${lora.variable} overflow-x-clip`}
+      className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} ${sora.variable} ${lora.variable}`}
     >
       <body
         className={`${inter.className} bg-background-dark text-primary-50 flex min-h-screen flex-col`}
       >
         <TopProgressBar />
         <ToasterProvider />
-        <UserRoleProvider role={session?.user?.role || null} isLoggedIn={!!session}>
+        <UserRoleProvider
+          role={session?.user?.role || null}
+          isLoggedIn={!!session}
+        >
           <Header />
-          <main className="grow"><PageTransition>{children}</PageTransition></main>
+          <main className="grow overflow-x-clip">
+            <PageTransition>{children}</PageTransition>
+          </main>
           <Footer
             session={session}
             social={social}

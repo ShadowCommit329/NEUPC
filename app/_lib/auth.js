@@ -52,9 +52,12 @@ const authConfig = {
   callbacks: {
     authorized({ auth, request }) {
       const isLoggedIn = !!auth?.user;
-      const isOnLoginPage = request.nextUrl.pathname === '/login';
+      const pathname = request?.nextUrl?.pathname || '';
 
-      if (!isLoggedIn && !isOnLoginPage) {
+      // Paths that require authentication
+      const isProtected = pathname.startsWith('/account');
+
+      if (isProtected && !isLoggedIn) {
         return NextResponse.redirect(new URL('/login', request.nextUrl));
       }
 
