@@ -6,7 +6,8 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   BookOpen,
   Search,
@@ -38,7 +39,7 @@ const DIFFICULTY_COLORS = {
   advanced: 'text-red-400',
 };
 
-function ResourceModal({ onClose, mentorId }) {
+function ResourceModal({ onClose, onCreated, mentorId }) {
   const [loading, setLoading] = useState(false);
   useScrollLock();
   const [error, setError] = useState(null);
@@ -65,7 +66,9 @@ function ResourceModal({ onClose, mentorId }) {
     if (result.error) {
       setError(result.error);
       setLoading(false);
-    } else onClose();
+    } else {
+      onCreated?.();
+    }
   };
 
   return (
@@ -243,13 +246,22 @@ function ResourceModal({ onClose, mentorId }) {
 }
 
 export default function MentorResourcesClient({ resources = [], mentorId }) {
+  const router = useRouter();
+  const [localResources, setLocalResources] = useState(resources);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [deleting, setDeleting] = useState(null);
   const [message, setMessage] = useState(null);
 
-  const filtered = resources.filter((r) => {
+  // Auto-clear feedback messages after 4 seconds.
+  useEffect(() => {
+    if (!message) return;
+    const t = setTimeout(() => setMessage(null), 4000);
+    return () => clearTimeout(t);
+  }, [message]);
+
+  const filtered = localResources.filter((r) => {
     const matchSearch =
       !search ||
       r.title?.toLowerCase().includes(search.toLowerCase()) ||
@@ -266,17 +278,22 @@ export default function MentorResourcesClient({ resources = [], mentorId }) {
     if (!window.confirm('Delete this resource?')) return;
     setDeleting(id);
     const fd = new FormData();
-    fd.set('resourceId', id);
+    fd.set('id', id);
     const result = await deleteResourceAction(fd);
-    if (result.error) setMessage({ type: 'error', text: result.error });
     setDeleting(null);
+    if (result.error) {
+      setMessage({ type: 'error', text: result.error });
+    } else {
+      setLocalResources((prev) => prev.filter((r) => r.id !== id));
+      setMessage({ type: 'success', text: 'Resource deleted.' });
+    }
   };
 
   const stats = {
-    total: resources.length,
-    my: resources.filter((r) => r.created_by === mentorId).length,
-    free: resources.filter((r) => r.is_free).length,
-    videos: resources.filter((r) => r.resource_type === 'video').length,
+    total: localResources.length,
+    my: localResources.filter((r) => r.created_by === mentorId).length,
+    free: localResources.filter((r) => r.is_free).length,
+    videos: localResources.filter((r) => r.resource_type === 'video').length,
   };
 
   return (
@@ -391,6 +408,10 @@ export default function MentorResourcesClient({ resources = [], mentorId }) {
       {showModal && (
         <ResourceModal
           onClose={() => setShowModal(false)}
+          onCreated={() => {
+            setShowModal(false);
+            router.refresh();
+          }}
           mentorId={mentorId}
         />
       )}
