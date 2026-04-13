@@ -10,6 +10,11 @@ import { auth } from './auth';
 import { supabaseAdmin } from './supabase';
 import { getUserRoles, getUserByEmail } from './data-service';
 import { sanitizeText, isValidUrl } from './validation';
+import {
+  isV2SchemaAvailable,
+  upsertUserHandleV2,
+  deleteUserHandleV2,
+} from './problem-solving-v2-helpers';
 
 async function requireActiveMember() {
   const session = await auth();
@@ -87,16 +92,11 @@ export async function updateMemberProfileAction(formData) {
       return { error: 'Invalid GitHub URL.' };
     }
 
+    // member_profiles update — no handle columns
     const updates = {
       bio: sanitizeText(formData.get('bio'), 1000) || null,
       linkedin: linkedinUrl,
       github: githubUrl,
-      codeforces_handle:
-        sanitizeText(formData.get('codeforces_handle'), 50) || null,
-      vjudge_handle: sanitizeText(formData.get('vjudge_handle'), 50) || null,
-      atcoder_handle: sanitizeText(formData.get('atcoder_handle'), 50) || null,
-      leetcode_handle:
-        sanitizeText(formData.get('leetcode_handle'), 50) || null,
       skills: skills.length > 0 ? skills : null,
       interests: interests.length > 0 ? interests : null,
       updated_at: new Date().toISOString(),
@@ -112,7 +112,46 @@ export async function updateMemberProfileAction(formData) {
       return { error: 'Failed to update profile.' };
     }
 
+    // Save handles to user_handles table (V2 schema)
+    const handleMap = {
+      codeforces: sanitizeText(formData.get('codeforces_handle'), 50) || null,
+      vjudge: sanitizeText(formData.get('vjudge_handle'), 50) || null,
+      atcoder: sanitizeText(formData.get('atcoder_handle'), 50) || null,
+      leetcode: sanitizeText(formData.get('leetcode_handle'), 50) || null,
+    };
+
+    const useV2 = await isV2SchemaAvailable();
+    for (const [platform, handle] of Object.entries(handleMap)) {
+      if (handle) {
+        if (useV2) {
+          await upsertUserHandleV2(user.id, platform, handle);
+        } else {
+          await supabaseAdmin.from('user_handles').upsert(
+            {
+              user_id: user.id,
+              platform,
+              handle,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id,platform' }
+          );
+        }
+      } else {
+        // Remove handle if cleared
+        if (useV2) {
+          await deleteUserHandleV2(user.id, platform);
+        } else {
+          await supabaseAdmin
+            .from('user_handles')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('platform', platform);
+        }
+      }
+    }
+
     revalidatePath('/account/member/profile');
+    revalidatePath('/account/member/problem-solving');
     revalidatePath('/account');
     revalidatePath('/committee');
     revalidateTag('committee');

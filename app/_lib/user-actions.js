@@ -10,6 +10,13 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { uploadToDrive } from '@/app/_lib/gdrive';
 import crypto from 'crypto';
+import {
+  isV2SchemaAvailable,
+  upsertUserHandleV2,
+  deleteUserHandleV2,
+  getUserHandlesV2,
+  V2_TABLES,
+} from '@/app/_lib/problem-solving-v2-helpers';
 
 // ─── helpers ────────────────────────────────────────────────
 
@@ -498,7 +505,6 @@ export async function approveMembershipAction(formData) {
         academic_session: joinRequest?.batch,
         department: joinRequest?.department,
         github: joinRequest?.github || null,
-        codeforces_handle: joinRequest?.codeforces_handle || null,
         interests,
         join_reason: joinRequest?.reason || null,
         approved: true,
@@ -510,6 +516,29 @@ export async function approveMembershipAction(formData) {
     );
 
   if (profileError) throw new Error(profileError.message);
+
+  // Save codeforces handle to user_handles (V2 schema)
+  if (joinRequest?.codeforces_handle) {
+    const useV2 = await isV2SchemaAvailable();
+    if (useV2) {
+      await upsertUserHandleV2(
+        userId,
+        'codeforces',
+        joinRequest.codeforces_handle
+      );
+    } else {
+      // Legacy fallback
+      await supabaseAdmin.from('user_handles').upsert(
+        {
+          user_id: userId,
+          platform: 'codeforces',
+          handle: joinRequest.codeforces_handle,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,platform' }
+      );
+    }
+  }
 
   // Mark join_request as approved
   if (joinRequest?.id) {
@@ -701,11 +730,32 @@ export async function getUserProfileForAdminAction(userId) {
   // Fetch all role-specific profiles
   const { data: memberProfile } = await supabaseAdmin
     .from('member_profiles')
-    .select(
-      'student_id, academic_session, department, bio, github, linkedin, codeforces_handle, vjudge_handle, atcoder_handle, leetcode_handle'
-    )
+    .select('student_id, academic_session, department, bio, github, linkedin')
     .eq('user_id', userId)
     .maybeSingle();
+
+  // Fetch handles from user_handles (V2 schema with fallback)
+  let userHandles = [];
+  const useV2 = await isV2SchemaAvailable();
+  if (useV2) {
+    try {
+      userHandles = await getUserHandlesV2(userId);
+    } catch (e) {
+      console.error('[user-actions] V2 handles fetch failed:', e.message);
+    }
+  } else {
+    const { data } = await supabaseAdmin
+      .from('user_handles')
+      .select('platform, handle')
+      .eq('user_id', userId);
+    userHandles = data || [];
+  }
+
+  // Merge handles into memberProfile for backward compatibility
+  const handlesMap = {};
+  (userHandles || []).forEach((h) => {
+    handlesMap[`${h.platform}_handle`] = h.handle;
+  });
 
   const { data: advisorProfile } = await supabaseAdmin
     .from('advisor_profiles')
@@ -734,7 +784,7 @@ export async function getUserProfileForAdminAction(userId) {
   return {
     ...user,
     roles,
-    member_profile: memberProfile || null,
+    member_profile: memberProfile ? { ...memberProfile, ...handlesMap } : null,
     advisor_profile: advisorProfile || null,
     admin_profile: adminProfile || null,
     mentor_profile: mentorProfile || null,
@@ -804,10 +854,6 @@ export async function updateUserAction(formData) {
     const bio = formData.get('bio');
     const github = formData.get('github');
     const linkedin = formData.get('linkedin');
-    const codeforces_handle = formData.get('codeforces_handle');
-    const vjudge_handle = formData.get('vjudge_handle');
-    const atcoder_handle = formData.get('atcoder_handle');
-    const leetcode_handle = formData.get('leetcode_handle');
 
     if (studentId !== null) profileUpdates.student_id = studentId;
     if (sessionValue !== null) profileUpdates.academic_session = sessionValue;
@@ -815,12 +861,6 @@ export async function updateUserAction(formData) {
     if (bio !== null) profileUpdates.bio = bio;
     if (github !== null) profileUpdates.github = github;
     if (linkedin !== null) profileUpdates.linkedin = linkedin;
-    if (codeforces_handle !== null)
-      profileUpdates.codeforces_handle = codeforces_handle;
-    if (vjudge_handle !== null) profileUpdates.vjudge_handle = vjudge_handle;
-    if (atcoder_handle !== null) profileUpdates.atcoder_handle = atcoder_handle;
-    if (leetcode_handle !== null)
-      profileUpdates.leetcode_handle = leetcode_handle;
 
     const { error: profileError } = await supabaseAdmin
       .from('member_profiles')
@@ -833,6 +873,47 @@ export async function updateUserAction(formData) {
       console.error('Member profile update error:', profileError);
     } else {
       memberProfileUpdated = true;
+    }
+
+    // Save handles to user_handles (V2 schema)
+    const handleFields = {
+      codeforces: formData.get('codeforces_handle'),
+      vjudge: formData.get('vjudge_handle'),
+      atcoder: formData.get('atcoder_handle'),
+      leetcode: formData.get('leetcode_handle'),
+    };
+
+    const useV2Handles = await isV2SchemaAvailable();
+    for (const [platform, handle] of Object.entries(handleFields)) {
+      if (handle !== null) {
+        const trimmed = handle.trim();
+        if (trimmed) {
+          if (useV2Handles) {
+            await upsertUserHandleV2(userId, platform, trimmed);
+          } else {
+            await supabaseAdmin.from('user_handles').upsert(
+              {
+                user_id: userId,
+                platform,
+                handle: trimmed,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'user_id,platform' }
+            );
+          }
+        } else {
+          // Remove handle if cleared
+          if (useV2Handles) {
+            await deleteUserHandleV2(userId, platform);
+          } else {
+            await supabaseAdmin
+              .from('user_handles')
+              .delete()
+              .eq('user_id', userId)
+              .eq('platform', platform);
+          }
+        }
+      }
     }
   }
 

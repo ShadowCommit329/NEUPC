@@ -77,6 +77,8 @@ export const {
             email_verified: true,
             account_status: 'pending',
             status_reason: 'initial sign up',
+            status_changed_by: null, // Self-signup via OAuth, no admin involved
+            status_changed_at: new Date().toISOString(),
             is_online: false,
             provider: account?.provider || 'google',
             created_at: new Date().toISOString(),

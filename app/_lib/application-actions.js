@@ -8,6 +8,10 @@
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { revalidatePath } from 'next/cache';
 import { requireAdmin, createLogger } from '@/app/_lib/helpers';
+import {
+  isV2SchemaAvailable,
+  upsertUserHandleV2,
+} from '@/app/_lib/problem-solving-v2-helpers';
 
 const logActivity = createLogger('join_request');
 
@@ -75,7 +79,6 @@ export async function approveApplicationAction(formData) {
         academic_session: joinRequest.batch,
         department: joinRequest.department,
         github: joinRequest.github || null,
-        codeforces_handle: joinRequest.codeforces_handle || null,
         interests,
         join_reason: joinRequest.reason || null,
         approved: true,
@@ -87,6 +90,29 @@ export async function approveApplicationAction(formData) {
     );
 
   if (profileError) return { error: profileError.message };
+
+  // Save codeforces handle to user_handles (V2 schema)
+  if (joinRequest.codeforces_handle) {
+    const useV2 = await isV2SchemaAvailable();
+    if (useV2) {
+      await upsertUserHandleV2(
+        userId,
+        'codeforces',
+        joinRequest.codeforces_handle
+      );
+    } else {
+      // Legacy fallback
+      await supabaseAdmin.from('user_handles').upsert(
+        {
+          user_id: userId,
+          platform: 'codeforces',
+          handle: joinRequest.codeforces_handle,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,platform' }
+      );
+    }
+  }
 
   // 4. Look up Member role ID
   const { data: memberRole, error: roleLookupErr } = await supabaseAdmin

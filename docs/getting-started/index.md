@@ -6,12 +6,12 @@ Setup guide for local development and production deployment.
 
 ## Prerequisites
 
-| Requirement | Version | Notes |
-|---|---|---|
-| Node.js | ≥ 20 | `node -v` to verify |
-| npm | ≥ 10 | bundled with Node 20 |
-| Supabase project | — | [supabase.com](https://supabase.com) — free tier works |
-| Google OAuth 2.0 credentials | — | [console.cloud.google.com](https://console.cloud.google.com) |
+| Requirement                  | Version | Notes                                                        |
+| ---------------------------- | ------- | ------------------------------------------------------------ |
+| Node.js                      | >= 20   | `node -v` to verify                                          |
+| npm                          | >= 10   | bundled with Node 20                                         |
+| Docker                       | Latest  | Required for local Supabase                                  |
+| Google OAuth 2.0 credentials | —       | [console.cloud.google.com](https://console.cloud.google.com) |
 
 ---
 
@@ -25,9 +25,65 @@ npm install
 
 ---
 
-## 2. Environment Variables
+## 2. Supabase Setup
+
+You have two options for database setup:
+
+### Option A: Local Supabase (Recommended for Development)
+
+See the complete [Local Supabase Setup Guide](./local-supabase.md) for detailed instructions.
+
+**Quick start:**
+
+```bash
+# Install Supabase CLI
+npm install -g supabase
+
+# Start local Supabase (requires Docker)
+npx supabase start
+
+# Apply migrations and seed data
+npx supabase db reset
+```
+
+Copy the output keys to `.env.local`:
+
+```env
+SUPABASE_LOCAL=true
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key from output>
+SUPABASE_SERVICE_ROLE_KEY=<service_role key from output>
+```
+
+**Local Supabase URLs:**
+
+| Service                  | URL                    |
+| ------------------------ | ---------------------- |
+| API Gateway              | http://127.0.0.1:54321 |
+| Studio (Dashboard)       | http://127.0.0.1:54323 |
+| Inbucket (Email Testing) | http://127.0.0.1:54324 |
+
+### Option B: Remote Supabase (Cloud)
+
+1. Create a project at [supabase.com](https://supabase.com) (free tier works)
+2. Go to **Settings → API** and copy your keys
+3. Open **SQL Editor** and run the schema from `docs/database/schema.sql`
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-public-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret-key
+```
+
+---
+
+## 3. Environment Variables
 
 Create `.env.local` at the project root. **Never commit this file.**
+
+```bash
+cp .env.example .env.local
+```
 
 ```env
 # ─── Auth.js ────────────────────────────────────────────────────────────────
@@ -53,23 +109,15 @@ GMAIL_REFRESH_TOKEN=
 # ─── Gemini API ─────────────────────────────────────────────────────────────
 GEMINI_API_KEY=
 
-# ─── Supabase ───────────────────────────────────────────────────────────────
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your-anon-public-key          # safe to expose
-SUPABASE_SERVICE_KEY=your-service-role-key # server-only — NEVER expose publicly
+# ─── Supabase (Local) ───────────────────────────────────────────────────────
+SUPABASE_LOCAL=true
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-local-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-local-service-role-key
 
 # ─── Site ───────────────────────────────────────────────────────────────────
 NEXT_PUBLIC_SITE_URL=http://localhost:3000  # no trailing slash
 ```
-
----
-
-## 3. Database Setup
-
-1. Open [Supabase SQL Editor](https://supabase.com/dashboard/project/_/sql)
-2. Paste the full contents of `docs/database/schema.sql`
-3. Run — this creates all 45+ tables, RLS policies, indexes, and seed data
-4. Verify in **Table Editor** that tables like `users`, `events`, `blog_posts` exist
 
 ---
 
@@ -163,10 +211,10 @@ npm run lint    # ESLint — next/core-web-vitals
 
 ## Troubleshooting
 
-| Symptom | Fix |
-|---|---|
-| Sign-in redirects to `/account` but shows "pending" | Run the SQL above to set `account_status = 'active'` and assign a role |
-| Images from Supabase Storage don't load | Add your Supabase hostname to `remotePatterns` in `next.config.mjs` |
-| `SUPABASE_SERVICE_KEY` undefined in server action | Verify the env var is set — it must not have `NEXT_PUBLIC_` prefix |
-| Giscus comments don't appear | Ensure GitHub Discussions is enabled and `giscus.app` script config is correct |
-| Build fails on `sanitize-html` | Run `npm install` — it is a direct dependency, not devDependency |
+| Symptom                                             | Fix                                                                            |
+| --------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Sign-in redirects to `/account` but shows "pending" | Run the SQL above to set `account_status = 'active'` and assign a role         |
+| Images from Supabase Storage don't load             | Add your Supabase hostname to `remotePatterns` in `next.config.mjs`            |
+| `SUPABASE_SERVICE_KEY` undefined in server action   | Verify the env var is set — it must not have `NEXT_PUBLIC_` prefix             |
+| Giscus comments don't appear                        | Ensure GitHub Discussions is enabled and `giscus.app` script config is correct |
+| Build fails on `sanitize-html`                      | Run `npm install` — it is a direct dependency, not devDependency               |

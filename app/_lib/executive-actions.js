@@ -12,6 +12,11 @@ import { supabaseAdmin } from '@/app/_lib/supabase';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { logActivity, generateSlug } from '@/app/_lib/helpers';
 import sanitizeHtml from 'sanitize-html';
+import {
+  isV2SchemaAvailable,
+  upsertUserHandleV2,
+  deleteUserHandleV2,
+} from '@/app/_lib/problem-solving-v2-helpers';
 
 // =============================================================================
 // BLOG CONTENT + MEDIA
@@ -335,7 +340,7 @@ export async function execCreateContestAction(formData) {
     title,
   });
   revalidatePath('/account/executive/contests/manage');
-  revalidatePath('/account/member/contests');
+  revalidatePath('/account/member/problem-solving');
   return { success: true, id: data.id };
 }
 
@@ -369,7 +374,7 @@ export async function execUpdateContestAction(formData) {
   if (error) return { error: error.message };
   await logActivity(user.id, 'exec_update_contest', 'contest', id, { title });
   revalidatePath('/account/executive/contests/manage');
-  revalidatePath('/account/member/contests');
+  revalidatePath('/account/member/problem-solving');
   return { success: true };
 }
 
@@ -381,7 +386,7 @@ export async function execDeleteContestAction(formData) {
   if (error) return { error: error.message };
   await logActivity(user.id, 'exec_delete_contest', 'contest', id, {});
   revalidatePath('/account/executive/contests/manage');
-  revalidatePath('/account/member/contests');
+  revalidatePath('/account/member/problem-solving');
   return { success: true };
 }
 
@@ -967,7 +972,6 @@ export async function execUpdateProfileAction(formData) {
     bio: formData.get('bio')?.trim() || null,
     linkedin: formData.get('linkedin')?.trim() || null,
     github: formData.get('github')?.trim() || null,
-    codeforces_handle: formData.get('codeforces_handle')?.trim() || null,
     updated_at: new Date().toISOString(),
   };
 
@@ -983,6 +987,36 @@ export async function execUpdateProfileAction(formData) {
       .update(profileUpdates)
       .eq('user_id', user.id);
     if (error) return { error: error.message };
+  }
+
+  // Save codeforces handle to user_handles (V2 schema)
+  const cfHandle = formData.get('codeforces_handle')?.trim() || null;
+  const useV2 = await isV2SchemaAvailable();
+
+  if (cfHandle) {
+    if (useV2) {
+      await upsertUserHandleV2(user.id, 'codeforces', cfHandle);
+    } else {
+      await supabaseAdmin.from('user_handles').upsert(
+        {
+          user_id: user.id,
+          platform: 'codeforces',
+          handle: cfHandle,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,platform' }
+      );
+    }
+  } else {
+    if (useV2) {
+      await deleteUserHandleV2(user.id, 'codeforces');
+    } else {
+      await supabaseAdmin
+        .from('user_handles')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('platform', 'codeforces');
+    }
   }
 
   revalidatePath('/account/executive/profile');

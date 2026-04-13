@@ -70,24 +70,24 @@ The user journey typically begins at the root landing page (`/`), branching out 
 
 ### 🌐 Public Website
 
-| Category | Routes |
-| :--- | :--- |
-| **Core Pages** | `/`, `/about`, `/contact`, `/developers` |
-| **Content Pages** | `/blogs`, `/blogs/[blogId]`, `/roadmaps`, `/roadmaps/[roadmapId]`, `/gallery` |
-| **Community Pages**| `/events`, `/events/[eventId]`, `/committee`, `/achievements`, `/join` |
-| **Auth Pages** | `/login`, `/verify-email` |
-| **Legal Pages** | `/privacy`, `/terms` |
+| Category            | Routes                                                                        |
+| :------------------ | :---------------------------------------------------------------------------- |
+| **Core Pages**      | `/`, `/about`, `/contact`, `/developers`                                      |
+| **Content Pages**   | `/blogs`, `/blogs/[blogId]`, `/roadmaps`, `/roadmaps/[roadmapId]`, `/gallery` |
+| **Community Pages** | `/events`, `/events/[eventId]`, `/committee`, `/achievements`, `/join`        |
+| **Auth Pages**      | `/login`, `/verify-email`                                                     |
+| **Legal Pages**     | `/privacy`, `/terms`                                                          |
 
 ### 🔐 Internal Portal (`/account`)
 
-| Role | Base Route | Key Modules |
-| :--- | :--- | :--- |
-| **Admin** | `/account/admin` | System-wide management, users, roles, security logs, content control |
-| **Advisor** | `/account/advisor` | Approvals, budget tracking, club overview, reports |
+| Role          | Base Route           | Key Modules                                                            |
+| :------------ | :------------------- | :--------------------------------------------------------------------- |
+| **Admin**     | `/account/admin`     | System-wide management, users, roles, security logs, content control   |
+| **Advisor**   | `/account/advisor`   | Approvals, budget tracking, club overview, reports                     |
 | **Executive** | `/account/executive` | Event management, blog publishing, member administration, certificates |
-| **Mentor** | `/account/mentor` | Assigned members, mentoring sessions, tasks, recommendations |
-| **Member** | `/account/member` | Problem sets, contest prep, event registration, discussions |
-| **Guest** | `/account/guest` | Membership applications, profile management, limited event access |
+| **Mentor**    | `/account/mentor`    | Assigned members, mentoring sessions, tasks, recommendations           |
+| **Member**    | `/account/member`    | Problem sets, contest prep, event registration, discussions            |
+| **Guest**     | `/account/guest`     | Membership applications, profile management, limited event access      |
 
 ---
 
@@ -344,7 +344,7 @@ The internal portal uses dynamic routing to serve context-aware dashboards depen
 
 **Purpose**: The core experience for approved club members.
 
-- `/problem-set`, `.../contests`: Practice coding problems and participate in internal contests.
+- `/bootcamps`, `.../contests`: Practice coding problems and participate in internal contests.
 - `/roadmap`: Track personal learning progress across tech stacks.
 - `/discussions`: Participate in member-only forums or Q&A.
 - `/certificates`: View and download earned certificates.
@@ -435,7 +435,7 @@ app                                          // Root application directory
 │   │   ├── notices                          // System-wide and role-specific announcements
 │   │   ├── notifications                    // User alerts and messages
 │   │   ├── participation                    // Track event and contest involvement
-│   │   ├── problem-set                      // Coding practice problems
+ │   │   ├── bootcamps                        // Coding practice problems
 │   │   ├── profile                          // User profile management
 │   │   ├── resources                        // Shared learning materials and assets
 │   │   ├── roadmap                          // Track personal learning progress
@@ -473,27 +473,27 @@ app                                          // Root application directory
 
 ### By User Role
 
-| Role | Entry Point | Primary Dashboard | Use Cases |
-|:---|:---|:---|:---|
-| **Anonymous Visitor** | `/` | `/blogs`, `/events`, `/about` | Browse content, discover events, apply for membership |
-| **Guest** | `/login` → `/account/guest` | `/account/guest/membership-application` | Complete membership form, view limited event info |
-| **Member** | `/login` → `/account/member` | `/account/member/problem-set` | Practice coding, participate in contests, attend events |
-| **Mentor** | `/login` → `/account/mentor` | `/account/mentor/assigned-members` | Guide mentees, schedule sessions, assign tasks |
-| **Executive** | `/login` → `/account/executive` | `/account/executive/events/manage` | Manage events, publish blogs, issue certificates |
-| **Advisor** | `/login` → `/account/advisor` | `/account/advisor/club-overview` | Monitor club health, approve initiatives, view reports |
-| **Admin** | `/login` → `/account/admin` | `/account/admin/users` | System-wide configuration, user management, security |
+| Role                  | Entry Point                     | Primary Dashboard                       | Use Cases                                               |
+| :-------------------- | :------------------------------ | :-------------------------------------- | :------------------------------------------------------ |
+| **Anonymous Visitor** | `/`                             | `/blogs`, `/events`, `/about`           | Browse content, discover events, apply for membership   |
+| **Guest**             | `/login` → `/account/guest`     | `/account/guest/membership-application` | Complete membership form, view limited event info       |
+| **Member**            | `/login` → `/account/member`    | `/account/member/bootcamps`             | Practice coding, participate in contests, attend events |
+| **Mentor**            | `/login` → `/account/mentor`    | `/account/mentor/assigned-members`      | Guide mentees, schedule sessions, assign tasks          |
+| **Executive**         | `/login` → `/account/executive` | `/account/executive/events/manage`      | Manage events, publish blogs, issue certificates        |
+| **Advisor**           | `/login` → `/account/advisor`   | `/account/advisor/club-overview`        | Monitor club health, approve initiatives, view reports  |
+| **Admin**             | `/login` → `/account/admin`     | `/account/admin/users`                  | System-wide configuration, user management, security    |
 
 ### By Feature
 
-| Feature | Public Route | Internal Route (if applicable) |
-|:---|:---|:---|
-| **Blog Discovery** | `/blogs` → `/blogs/[blogId]` | `/account/executive/blogs/manage` |
-| **Event Management** | `/events` → `/events/[eventId]` | `/account/executive/events/manage` |
-| **Learning Paths** | `/roadmaps` → `/roadmaps/[roadmapId]` | `/account/member/roadmap` |
-| **Gallery** | `/gallery` | `/account/executive/gallery/manage` |
-| **Committee Info** | `/committee` | `/account/admin/committee` |
-| **User Management** | — | `/account/admin/users` |
-| **Settings** | — | `/account/*/settings` |
+| Feature              | Public Route                          | Internal Route (if applicable)      |
+| :------------------- | :------------------------------------ | :---------------------------------- |
+| **Blog Discovery**   | `/blogs` → `/blogs/[blogId]`          | `/account/executive/blogs/manage`   |
+| **Event Management** | `/events` → `/events/[eventId]`       | `/account/executive/events/manage`  |
+
+| **Gallery**          | `/gallery`                            | `/account/executive/gallery/manage` |
+| **Committee Info**   | `/committee`                          | `/account/admin/committee`          |
+| **User Management**  | —                                     | `/account/admin/users`              |
+| **Settings**         | —                                     | `/account/*/settings`               |
 
 ### By Access Level
 
@@ -567,7 +567,7 @@ AUTHENTICATED (Auth Required - Role-Based)
 ```
 Public Discovery → Content Detail → Account Integration
 /blogs           → /blogs/[id]      → /account/member/...
-/roadmaps        → /roadmaps/[id]   → /account/member/roadmap
+
 /events          → /events/[id]     → /account/*/events
 /gallery         → /gallery (modal)  → —
 ```
@@ -911,7 +911,7 @@ Public Site → Join Info → Application → Approval → Full Portal Access
 
 **What's in the Member Dashboard:**
 
-- **problem-set**: Coding challenges library
+- **bootcamps**: Coding challenges library
 - **contests**: Contest listings, participate
 - **roadmap**: Track learning progress
 - **discussions**: Forums, Q and A
@@ -1131,8 +1131,8 @@ Public Site → Join Info → Application → Approval → Full Portal Access
 
 ```sql
 INSERT INTO event_registrations (
-  event_id, 
-  user_id, 
+  event_id,
+  user_id,
   status = 'registered',
   registered_at = NOW()
 )
@@ -1290,12 +1290,12 @@ INSERT INTO event_registrations (
 
 **Status Values:**
 
-| Status | Meaning | Can Cancel? |
-|--------|---------|-------------|
-| `registered` | User signed up | ✓ Yes |
-| `confirmed` | Event organizer confirmed attendance | ✗ Contact club |
-| `attended` | Marked present at event | ✗ Contact club |
-| `cancelled` | User or organizer cancelled | Can re-register |
+| Status       | Meaning                              | Can Cancel?     |
+| ------------ | ------------------------------------ | --------------- |
+| `registered` | User signed up                       | ✓ Yes           |
+| `confirmed`  | Event organizer confirmed attendance | ✗ Contact club  |
+| `attended`   | Marked present at event              | ✗ Contact club  |
+| `cancelled`  | User or organizer cancelled          | Can re-register |
 
 ---
 
@@ -1388,7 +1388,7 @@ registerForEventAction(eventId, teamData?)
 **Cancellation:**
 
 ```javascript
-cancelEventRegistrationAction(eventId)
+cancelEventRegistrationAction(eventId);
 // Only team leader can cancel team registrations
 // Cannot cancel if status is 'confirmed' or 'attended'
 ```
@@ -1404,7 +1404,7 @@ respondToTeamInviteAction(registrationId, accept: boolean)
 **Get Registration Status:**
 
 ```javascript
-getMyRegistrationAction(eventId)
+getMyRegistrationAction(eventId);
 // Fetches current user's registration for an event
 // Called on page load + after every action
 ```
@@ -1554,3 +1554,4 @@ Response:
 ---
 
 **[↑ Back to Top](#-table-of-contents)** | **[View All Sections](#📑-table-of-contents)** | **[Archive Versions](./)**
+```

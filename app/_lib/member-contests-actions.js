@@ -51,7 +51,7 @@ export async function joinContestAction(contestId) {
     console.error('Contest join error:', insErr);
     return { error: 'Failed to join contest.' };
   }
-  revalidatePath('/account/member/contests');
+  revalidatePath('/account/member/problem-solving');
   revalidatePath('/account/executive/contests/manage');
   return { success: true };
 }
@@ -83,7 +83,7 @@ export async function leaveContestAction(contestId) {
     console.error('Contest leave error:', error);
     return { error: 'Failed to leave contest.' };
   }
-  revalidatePath('/account/member/contests');
+  revalidatePath('/account/member/problem-solving');
   revalidatePath('/account/executive/contests/manage');
   return { success: true };
 }

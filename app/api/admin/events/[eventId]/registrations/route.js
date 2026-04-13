@@ -76,7 +76,7 @@ export async function GET(request, { params }) {
   } catch (error) {
     console.error('Error fetching event registrations:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error.message || 'Failed to fetch event registrations' },
       { status: 500 }
     );
   }

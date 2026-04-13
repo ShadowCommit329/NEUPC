@@ -22,10 +22,6 @@ const ALLOWED_USER_FIELDS = [
   'student_id',
   'linkedin',
   'github',
-  'codeforces_handle',
-  'vjudge_handle',
-  'atcoder_handle',
-  'leetcode_handle',
 ];
 
 export async function POST(request, { params }) {

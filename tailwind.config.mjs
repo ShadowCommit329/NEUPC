@@ -1,5 +1,35 @@
 /** @type {import('tailwindcss').Config} */
 const config = {
+  // Safelist badge colors to prevent purging
+  safelist: [
+    // Green for solved during contest
+    'bg-green-500',
+    'bg-emerald-500',
+    'border-green-600',
+    'border-emerald-600',
+    'shadow-green-500/30',
+    'shadow-emerald-500/30',
+    // Orange for upsolve
+    'bg-orange-500',
+    'border-orange-600',
+    'shadow-orange-500/30',
+    // Yellow (legacy)
+    'bg-yellow-400',
+    'border-yellow-500',
+    'shadow-yellow-400/30',
+    // Red for failed attempts
+    'bg-red-500',
+    'border-red-600',
+    'shadow-red-500/30',
+    // Gray/transparent for not attempted
+    'bg-transparent',
+    'border-gray-600',
+    'border-dashed',
+    // Text colors
+    'text-white',
+    'text-gray-900',
+    'text-gray-500',
+  ],
   theme: {
     extend: {
       colors: {

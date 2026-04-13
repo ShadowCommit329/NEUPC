@@ -1,12 +1,10 @@
 /**
  * @file Learning progress tracker — dashboard widget showing the
- *   member’s roadmap and problem-set completion percentages.
+ *   member’s roadmap and bootcamps completion percentages.
  * @module MemberLearningProgress
  */
 
 'use client';
-
-import Link from 'next/link';
 
 const progressColors = {
   blue: 'bg-blue-500',
@@ -28,12 +26,6 @@ export default function LearningProgress({ roadmaps }) {
           <h2 className="text-xl font-bold text-white">🗺 Learning Progress</h2>
           <p className="text-sm text-gray-400">Track your roadmap completion</p>
         </div>
-        <Link
-          href="/account/member/roadmap"
-          className="rounded-lg bg-purple-500/20 px-3 py-1.5 text-sm font-semibold text-purple-300 transition-colors hover:bg-purple-500/30"
-        >
-          View All
-        </Link>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {roadmaps.map((roadmap, idx) => (

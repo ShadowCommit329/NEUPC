@@ -1,0 +1,397 @@
+{
+  "manifest_version": 3,
+  "name": "NEUPC Problem Solving Sync",
+  "version": "2.1.0",
+  "description": "Sync your competitive programming solutions from 41+ platforms (Codeforces, AtCoder, LeetCode, and more) to NEUPC",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabs",
+    "notifications",
+    "alarms",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://codeforces.com/*",
+    "https://atcoder.jp/*",
+    "https://toph.co/*",
+    "https://leetcode.com/*",
+    "https://cses.fi/*",
+    "https://www.codechef.com/*",
+    "https://www.topcoder.com/*",
+    "https://www.hackerrank.com/*",
+    "https://open.kattis.com/*",
+    "https://*.kattis.com/*",
+    "https://lightoj.com/*",
+    "https://onlinejudge.org/*",
+    "https://uhunt.onlinejudge.org/*",
+    "https://www.spoj.com/*",
+    "https://vjudge.net/*",
+    "https://csacademy.com/*",
+    "https://www.eolymp.com/*",
+    "https://usaco.org/*",
+    "https://dmoj.ca/*",
+    "https://bapsoj.org/*",
+    "https://dimikoj.com/*",
+    "https://loj.ac/*",
+    "https://www.beecrowd.com.br/*",
+    "https://judge.beecrowd.com/*",
+    "https://coj.uci.cu/*",
+    "https://acm.timus.ru/*",
+    "https://acmp.ru/*",
+    "https://www.hackerearth.com/*",
+    "https://www.codewars.com/*",
+    "https://exercism.org/*",
+    "https://projecteuler.net/*",
+    "https://codingcompetitions.withgoogle.com/*",
+    "https://www.facebook.com/codingcompetitions/*",
+    "https://leetcode.cn/*",
+    "https://www.luogu.com.cn/*",
+    "https://www.acwing.com/*",
+    "http://poj.org/*",
+    "https://acm.hdu.edu.cn/*",
+    "http://acm.hdu.edu.cn/*",
+    "https://zoj.pintia.cn/*",
+    "http://acm.zju.edu.cn/*",
+    "https://darkbzoj.cc/*",
+    "https://hydro.ac/*",
+    "https://www.51nod.com/*",
+    "https://onlinejudge.u-aizu.ac.jp/*",
+    "https://judge.yosupo.jp/*",
+    "http://localhost:3000/*",
+    "https://neupc.vercel.app/*"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://codeforces.com/contest/*/submission/*",
+        "https://codeforces.com/problemset/submission/*",
+        "https://codeforces.com/gym/*/submission/*",
+        "https://codeforces.com/contest/*/my",
+        "https://codeforces.com/problemset/status*",
+        "https://codeforces.com/group/*/contest/*/submission/*"
+      ],
+      "js": ["content-scripts/group1/neupc-codeforces.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://atcoder.jp/contests/*/submissions/*"],
+      "js": ["content-scripts/group1/neupc-atcoder.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://toph.co/s/*", "https://toph.co/submissions*"],
+      "js": ["content-scripts/group1/neupc-toph.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://leetcode.com/submissions/detail/*",
+        "https://leetcode.com/problems/*/submissions/*"
+      ],
+      "js": ["content-scripts/group1/neupc-leetcode.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://cses.fi/problemset/result/*",
+        "https://cses.fi/*/result/*"
+      ],
+      "js": ["content-scripts/group1/neupc-cses.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.codechef.com/submit/complete/*",
+        "https://www.codechef.com/viewsolution/*",
+        "https://www.codechef.com/status/*"
+      ],
+      "js": ["content-scripts/group1/neupc-codechef.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.topcoder.com/challenges/*",
+        "https://www.topcoder.com/my-dashboard/*"
+      ],
+      "js": ["content-scripts/group1/neupc-topcoder.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.hackerrank.com/challenges/*/submissions/*",
+        "https://www.hackerrank.com/rest/contests/*/challenges/*/submissions/*"
+      ],
+      "js": ["content-scripts/group1/neupc-hackerrank.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://open.kattis.com/submissions/*",
+        "https://*.kattis.com/submissions/*"
+      ],
+      "js": ["content-scripts/group1/neupc-kattis.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://lightoj.com/submission/*",
+        "https://lightoj.com/submissions*"
+      ],
+      "js": ["content-scripts/group1/neupc-lightoj.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://onlinejudge.org/*",
+        "https://uhunt.onlinejudge.org/*"
+      ],
+      "js": ["content-scripts/group1/neupc-uva.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.spoj.com/status/*",
+        "https://www.spoj.com/submit/*"
+      ],
+      "js": ["content-scripts/group1/neupc-spoj.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://vjudge.net/solution/*",
+        "https://vjudge.net/status*"
+      ],
+      "js": ["content-scripts/group1/neupc-vjudge.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://csacademy.com/submission/*",
+        "https://csacademy.com/contest/*/task/*"
+      ],
+      "js": ["content-scripts/group1/neupc-csacademy.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.eolymp.com/*/submissions/*",
+        "https://www.eolymp.com/*/problems/*/submissions*"
+      ],
+      "js": ["content-scripts/group1/neupc-eolymp.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://usaco.org/*"],
+      "js": ["content-scripts/group1/neupc-usaco.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://dmoj.ca/submission/*",
+        "https://dmoj.ca/submissions/*",
+        "https://dmoj.ca/problem/*"
+      ],
+      "js": ["content-scripts/group1/neupc-dmoj.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://bapsoj.org/submissions/*",
+        "https://bapsoj.org/problems/*/submissions*"
+      ],
+      "js": ["content-scripts/group2/neupc-bapsoj.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://dimikoj.com/submissions/*",
+        "https://dimikoj.com/problems/*/submissions*"
+      ],
+      "js": ["content-scripts/group2/neupc-dimikoj.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://loj.ac/s/*", "https://loj.ac/submission/*"],
+      "js": ["content-scripts/group2/neupc-loj.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.beecrowd.com.br/judge/*/runs/*",
+        "https://judge.beecrowd.com/*/runs/*"
+      ],
+      "js": ["content-scripts/group2/neupc-beecrowd.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://coj.uci.cu/24h/submission.xhtml*",
+        "https://coj.uci.cu/contest/csubmission.xhtml*"
+      ],
+      "js": ["content-scripts/group2/neupc-coj.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://acm.timus.ru/status.aspx*",
+        "https://acm.timus.ru/submit.aspx*"
+      ],
+      "js": ["content-scripts/group2/neupc-timus.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://acmp.ru/index.asp*",
+        "https://acmp.ru/asp/chk/status.asp*"
+      ],
+      "js": ["content-scripts/group2/neupc-acmp.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.hackerearth.com/submission/*",
+        "https://www.hackerearth.com/*/submissions/*"
+      ],
+      "js": ["content-scripts/group3/neupc-hackerearth.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.codewars.com/kata/*/solutions/*",
+        "https://www.codewars.com/users/*/completed_solutions*"
+      ],
+      "js": ["content-scripts/group3/neupc-codewars.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://exercism.org/tracks/*/exercises/*/solutions/*",
+        "https://exercism.org/tracks/*/exercises/*"
+      ],
+      "js": ["content-scripts/group3/neupc-exercism.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://projecteuler.net/problem=*",
+        "https://projecteuler.net/progress*"
+      ],
+      "js": ["content-scripts/group3/neupc-projecteuler.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://codingcompetitions.withgoogle.com/codejam/*",
+        "https://codingcompetitions.withgoogle.com/kickstart/*",
+        "https://codingcompetitions.withgoogle.com/hashcode/*"
+      ],
+      "js": ["content-scripts/group3/neupc-gcj.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.facebook.com/codingcompetitions/hacker-cup/*"],
+      "js": ["content-scripts/group3/neupc-fbhc.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://leetcode.cn/submissions/detail/*",
+        "https://leetcode.cn/problems/*/submissions/*"
+      ],
+      "js": ["content-scripts/group4/neupc-leetcode-cn.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.luogu.com.cn/record/*",
+        "https://www.luogu.com.cn/problem/*"
+      ],
+      "js": ["content-scripts/group4/neupc-luogu.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.acwing.com/solution/*",
+        "https://www.acwing.com/problem/*"
+      ],
+      "js": ["content-scripts/group4/neupc-acwing.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["http://poj.org/status*", "http://poj.org/showsource*"],
+      "js": ["content-scripts/group4/neupc-poj.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://acm.hdu.edu.cn/status.php*",
+        "https://acm.hdu.edu.cn/viewcode.php*",
+        "http://acm.hdu.edu.cn/status.php*",
+        "http://acm.hdu.edu.cn/viewcode.php*"
+      ],
+      "js": ["content-scripts/group4/neupc-hdu.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://zoj.pintia.cn/problem-sets/*/submissions/*",
+        "http://acm.zju.edu.cn/onlinejudge/*"
+      ],
+      "js": ["content-scripts/group4/neupc-zoj.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://darkbzoj.cc/record/*",
+        "https://hydro.ac/record/*",
+        "https://hydro.ac/d/*/record/*"
+      ],
+      "js": ["content-scripts/group4/neupc-bzoj.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.51nod.com/submission/*",
+        "https://www.51nod.com/Submit/*"
+      ],
+      "js": ["content-scripts/group4/neupc-51nod.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://onlinejudge.u-aizu.ac.jp/*"],
+      "js": ["content-scripts/group4/neupc-aizu.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://judge.yosupo.jp/submission/*",
+        "https://judge.yosupo.jp/problem/*"
+      ],
+      "js": ["content-scripts/group4/neupc-yosupo.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "neupc@neupc.app",
+      "strict_min_version": "109.0"
+    }
+  }
+}

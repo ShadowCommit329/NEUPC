@@ -59,15 +59,32 @@ const NAV_CONFIG = {
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
+/** Check if a path matches or is a child of a given href. */
+function isNavActive(pathname, href) {
+  if (href === '/') return pathname === '/';
+  return pathname === href || pathname.startsWith(href + '/');
+}
+
+/** Check if any item within a dropdown is active. */
+function isDropdownActive(pathname, dropdown) {
+  return dropdown.items.some((item) => isNavActive(pathname, item.href));
+}
+
 /** Desktop dropdown menu with hover + click support for touch devices. */
-function DesktopDropdown({ dropdown, isOpen, onToggle }) {
+function DesktopDropdown({ dropdown, isOpen, onToggle, pathname }) {
   const ref = useRef(null);
+  const dropdownIsActive = isDropdownActive(pathname, dropdown);
 
   return (
     <li ref={ref} className="group relative">
       <button
         onClick={onToggle}
-        className="text-primary-100 hover:text-secondary-400 flex items-center gap-1 text-sm font-medium whitespace-nowrap transition-colors duration-200 xl:text-base"
+        className={cn(
+          'flex items-center gap-1 text-sm font-medium whitespace-nowrap transition-colors duration-200 xl:text-base',
+          dropdownIsActive
+            ? 'text-secondary-400'
+            : 'text-primary-100 hover:text-secondary-400'
+        )}
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
@@ -94,7 +111,10 @@ function DesktopDropdown({ dropdown, isOpen, onToggle }) {
               href={item.href}
               role="menuitem"
               className={cn(
-                'text-primary-100 hover:bg-primary-800 hover:text-secondary-400 block px-5 py-3 text-sm transition-colors duration-200',
+                'block px-5 py-3 text-sm transition-colors duration-200',
+                isNavActive(pathname, item.href)
+                  ? 'bg-primary-800/50 text-secondary-400'
+                  : 'text-primary-100 hover:bg-primary-800 hover:text-secondary-400',
                 index === 0 && 'rounded-t-xl',
                 index === dropdown.items.length - 1 && 'rounded-b-xl'
               )}
@@ -109,12 +129,19 @@ function DesktopDropdown({ dropdown, isOpen, onToggle }) {
 }
 
 /** Mobile accordion dropdown. */
-function MobileDropdown({ dropdown, isOpen, onToggle, onNavigate }) {
+function MobileDropdown({ dropdown, isOpen, onToggle, onNavigate, pathname }) {
+  const dropdownIsActive = isDropdownActive(pathname, dropdown);
+
   return (
     <li>
       <button
         onClick={onToggle}
-        className="text-primary-100 hover:bg-primary-800 hover:text-secondary-400 flex w-full touch-manipulation items-center justify-between rounded-lg px-5 py-3.5 text-base font-medium transition-colors duration-200"
+        className={cn(
+          'flex w-full touch-manipulation items-center justify-between rounded-lg px-5 py-3.5 text-base font-medium transition-colors duration-200',
+          dropdownIsActive
+            ? 'bg-primary-800/50 text-secondary-400'
+            : 'text-primary-100 hover:bg-primary-800 hover:text-secondary-400'
+        )}
         aria-expanded={isOpen}
       >
         {dropdown.label}
@@ -136,7 +163,12 @@ function MobileDropdown({ dropdown, isOpen, onToggle, onNavigate }) {
             <Link
               href={item.href}
               onClick={onNavigate}
-              className="text-primary-200 hover:text-secondary-400 block px-10 py-2.5 text-sm transition-colors duration-200"
+              className={cn(
+                'block px-10 py-2.5 text-sm transition-colors duration-200',
+                isNavActive(pathname, item.href)
+                  ? 'text-secondary-400'
+                  : 'text-primary-200 hover:text-secondary-400'
+              )}
             >
               {item.label}
             </Link>
@@ -232,7 +264,7 @@ export default function Navbar({ session }) {
               href={link.href}
               className={cn(
                 'text-sm font-medium whitespace-nowrap transition-colors duration-200 xl:text-base',
-                pathname === link.href
+                isNavActive(pathname, link.href)
                   ? 'text-secondary-400'
                   : 'text-primary-100 hover:text-secondary-400'
               )}
@@ -248,6 +280,7 @@ export default function Navbar({ session }) {
             dropdown={dropdown}
             isOpen={openDropdown === dropdown.id}
             onToggle={() => toggleDropdown(dropdown.id)}
+            pathname={pathname}
           />
         ))}
 
@@ -331,7 +364,7 @@ export default function Navbar({ session }) {
                 onClick={closeMobileMenu}
                 className={cn(
                   'block touch-manipulation rounded-lg px-5 py-3.5 text-base font-medium transition-colors duration-200',
-                  pathname === link.href
+                  isNavActive(pathname, link.href)
                     ? 'bg-primary-800/50 text-secondary-400'
                     : 'text-primary-100 hover:bg-primary-800 hover:text-secondary-400'
                 )}
@@ -348,6 +381,7 @@ export default function Navbar({ session }) {
               isOpen={openDropdown === dropdown.id}
               onToggle={() => toggleDropdown(dropdown.id)}
               onNavigate={closeMobileMenu}
+              pathname={pathname}
             />
           ))}
 

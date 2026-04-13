@@ -325,3 +325,28 @@ export function ContactPageJsonLd() {
     />
   );
 }
+
+/**
+ * Course schema for bootcamp/course pages
+ */
+export function CourseJsonLd({ name, description, provider, url }) {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Course',
+    name,
+    description,
+    provider: {
+      '@type': 'Organization',
+      name: provider || 'Netrokona University Programming Club',
+      url: BASE_URL,
+    },
+    url: url ? `${BASE_URL}${url}` : BASE_URL,
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    />
+  );
+}

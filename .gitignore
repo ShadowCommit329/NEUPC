@@ -17,20 +17,63 @@
 /.next/
 /out/
 
+# next.js / tooling caches
+.next/cache/
+.swc/
+.turbo/
+.cache/
+.parcel-cache/
+
+# logs (generic)
+*.log
+logs/
+
 /.vscode/
+
+# IDEs
+.idea/
+*.iml
+
+# Copilot workspace customizations (keep local; don't push)
+.github/copilot-instructions.md
+.github/hooks/
+.github/agents/
 
 # production
 /build
+dist/
 
 # misc
 .DS_Store
+Thumbs.db
 *.pem
+
+# temp / editor swap files
+*.swp
+*.swo
+*~
+
+
+# Copilot Next.js single-server helpers (keep local; don't push)
+scripts/copilot-stop-next-before-dev.mjs
+scripts/stop-next-dev.sh
+scripts/copilot-cleanup-on-stop.sh
+scripts/copilot-session-start.sh
+scripts/.next-dev-pids
+scripts/agent-next-dev.sh
+
+# Copilot local session state
+.copilot/
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+
+# test output
+.nyc_output/
+*.lcov
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -42,3 +85,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Scraper credentials and progress
+.env.scraper
+scripts/*-progress.json
+scripts/codeforces-scrape-progress.json

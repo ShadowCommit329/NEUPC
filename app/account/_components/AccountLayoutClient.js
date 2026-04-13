@@ -75,8 +75,24 @@ function useHeartbeat() {
 export default function AccountLayoutClient({ children, session, userRoles }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [collapsePrefLoaded, setCollapsePrefLoaded] = useState(false);
   const pathname = usePathname();
   const { activeRole, setActiveRole } = useRole();
+
+  // Load persisted collapse preference after mount to keep hydration deterministic.
+  useEffect(() => {
+    const stored = localStorage.getItem('sidebar-collapsed');
+    if (stored != null) {
+      setCollapsed(stored === 'true');
+    }
+    setCollapsePrefLoaded(true);
+  }, []);
+
+  // Persist collapse preference
+  useEffect(() => {
+    if (!collapsePrefLoaded) return;
+    localStorage.setItem('sidebar-collapsed', String(collapsed));
+  }, [collapsed, collapsePrefLoaded]);
 
   useHeartbeat();
 

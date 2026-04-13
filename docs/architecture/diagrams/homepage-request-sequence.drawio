@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-04-09T00:00:00.000Z" agent="GitHub Copilot" version="24.7.17" type="device">
+<diagram id="request-sequence" name="Request Sequence">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1300" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="sq_title" value="Homepage Request Sequence (Stepwise)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=16;fontColor=#f3f4f6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="500" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="sq_p" value="Participants: Browser | app/page.js | getHomePageData | cache layer | data-service | Supabase DB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#334155;fontColor=#e2e8f0;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="1480" height="44" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="sq_s1" value="1. Browser -&gt; app/page.js: GET /" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#374151;fontColor=#f9fafb;fontSize=11;" vertex="1" parent="1"><mxGeometry x="120" y="140" width="1320" height="48" as="geometry"/></mxCell>
+        <mxCell id="sq_s2" value="2. app/page.js: buildMetadata(pathname='/')" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#374151;fontColor=#f9fafb;fontSize=11;" vertex="1" parent="1"><mxGeometry x="120" y="205" width="1320" height="48" as="geometry"/></mxCell>
+        <mxCell id="sq_s3" value="3. app/page.js -&gt; getHomePageData: await getHomePageData()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#115e59;strokeColor=#0f766e;fontColor=#ecfeff;fontSize=11;" vertex="1" parent="1"><mxGeometry x="120" y="270" width="1320" height="48" as="geometry"/></mxCell>
+        <mxCell id="sq_s4" value="4. getHomePageData -&gt; cache layer: resolve nested cached read functions in parallel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#115e59;strokeColor=#0f766e;fontColor=#ecfeff;fontSize=11;" vertex="1" parent="1"><mxGeometry x="120" y="335" width="1320" height="48" as="geometry"/></mxCell>
+        <mxCell id="sq_s5" value="5. cache miss path: cache layer -&gt; data-service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#374151;fontColor=#f9fafb;fontSize=11;" vertex="1" parent="1"><mxGeometry x="120" y="400" width="1320" height="48" as="geometry"/></mxCell>
+        <mxCell id="sq_s6" value="6. data-service -&gt; Supabase DB: SELECT website_settings/events/blog_posts/achievements/participation_records/users" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#374151;fontColor=#f9fafb;fontSize=11;" vertex="1" parent="1"><mxGeometry x="120" y="465" width="1320" height="48" as="geometry"/></mxCell>
+        <mxCell id="sq_s7" value="7. Supabase DB -&gt; data-service: result sets" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#374151;fontColor=#f9fafb;fontSize=11;" vertex="1" parent="1"><mxGeometry x="120" y="530" width="1320" height="48" as="geometry"/></mxCell>
+        <mxCell id="sq_s8" value="8. data-service -&gt; cache layer: normalized data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#374151;fontColor=#f9fafb;fontSize=11;" vertex="1" parent="1"><mxGeometry x="120" y="595" width="1320" height="48" as="geometry"/></mxCell>
+        <mxCell id="sq_s9" value="9. cache layer -&gt; getHomePageData: cached + fresh merged results" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#115e59;strokeColor=#0f766e;fontColor=#ecfeff;fontSize=11;" vertex="1" parent="1"><mxGeometry x="120" y="660" width="1320" height="48" as="geometry"/></mxCell>
+        <mxCell id="sq_s10" value="10. getHomePageData -&gt; app/page.js: HomePageData object" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#115e59;strokeColor=#0f766e;fontColor=#ecfeff;fontSize=11;" vertex="1" parent="1"><mxGeometry x="120" y="725" width="1320" height="48" as="geometry"/></mxCell>
+        <mxCell id="sq_s11" value="11. app/page.js: render Hero / About / Events / Achievements / Blogs / Join" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#374151;fontColor=#f9fafb;fontSize=11;" vertex="1" parent="1"><mxGeometry x="120" y="790" width="1320" height="48" as="geometry"/></mxCell>
+        <mxCell id="sq_s12" value="12. app/page.js -&gt; Browser: streamed HTML + JSON-LD; Browser hydrates client components" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#374151;fontColor=#f9fafb;fontSize=11;" vertex="1" parent="1"><mxGeometry x="120" y="855" width="1320" height="48" as="geometry"/></mxCell>
+
+        <mxCell id="sq_e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;" edge="1" parent="1" source="sq_s1" target="sq_s2"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sq_e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;" edge="1" parent="1" source="sq_s2" target="sq_s3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sq_e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;" edge="1" parent="1" source="sq_s3" target="sq_s4"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sq_e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;" edge="1" parent="1" source="sq_s4" target="sq_s5"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sq_e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;" edge="1" parent="1" source="sq_s5" target="sq_s6"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sq_e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;" edge="1" parent="1" source="sq_s6" target="sq_s7"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sq_e7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;" edge="1" parent="1" source="sq_s7" target="sq_s8"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sq_e8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;" edge="1" parent="1" source="sq_s8" target="sq_s9"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sq_e9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;" edge="1" parent="1" source="sq_s9" target="sq_s10"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sq_e10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;" edge="1" parent="1" source="sq_s10" target="sq_s11"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="sq_e11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;" edge="1" parent="1" source="sq_s11" target="sq_s12"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+</mxfile>

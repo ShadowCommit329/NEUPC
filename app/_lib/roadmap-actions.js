@@ -26,7 +26,6 @@ function revalidateRoadmaps() {
   revalidatePath('/');
   revalidatePath('/roadmaps', 'layout');
   revalidatePath('/account/admin/roadmaps', 'layout');
-  revalidatePath('/account/member/roadmap', 'layout');
 }
 
 // =============================================================================

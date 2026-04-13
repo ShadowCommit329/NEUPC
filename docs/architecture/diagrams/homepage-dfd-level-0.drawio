@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-04-09T00:00:00.000Z" agent="GitHub Copilot" version="24.7.17" type="device">
+<diagram id="dfd-l0" name="DFD Level 0">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="d0_title" value="Data Flow Diagram - Level 0 (Context)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=16;fontColor=#f3f4f6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="30" width="460" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="d0_visitor" value="Visitor Browser" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1f2937;strokeColor=#4b5563;fontColor=#ffffff;fontSize=12;" vertex="1" parent="1"><mxGeometry x="60" y="220" width="220" height="70" as="geometry"/></mxCell>
+        <mxCell id="d0_home" value="Homepage Route /" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f766e;strokeColor=#0d9488;fontColor=#ecfeff;fontStyle=1;fontSize=12;" vertex="1" parent="1"><mxGeometry x="380" y="220" width="240" height="70" as="geometry"/></mxCell>
+        <mxCell id="d0_data" value="Public Actions + Data Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#111827;strokeColor=#374151;fontColor=#f9fafb;fontSize=12;" vertex="1" parent="1"><mxGeometry x="720" y="220" width="280" height="70" as="geometry"/></mxCell>
+        <mxCell id="d0_db" value="Supabase DB" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#111827;strokeColor=#4b5563;fontColor=#f9fafb;fontStyle=1;fontSize=12;" vertex="1" parent="1"><mxGeometry x="1120" y="210" width="220" height="90" as="geometry"/></mxCell>
+
+        <mxCell id="d0_e1" value="HTTP GET /" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;fontSize=11;fontColor=#d1d5db;" edge="1" parent="1" source="d0_visitor" target="d0_home"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="d0_e2" value="Read requests" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;fontSize=11;fontColor=#d1d5db;" edge="1" parent="1" source="d0_home" target="d0_data"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="d0_e3" value="SQL queries" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;fontSize=11;fontColor=#d1d5db;" edge="1" parent="1" source="d0_data" target="d0_db"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="d0_e4" value="Result sets" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;fontSize=11;fontColor=#d1d5db;" edge="1" parent="1" source="d0_db" target="d0_data"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="d0_e5" value="View model" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;fontSize=11;fontColor=#d1d5db;" edge="1" parent="1" source="d0_data" target="d0_home"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="d0_e6" value="SSR HTML + JSON-LD + hydration payload" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;fontSize=11;fontColor=#d1d5db;" edge="1" parent="1" source="d0_home" target="d0_visitor"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+</mxfile>

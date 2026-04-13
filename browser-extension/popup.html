@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NEUPC Sync</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        width: 400px;
+        max-width: 100%;
+        min-height: 520px;
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        color: white;
+        padding: 16px;
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .header h1 {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 4px;
+        background: linear-gradient(90deg, #00d9ff, #00ff88);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .header p {
+        font-size: 12px;
+        opacity: 0.7;
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .card-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #00d9ff;
+      }
+
+      .form-group {
+        margin-bottom: 14px;
+      }
+
+      .form-group:last-child {
+        margin-bottom: 0;
+      }
+
+      label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      input[type='text'],
+      input[type='password'],
+      select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        color: white;
+        font-size: 13px;
+        transition: all 0.2s;
+      }
+
+      input[type='text']:focus,
+      input[type='password']:focus,
+      select:focus {
+        outline: none;
+        border-color: #00d9ff;
+        background: rgba(255, 255, 255, 0.12);
+      }
+
+      input::placeholder {
+        color: rgba(255, 255, 255, 0.4);
+      }
+
+      select option {
+        background: #1a1a2e;
+        color: white;
+      }
+
+      .btn {
+        width: 100%;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-bottom: 8px;
+      }
+
+      .btn:last-child {
+        margin-bottom: 0;
+      }
+
+      .btn-primary {
+        background: linear-gradient(90deg, #00d9ff, #00ff88);
+        color: #1a1a2e;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 217, 255, 0.3);
+      }
+
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      .btn-danger {
+        background: rgba(239, 68, 68, 0.2);
+        color: #ff6b6b;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+      }
+
+      .btn-danger:hover {
+        background: rgba(239, 68, 68, 0.3);
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      .btn-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn-row .btn {
+        flex: 1;
+        margin-bottom: 0;
+      }
+
+      .status {
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        margin-top: 10px;
+        text-align: center;
+        font-weight: 500;
+      }
+
+      .status.success {
+        background: rgba(0, 255, 136, 0.15);
+        border: 1px solid rgba(0, 255, 136, 0.3);
+        color: #00ff88;
+      }
+
+      .status.error {
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #ff6b6b;
+      }
+
+      .status.warning {
+        background: rgba(245, 158, 11, 0.15);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        color: #fbbf24;
+      }
+
+      .status.info {
+        background: rgba(0, 217, 255, 0.15);
+        border: 1px solid rgba(0, 217, 255, 0.3);
+        color: #00d9ff;
+      }
+
+      .help-text {
+        font-size: 11px;
+        opacity: 0.6;
+        margin-top: 4px;
+        line-height: 1.4;
+      }
+
+      /* Import Progress Section */
+      .import-progress {
+        margin-top: 12px;
+      }
+
+      .progress-bar {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 8px;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #00d9ff, #00ff88);
+        border-radius: 3px;
+        transition: width 0.3s ease;
+        width: 0%;
+      }
+
+      .progress-text {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.7);
+        text-align: center;
+      }
+
+      .phase-indicator {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        margin-top: 6px;
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      .phase-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      .phase-dot.active {
+        background: #00ff88;
+        animation: pulse 1s infinite;
+      }
+
+      .phase-dot.complete {
+        background: #00ff88;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      /* Stats Section */
+      .stats-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .stat-box {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: #00d9ff;
+      }
+
+      .stat-label {
+        font-size: 10px;
+        opacity: 0.6;
+        margin-top: 2px;
+      }
+
+      /* Platform Selector */
+      .platform-selector {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+
+      .platform-chip {
+        padding: 8px 6px;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 600;
+        text-align: center;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.2s;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .platform-chip:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+
+      .platform-chip.selected {
+        background: rgba(0, 217, 255, 0.2);
+        border-color: #00d9ff;
+        color: #00d9ff;
+      }
+
+      .platform-chip.disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      .platform-chip .chip-icon {
+        font-size: 14px;
+        margin-bottom: 2px;
+      }
+
+      /* Mode Toggle */
+      .mode-toggle {
+        display: flex;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 4px;
+        margin-bottom: 12px;
+      }
+
+      .mode-btn {
+        flex: 1;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .mode-btn.active {
+        background: rgba(0, 217, 255, 0.2);
+        color: #00d9ff;
+      }
+
+      .mode-btn:hover:not(.active) {
+        color: white;
+      }
+
+      .mode-btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+      }
+
+      .mode-btn:disabled:hover {
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      .spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 6px;
+        vertical-align: middle;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      /* Settings Toggle */
+      .toggle-group {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .toggle-label {
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .toggle-switch {
+        position: relative;
+        width: 44px;
+        height: 24px;
+      }
+
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.2);
+        transition: 0.3s;
+        border-radius: 24px;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: '';
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+      }
+
+      input:checked + .slider {
+        background: linear-gradient(90deg, #00d9ff, #00ff88);
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(20px);
+      }
+
+      /* Collapsible Settings */
+      .settings-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        padding: 8px 0;
+      }
+
+      .settings-toggle svg {
+        transition: transform 0.2s;
+      }
+
+      .settings-content.collapsed {
+        display: none;
+      }
+
+      .settings-toggle.expanded svg {
+        transform: rotate(180deg);
+      }
+
+      /* Connected Handles List */
+      .connected-handles {
+        margin-top: 12px;
+      }
+
+      .handle-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 6px;
+        margin-bottom: 6px;
+        font-size: 12px;
+      }
+
+      .handle-item:last-child {
+        margin-bottom: 0;
+      }
+
+      .handle-platform {
+        font-weight: 600;
+        color: #00d9ff;
+        min-width: 80px;
+      }
+
+      .handle-name {
+        flex: 1;
+        color: rgba(255, 255, 255, 0.9);
+        margin-left: 8px;
+      }
+
+      .handle-status {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: rgba(0, 255, 136, 0.2);
+        color: #00ff88;
+      }
+
+      .handle-status.not-connected {
+        background: rgba(255, 107, 107, 0.2);
+        color: #ff6b6b;
+      }
+
+      /* Tabs */
+      .tab-container {
+        display: flex;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 12px;
+      }
+
+      .tab-btn {
+        flex: 1;
+        padding: 10px;
+        background: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border-bottom: 2px solid transparent;
+      }
+
+      .tab-btn:hover {
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      .tab-btn.active {
+        color: #00d9ff;
+        border-bottom-color: #00d9ff;
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      .inline-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .inline-input-disabled {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.05);
+        cursor: not-allowed;
+      }
+
+      .inline-input-mono {
+        flex: 1;
+        font-family: monospace;
+        font-size: 11px;
+      }
+
+      .btn-inline {
+        width: auto;
+        padding: 10px 16px;
+        margin-bottom: 0;
+      }
+
+      .btn-inline-sm {
+        width: auto;
+        padding: 10px 12px;
+        margin-bottom: 0;
+      }
+
+      .help-text-spaced {
+        margin-top: 8px;
+      }
+
+      .help-list {
+        padding-left: 16px;
+        font-size: 11px;
+        line-height: 1.6;
+        opacity: 0.8;
+      }
+
+      @media (max-width: 440px) {
+        body {
+          width: 100%;
+          min-height: 0;
+          padding: 12px;
+        }
+
+        .platform-selector {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .stats-row {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>NEUPC Sync</h1>
+      <p>Sync solutions from 41+ competitive programming platforms</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-container">
+      <button class="tab-btn active" data-tab="import">Bulk Import</button>
+      <button class="tab-btn" data-tab="settings">Settings</button>
+    </div>
+
+    <!-- Import Tab -->
+    <div class="tab-content active" id="tab-import">
+      <!-- Platform Selection -->
+      <div class="card">
+        <div class="card-title">Select Platform</div>
+
+        <div class="platform-selector" id="platformSelector">
+          <div class="platform-chip selected" data-platform="codeforces">
+            <div class="chip-icon">CF</div>
+            <div>Codeforces</div>
+          </div>
+          <div class="platform-chip" data-platform="atcoder">
+            <div class="chip-icon">AC</div>
+            <div>AtCoder</div>
+          </div>
+          <div class="platform-chip" data-platform="leetcode">
+            <div class="chip-icon">LC</div>
+            <div>LeetCode</div>
+          </div>
+          <div
+            class="platform-chip disabled"
+            data-platform="toph"
+            title="Coming soon"
+          >
+            <div class="chip-icon">TP</div>
+            <div>Toph</div>
+          </div>
+        </div>
+
+        <!-- Handle Input -->
+        <div class="form-group">
+          <label for="handleInput" id="handleLabel">Codeforces Handle</label>
+          <div class="inline-row">
+            <input
+              type="text"
+              id="handleInput"
+              placeholder="Auto-loaded from NEUPC..."
+              class="inline-input-disabled"
+              readonly
+            />
+            <button
+              class="btn btn-secondary btn-inline"
+              id="refreshHandleBtn"
+              title="Refresh handle from NEUPC account"
+            >
+              Refresh
+            </button>
+          </div>
+          <p class="help-text" id="handleHelp">
+            Connect your handle in NEUPC account settings
+          </p>
+        </div>
+
+        <!-- Import Mode Toggle -->
+        <div class="mode-toggle">
+          <button class="mode-btn active" data-mode="quick">
+            Quick Import
+          </button>
+          <button class="mode-btn" data-mode="full">Full Import</button>
+        </div>
+
+        <p class="help-text" id="modeDescription">
+          Quick: Imports submission metadata only (fast).
+        </p>
+
+        <!-- Verdict Filter -->
+        <div class="form-group">
+          <label for="verdictFilter">Filter Submissions</label>
+          <select id="verdictFilter">
+            <option value="all" selected>
+              All Verdicts (AC, WA, TLE, etc.)
+            </option>
+            <option value="ac">AC Only (Accepted Solutions)</option>
+            <option value="wa">WA Only (Wrong Answer)</option>
+            <option value="tle">TLE Only (Time Limit Exceeded)</option>
+            <option value="mle">MLE Only (Memory Limit Exceeded)</option>
+            <option value="re">RE Only (Runtime Error)</option>
+            <option value="ce">CE Only (Compilation Error)</option>
+          </select>
+        </div>
+
+        <button class="btn btn-primary" id="startImportBtn">
+          Start Import
+        </button>
+
+        <!-- Progress Section -->
+        <div class="import-progress hidden" id="progressSection">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <div class="progress-text" id="progressText">Initializing...</div>
+
+          <div class="phase-indicator">
+            <span class="phase-dot" id="phase1"></span> API
+            <span class="phase-dot" id="phase2"></span> Codes
+            <span class="phase-dot" id="phase3"></span> Import
+          </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="stats-row hidden" id="resultsSection">
+          <div class="stat-box">
+            <div class="stat-value" id="totalFound">0</div>
+            <div class="stat-label" id="totalFoundLabel">Total Found</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="acFound">0</div>
+            <div class="stat-label" id="acFoundLabel">AC Solutions</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="imported">0</div>
+            <div class="stat-label" id="importedLabel">Imported</div>
+          </div>
+        </div>
+
+        <button class="btn btn-danger hidden" id="stopImportBtn">
+          Stop Import
+        </button>
+
+        <div id="importStatus" class="status hidden"></div>
+      </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="tab-content" id="tab-settings">
+      <!-- Connected Handles -->
+      <div class="card">
+        <div class="card-title">Connected Handles</div>
+        <div class="connected-handles" id="connectedHandles">
+          <div class="handle-item">
+            <span class="handle-platform">Loading...</span>
+          </div>
+        </div>
+        <p class="help-text help-text-spaced">
+          Connect handles in your NEUPC account settings
+        </p>
+      </div>
+
+      <!-- Extension Settings -->
+      <div class="card">
+        <div class="card-title">Extension Settings</div>
+
+        <div class="form-group">
+          <div class="toggle-group">
+            <span class="toggle-label">Auto-sync on AC</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="autoSyncEnabled" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <p class="help-text">
+            Automatically sync when you get AC on any supported platform
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label for="apiEndpoint">Server</label>
+          <select id="apiEndpoint">
+            <option value="http://localhost:3000">
+              Local (localhost:3000)
+            </option>
+            <option value="https://neupc.vercel.app">
+              Production (neupc.vercel.app)
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="extensionToken">Extension Token</label>
+          <div class="inline-row">
+            <input
+              type="password"
+              id="extensionToken"
+              placeholder="Paste your token here..."
+              class="inline-input-mono"
+            />
+            <button
+              class="btn btn-secondary btn-inline-sm"
+              id="toggleTokenBtn"
+              title="Toggle token visibility"
+            >
+              Show
+            </button>
+          </div>
+          <p class="help-text">
+            Go to NEUPC > Problem Solving > Generate Extension Token
+          </p>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-secondary" id="saveSettingsBtn">Save</button>
+          <button class="btn btn-secondary" id="testConnectionBtn">
+            Test Connection
+          </button>
+        </div>
+
+        <div id="settingsStatus" class="status hidden"></div>
+      </div>
+
+      <!-- Quick Help -->
+      <div class="card">
+        <div class="card-title">How It Works</div>
+        <ol class="help-list">
+          <li>Generate an extension token in NEUPC</li>
+          <li>Paste it in Settings and click Save</li>
+          <li>Connect your platform handles in NEUPC</li>
+          <li>Select platform and click Start Import</li>
+          <li>Enable auto-sync for automatic submission tracking</li>
+        </ol>
+      </div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

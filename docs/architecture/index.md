@@ -4,6 +4,12 @@ How the codebase is structured and the key patterns it follows.
 
 ---
 
+## Deep Dives
+
+- [Root Homepage (`/`) Technical Documentation](homepage-root-page.md)
+
+---
+
 ## Folder Structure
 
 ```

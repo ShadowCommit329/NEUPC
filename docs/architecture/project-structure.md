@@ -33,17 +33,17 @@ The heart of the application. Uses Next.js **App Router** conventions.
 
 ### Root Files
 
-| File | Purpose |
-|---|---|
-| `layout.js` | Root layout — global CSS, fonts, providers (toast, role context, page transition), header/footer |
-| `page.js` | Homepage — server component that fetches and renders all homepage sections |
-| `error.js` | Global error boundary |
-| `loading.js` | Global loading skeleton |
-| `not-found.js` | Custom 404 page |
-| `icon.png` | Favicon |
-| `robots.js` | Dynamic `robots.txt` generator |
-| `sitemap.js` | Dynamic `sitemap.xml` generator |
-| `opengraph-image.js` | Edge-rendered Open Graph image |
+| File                 | Purpose                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| `layout.js`          | Root layout — global CSS, fonts, providers (toast, role context, page transition), header/footer |
+| `page.js`            | Homepage — server component that fetches and renders all homepage sections                       |
+| `error.js`           | Global error boundary                                                                            |
+| `loading.js`         | Global loading skeleton                                                                          |
+| `not-found.js`       | Custom 404 page                                                                                  |
+| `icon.png`           | Favicon                                                                                          |
+| `robots.js`          | Dynamic `robots.txt` generator                                                                   |
+| `sitemap.js`         | Dynamic `sitemap.xml` generator                                                                  |
+| `opengraph-image.js` | Edge-rendered Open Graph image                                                                   |
 
 ---
 
@@ -55,38 +55,38 @@ Directories prefixed with `_` are excluded from routing by Next.js convention.
 
 The brain of the application. Contains **58 files** covering:
 
-| Category | Key Files | Description |
-|---|---|---|
-| **Auth** | `auth.js`, `auth.config.js`, `auth-guard.js` | NextAuth config, session callbacks, `requireRole()`/`requireAuth()` |
-| **Data** | `data-service.js` | Central data layer — 262 exported functions, ~3,700 lines |
-| **Actions** | `*-actions.js` (30+ files) | All server actions (`"use server"`) for mutations |
-| **Public Data** | `public-actions.js` | Cached SSR fetchers for public pages (`unstable_cache`) |
-| **Database** | `supabase.js` | Supabase client initialization (anon + service role) |
-| **Validation** | `validation.js`, `schemas.js` | Input sanitization, Zod schemas |
-| **Security** | `rate-limiter.js`, `security-service.js`, `action-guard.js`, `api-guard.js` | Rate limiting, security logging, permission wrappers |
-| **Email** | `email-service.js` | Gmail API email dispatch |
-| **Media** | `gdrive.js`, `gcs.js`, `image-gen.js` | Google Drive integration, image generation |
-| **Config** | `sidebarConfig.js`, `roleDashboardConfig.js` | Per-role UI configuration |
-| **Utils** | `helpers.js`, `utils.js`, `hooks.js`, `seo.js` | Utilities, custom hooks, SEO helpers |
-| **Logging** | `analytics-service.js`, `system-logs-service.js` | Analytics and system log services |
+| Category        | Key Files                                                                   | Description                                                         |
+| --------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Auth**        | `auth.js`, `auth.config.js`, `auth-guard.js`                                | NextAuth config, session callbacks, `requireRole()`/`requireAuth()` |
+| **Data**        | `data-service.js`                                                           | Central data layer — 262 exported functions, ~3,700 lines           |
+| **Actions**     | `*-actions.js` (30+ files)                                                  | All server actions (`"use server"`) for mutations                   |
+| **Public Data** | `public-actions.js`                                                         | Cached SSR fetchers for public pages (`unstable_cache`)             |
+| **Database**    | `supabase.js`                                                               | Supabase client initialization (anon + service role)                |
+| **Validation**  | `validation.js`, `schemas.js`                                               | Input sanitization, Zod schemas                                     |
+| **Security**    | `rate-limiter.js`, `security-service.js`, `action-guard.js`, `api-guard.js` | Rate limiting, security logging, permission wrappers                |
+| **Email**       | `email-service.js`                                                          | Gmail API email dispatch                                            |
+| **Media**       | `gdrive.js`, `gcs.js`, `image-gen.js`                                       | Google Drive integration, image generation                          |
+| **Config**      | `sidebarConfig.js`, `roleDashboardConfig.js`                                | Per-role UI configuration                                           |
+| **Utils**       | `helpers.js`, `utils.js`, `hooks.js`, `seo.js`                              | Utilities, custom hooks, SEO helpers                                |
+| **Logging**     | `analytics-service.js`, `system-logs-service.js`                            | Analytics and system log services                                   |
 
 #### `app/_components/` — Shared Components
 
-| Directory | Count | Description |
-|---|---|---|
-| `ui/` | 37 files | Reusable UI components (Button, Modal, Avatar, etc.) |
-| `sections/` | 11 files | Homepage sections (Hero, Events, Blogs, etc.) |
-| `motion/` | 7 files | Framer Motion animation wrappers |
-| `chat/` | 10 files | Real-time chat system components |
+| Directory   | Count    | Description                                          |
+| ----------- | -------- | ---------------------------------------------------- |
+| `ui/`       | 37 files | Reusable UI components (Button, Modal, Avatar, etc.) |
+| `sections/` | 11 files | Homepage sections (Hero, Events, Blogs, etc.)        |
+| `motion/`   | 7 files  | Framer Motion animation wrappers                     |
+| `chat/`     | 10 files | Real-time chat system components                     |
 
 See [components.md](components.md) for the full catalog.
 
 #### `app/_styles/` — Global Styles
 
-| File | Description |
-|---|---|
+| File         | Description                                                  |
+| ------------ | ------------------------------------------------------------ |
 | `global.css` | CSS variables, component classes, scrollbar, prose overrides |
-| `color.json` | Color palette configuration |
+| `color.json` | Color palette configuration                                  |
 
 ---
 
@@ -148,7 +148,7 @@ app/account/
 │   ├── notices/            # Club announcements
 │   ├── notifications/      # Notifications
 │   ├── participation/      # Full history
-│   ├── problem-set/        # CP problem list
+ │   ├── bootcamps/          # CP problem list
 │   ├── profile/            # Full profile
 │   ├── resources/          # Learning resources
 │   ├── roadmap/            # Roadmaps

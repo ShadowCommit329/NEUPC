@@ -61,7 +61,7 @@ export async function createWeeklyTaskAction(formData) {
 
     if (error) throw new Error(error.message);
     revalidatePath('/account/mentor/tasks');
-    revalidatePath('/account/member/problem-set');
+    revalidatePath('/account/member/bootcamps');
     return { success: 'Task created successfully', data };
   } catch (err) {
     return { error: err.message };
@@ -109,7 +109,7 @@ export async function updateWeeklyTaskAction(formData) {
 
     if (error) throw new Error(error.message);
     revalidatePath('/account/mentor/tasks');
-    revalidatePath('/account/member/problem-set');
+    revalidatePath('/account/member/bootcamps');
     return { success: 'Task updated successfully' };
   } catch (err) {
     return { error: err.message };
@@ -132,7 +132,7 @@ export async function deleteWeeklyTaskAction(formData) {
     const { error } = await supabase.from('weekly_tasks').delete().eq('id', id);
     if (error) throw new Error(error.message);
     revalidatePath('/account/mentor/tasks');
-    revalidatePath('/account/member/problem-set');
+    revalidatePath('/account/member/bootcamps');
     return { success: 'Task deleted successfully' };
   } catch (err) {
     return { error: err.message };
@@ -156,7 +156,7 @@ export async function reviewTaskSubmissionAction(formData) {
 
     if (error) throw new Error(error.message);
     revalidatePath('/account/mentor/tasks');
-    revalidatePath('/account/member/problem-set');
+    revalidatePath('/account/member/bootcamps');
     return { success: 'Submission reviewed successfully' };
   } catch (err) {
     return { error: err.message };

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-04-09T00:00:00.000Z" agent="GitHub Copilot" version="24.7.17" type="device">
+<diagram id="dfd-l1" name="DFD Level 1">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="d1_title" value="Data Flow Diagram - Level 1 (Internal to Root Page)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=16;fontColor=#f3f4f6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="620" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="d1_e1" value="External Entity E1&#10;Browser" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1f2937;strokeColor=#4b5563;fontColor=#ffffff;fontSize=11;" vertex="1" parent="1"><mxGeometry x="40" y="230" width="180" height="70" as="geometry"/></mxCell>
+
+        <mxCell id="d1_p1" value="Process P1&#10;HomePage SSR" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f766e;strokeColor=#0d9488;fontColor=#ecfeff;fontSize=11;" vertex="1" parent="1"><mxGeometry x="280" y="120" width="220" height="70" as="geometry"/></mxCell>
+        <mxCell id="d1_p2" value="Process P2&#10;getHomePageData Aggregator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#115e59;strokeColor=#0f766e;fontColor=#ecfeff;fontSize=11;" vertex="1" parent="1"><mxGeometry x="560" y="120" width="250" height="70" as="geometry"/></mxCell>
+        <mxCell id="d1_p3" value="Process P3&#10;Section Rendering" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f766e;strokeColor=#0d9488;fontColor=#ecfeff;fontSize=11;" vertex="1" parent="1"><mxGeometry x="880" y="120" width="220" height="70" as="geometry"/></mxCell>
+        <mxCell id="d1_p4" value="Process P4&#10;Client-side Enhancements" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f766e;strokeColor=#0d9488;fontColor=#ecfeff;fontSize=11;" vertex="1" parent="1"><mxGeometry x="1160" y="120" width="240" height="70" as="geometry"/></mxCell>
+
+        <mxCell id="d1_d1" value="Data Store D1&#10;website_settings" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#111827;strokeColor=#4b5563;fontColor=#f9fafb;fontSize=11;" vertex="1" parent="1"><mxGeometry x="420" y="360" width="190" height="90" as="geometry"/></mxCell>
+        <mxCell id="d1_d2" value="Data Store D2&#10;events" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#111827;strokeColor=#4b5563;fontColor=#f9fafb;fontSize=11;" vertex="1" parent="1"><mxGeometry x="640" y="360" width="160" height="90" as="geometry"/></mxCell>
+        <mxCell id="d1_d3" value="Data Store D3&#10;blog_posts" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#111827;strokeColor=#4b5563;fontColor=#f9fafb;fontSize=11;" vertex="1" parent="1"><mxGeometry x="830" y="360" width="170" height="90" as="geometry"/></mxCell>
+        <mxCell id="d1_d4" value="Data Store D4&#10;achievements" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#111827;strokeColor=#4b5563;fontColor=#f9fafb;fontSize=11;" vertex="1" parent="1"><mxGeometry x="1030" y="360" width="180" height="90" as="geometry"/></mxCell>
+        <mxCell id="d1_d5" value="Data Store D5&#10;participation_records + users" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#111827;strokeColor=#4b5563;fontColor=#f9fafb;fontSize=11;" vertex="1" parent="1"><mxGeometry x="1240" y="350" width="260" height="100" as="geometry"/></mxCell>
+
+        <mxCell id="d1_ea" value="Request /" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;fontSize=10;fontColor=#d1d5db;" edge="1" parent="1" source="d1_e1" target="d1_p1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="d1_eb" value="invoke" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;fontSize=10;fontColor=#d1d5db;" edge="1" parent="1" source="d1_p1" target="d1_p2"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="d1_ec" value="read hero/about/join/site labels" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;fontSize=10;fontColor=#d1d5db;" edge="1" parent="1" source="d1_p2" target="d1_d1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="d1_ed" value="read upcoming/featured/recent events" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;fontSize=10;fontColor=#d1d5db;" edge="1" parent="1" source="d1_p2" target="d1_d2"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="d1_ee" value="read featured/recent blogs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;fontSize=10;fontColor=#d1d5db;" edge="1" parent="1" source="d1_p2" target="d1_d3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="d1_ef" value="read achievements" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;fontSize=10;fontColor=#d1d5db;" edge="1" parent="1" source="d1_p2" target="d1_d4"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="d1_eg" value="read participations + member identities" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;fontSize=10;fontColor=#d1d5db;" edge="1" parent="1" source="d1_p2" target="d1_d5"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="d1_eh" value="composed HomePageData" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;fontSize=10;fontColor=#d1d5db;" edge="1" parent="1" source="d1_p2" target="d1_p3"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="d1_ei" value="HTML stream + JSON-LD" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;fontSize=10;fontColor=#d1d5db;" edge="1" parent="1" source="d1_p3" target="d1_e1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="d1_ej" value="hydrate interactive sections" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;fontSize=10;fontColor=#d1d5db;" edge="1" parent="1" source="d1_e1" target="d1_p4"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="d1_ek" value="slider / reveal / scroll-top interactions" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=classic;strokeColor=#9ca3af;fontSize=10;fontColor=#d1d5db;" edge="1" parent="1" source="d1_p4" target="d1_e1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+</mxfile>

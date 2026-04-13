@@ -5,6 +5,7 @@
 
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { formatDistanceToNow } from 'date-fns';
 
 /**
  * Merge Tailwind CSS classes with conflict resolution.
@@ -108,4 +109,64 @@ export function getFallbackAvatarUrl(identifier) {
   if (!identifier) return 'https://robohash.org/default?set=set4&size=200x200';
   const hash = identifier.replace(/[^a-z0-9]/gi, '').slice(0, 20) || 'default';
   return `https://robohash.org/${hash}?set=set4&size=200x200`;
+}
+
+/**
+ * Format a date as a relative time string (e.g., "5 minutes ago").
+ *
+ * @param {string|Date} date - ISO date string or Date object
+ * @returns {string} Relative time string with "ago" suffix, or empty string on error
+ *
+ * @example
+ * formatRelativeTime('2024-01-15T10:30:00Z')
+ * // → "2 hours ago"
+ */
+export function formatRelativeTime(date) {
+  if (!date) return '';
+  try {
+    return formatDistanceToNow(new Date(date), { addSuffix: true });
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Debounce a function call.
+ *
+ * @param {Function} fn - Function to debounce
+ * @param {number} delay - Delay in milliseconds
+ * @returns {Function} Debounced function
+ *
+ * @example
+ * const debouncedSearch = debounce((query) => search(query), 300);
+ */
+export function debounce(fn, delay) {
+  let timeoutId;
+  return function (...args) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+/**
+ * Truncate text to a maximum length with ellipsis.
+ *
+ * @param {string} text - Text to truncate
+ * @param {number} maxLength - Maximum length before truncation
+ * @returns {string} Truncated text with ellipsis if needed
+ */
+export function truncateText(text, maxLength = 100) {
+  if (!text || text.length <= maxLength) return text || '';
+  return text.slice(0, maxLength).trim() + '...';
+}
+
+/**
+ * Strip HTML tags from a string for plain text preview.
+ *
+ * @param {string} html - HTML string
+ * @returns {string} Plain text without HTML tags
+ */
+export function stripHtml(html) {
+  if (!html) return '';
+  return html.replace(/<[^>]*>/g, '').trim();
 }

@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NEUPC Extension - Unit Test Page</title>
+    <style>
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 1200px;
+        margin: 40px auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      h1 {
+        color: #333;
+        border-bottom: 3px solid #4caf50;
+        padding-bottom: 10px;
+      }
+      .test-section {
+        background: white;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .test-section h2 {
+        color: #555;
+        margin-top: 0;
+      }
+      .test-result {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        font-family: monospace;
+      }
+      .pass {
+        background: #d4edda;
+        color: #155724;
+        border-left: 4px solid #28a745;
+      }
+      .fail {
+        background: #f8d7da;
+        color: #721c24;
+        border-left: 4px solid #dc3545;
+      }
+      button {
+        background: #4caf50;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      button:hover {
+        background: #45a049;
+      }
+      pre {
+        background: #f4f4f4;
+        padding: 10px;
+        border-radius: 4px;
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🧪 NEUPC Extension - Unit Tests</h1>
+    <p>This page tests the utility functions used by the browser extension.</p>
+
+    <div class="test-section">
+      <h2>1. Verdict Normalization Tests</h2>
+      <button onclick="testVerdictNormalization()">Run Tests</button>
+      <div id="verdict-results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>2. Language Normalization Tests</h2>
+      <button onclick="testLanguageNormalization()">Run Tests</button>
+      <div id="language-results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>3. Date Parsing Tests</h2>
+      <button onclick="testDateParsing()">Run Tests</button>
+      <div id="date-results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>4. Text Sanitization Tests</h2>
+      <button onclick="testTextSanitization()">Run Tests</button>
+      <div id="sanitize-results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>5. DOM Query Tests</h2>
+      <button onclick="testDOMQueries()">Run Tests</button>
+      <div id="dom-results"></div>
+
+      <!-- Hidden test elements -->
+      <div style="display: none">
+        <div id="test-element" class="test-class">Test Content</div>
+        <div class="test-verdict">Accepted</div>
+        <span data-submission="12345">Submission Data</span>
+      </div>
+    </div>
+
+    <script type="module">
+      // Import utility functions
+      import {
+        normalizeVerdict,
+        normalizeLanguage,
+        parseDate,
+        parseRelativeTime,
+        sanitizeText,
+        extractText,
+        extractAttr,
+        safeQuery,
+      } from './common/utils.js';
+
+      // Make functions available globally for onclick handlers
+      window.normalizeVerdict = normalizeVerdict;
+      window.normalizeLanguage = normalizeLanguage;
+      window.parseDate = parseDate;
+      window.parseRelativeTime = parseRelativeTime;
+      window.sanitizeText = sanitizeText;
+      window.extractText = extractText;
+      window.extractAttr = extractAttr;
+      window.safeQuery = safeQuery;
+
+      function displayResult(containerId, testName, actual, expected) {
+        const container = document.getElementById(containerId);
+        const passed = JSON.stringify(actual) === JSON.stringify(expected);
+        const resultDiv = document.createElement('div');
+        resultDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+        resultDiv.innerHTML = `
+        <strong>${passed ? '✓' : '✗'} ${testName}</strong><br>
+        Expected: <code>${JSON.stringify(expected)}</code><br>
+        Actual: <code>${JSON.stringify(actual)}</code>
+      `;
+        container.appendChild(resultDiv);
+        return passed;
+      }
+
+      window.testVerdictNormalization = function () {
+        const container = document.getElementById('verdict-results');
+        container.innerHTML = '';
+
+        const tests = [
+          { input: 'Accepted', expected: 'AC' },
+          { input: 'WRONG_ANSWER', expected: 'WA' },
+          { input: 'Time Limit Exceeded', expected: 'TLE' },
+          { input: 'MEMORY_LIMIT_EXCEEDED', expected: 'MLE' },
+          { input: 'Runtime Error', expected: 'RE' },
+          { input: 'COMPILATION_ERROR', expected: 'CE' },
+          { input: 'In Queue', expected: 'IQ' },
+          { input: 'OK', expected: 'AC' },
+          { input: 'CORRECT', expected: 'AC' },
+        ];
+
+        let passed = 0;
+        tests.forEach((test) => {
+          if (
+            displayResult(
+              'verdict-results',
+              test.input,
+              normalizeVerdict(test.input),
+              test.expected
+            )
+          ) {
+            passed++;
+          }
+        });
+
+        container.innerHTML += `<p><strong>Passed: ${passed}/${tests.length}</strong></p>`;
+      };
+
+      window.testLanguageNormalization = function () {
+        const container = document.getElementById('language-results');
+        container.innerHTML = '';
+
+        const tests = [
+          { input: 'GNU C++17', expected: 'C++' },
+          { input: 'Python 3', expected: 'Python' },
+          { input: 'Java 11', expected: 'Java' },
+          { input: 'Node.js', expected: 'JavaScript' },
+          { input: 'PyPy3', expected: 'Python' },
+          { input: 'MS C++', expected: 'C++' },
+          { input: 'C Sharp', expected: 'C#' },
+          { input: 'Golang', expected: 'Go' },
+        ];
+
+        let passed = 0;
+        tests.forEach((test) => {
+          if (
+            displayResult(
+              'language-results',
+              test.input,
+              normalizeLanguage(test.input),
+              test.expected
+            )
+          ) {
+            passed++;
+          }
+        });
+
+        container.innerHTML += `<p><strong>Passed: ${passed}/${tests.length}</strong></p>`;
+      };
+
+      window.testDateParsing = function () {
+        const container = document.getElementById('date-results');
+        container.innerHTML = '';
+
+        const now = new Date('2024-01-15T12:00:00Z');
+
+        // Test absolute dates
+        const absoluteTests = [
+          { input: '2024-01-15', expected: true },
+          { input: 'Jan 15, 2024', expected: true },
+          { input: 'invalid-date', expected: null },
+        ];
+
+        let passed = 0;
+        absoluteTests.forEach((test) => {
+          const result = parseDate(test.input);
+          const isValid = test.expected ? result !== null : result === null;
+          if (isValid) passed++;
+
+          const resultDiv = document.createElement('div');
+          resultDiv.className = `test-result ${isValid ? 'pass' : 'fail'}`;
+          resultDiv.innerHTML = `
+          <strong>${isValid ? '✓' : '✗'} parseDate("${test.input}")</strong><br>
+          Result: <code>${result}</code>
+        `;
+          container.appendChild(resultDiv);
+        });
+
+        // Test relative times
+        const relativeTests = [
+          { input: '2 hours ago', expected: true },
+          { input: '30 minutes ago', expected: true },
+          { input: '1 day ago', expected: true },
+        ];
+
+        relativeTests.forEach((test) => {
+          const result = parseRelativeTime(test.input);
+          const isValid = result !== null;
+          if (isValid) passed++;
+
+          const resultDiv = document.createElement('div');
+          resultDiv.className = `test-result ${isValid ? 'pass' : 'fail'}`;
+          resultDiv.innerHTML = `
+          <strong>${isValid ? '✓' : '✗'} parseRelativeTime("${test.input}")</strong><br>
+          Result: <code>${result}</code>
+        `;
+          container.appendChild(resultDiv);
+        });
+
+        container.innerHTML += `<p><strong>Passed: ${passed}/${absoluteTests.length + relativeTests.length}</strong></p>`;
+      };
+
+      window.testTextSanitization = function () {
+        const container = document.getElementById('sanitize-results');
+        container.innerHTML = '';
+
+        const tests = [
+          { input: '  multiple   spaces  ', expected: 'multiple spaces' },
+          { input: 'text\nwith\nnewlines', expected: 'text with newlines' },
+          { input: '\ttabs\tand\tspaces  ', expected: 'tabs and spaces' },
+          { input: 'normal text', expected: 'normal text' },
+        ];
+
+        let passed = 0;
+        tests.forEach((test) => {
+          if (
+            displayResult(
+              'sanitize-results',
+              `"${test.input}"`,
+              sanitizeText(test.input),
+              test.expected
+            )
+          ) {
+            passed++;
+          }
+        });
+
+        container.innerHTML += `<p><strong>Passed: ${passed}/${tests.length}</strong></p>`;
+      };
+
+      window.testDOMQueries = function () {
+        const container = document.getElementById('dom-results');
+        container.innerHTML = '';
+
+        let passed = 0;
+        let total = 0;
+
+        // Test extractText
+        total++;
+        const text = extractText('#test-element');
+        if (text === 'Test Content') {
+          passed++;
+          container.innerHTML +=
+            '<div class="test-result pass"><strong>✓ extractText</strong> - Extracted correctly</div>';
+        } else {
+          container.innerHTML +=
+            '<div class="test-result fail"><strong>✗ extractText</strong> - Failed</div>';
+        }
+
+        // Test extractAttr
+        total++;
+        const attr = extractAttr('[data-submission]', 'data-submission');
+        if (attr === '12345') {
+          passed++;
+          container.innerHTML +=
+            '<div class="test-result pass"><strong>✓ extractAttr</strong> - Extracted correctly</div>';
+        } else {
+          container.innerHTML +=
+            '<div class="test-result fail"><strong>✗ extractAttr</strong> - Failed</div>';
+        }
+
+        // Test safeQuery
+        total++;
+        const element = safeQuery('.test-class');
+        if (element && element.id === 'test-element') {
+          passed++;
+          container.innerHTML +=
+            '<div class="test-result pass"><strong>✓ safeQuery</strong> - Found element</div>';
+        } else {
+          container.innerHTML +=
+            '<div class="test-result fail"><strong>✗ safeQuery</strong> - Failed</div>';
+        }
+
+        // Test safeQuery with array
+        total++;
+        const element2 = safeQuery(['.nonexistent', '.test-verdict']);
+        if (element2 && extractText(element2) === 'Accepted') {
+          passed++;
+          container.innerHTML +=
+            '<div class="test-result pass"><strong>✓ safeQuery (array)</strong> - Fallback works</div>';
+        } else {
+          container.innerHTML +=
+            '<div class="test-result fail"><strong>✗ safeQuery (array)</strong> - Failed</div>';
+        }
+
+        container.innerHTML += `<p><strong>Passed: ${passed}/${total}</strong></p>`;
+      };
+
+      console.log('[NEUPC] Test page loaded - utilities available');
+    </script>
+  </body>
+</html>

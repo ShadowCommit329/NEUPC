@@ -7,7 +7,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Calendar, Trophy, Target, MessageSquare, Clock } from 'lucide-react';
+import { Calendar, Trophy, MessageSquare, Clock } from 'lucide-react';
 
 export default function MemberStatsGrid({ stats }) {
   const statConfigs = [
@@ -28,15 +28,6 @@ export default function MemberStatsGrid({ stats }) {
       icon: Trophy,
       color: 'amber',
       shadowColor: 'amber',
-    },
-    {
-      label: 'Roadmaps',
-      value: stats.completedRoadmaps,
-      subtext: 'Completed',
-      href: '/account/member/roadmap',
-      icon: Target,
-      color: 'purple',
-      shadowColor: 'purple',
     },
     {
       label: 'Messages',

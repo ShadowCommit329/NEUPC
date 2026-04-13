@@ -69,7 +69,7 @@ export async function submitTaskAction({ taskId, submissionUrl, code, notes }) {
       console.error('Task submission update error:', updErr);
       return { error: 'Failed to update submission.' };
     }
-    revalidatePath('/account/member/problem-set');
+    revalidatePath('/account/member/bootcamps');
     revalidatePath('/account/mentor/tasks');
     return { success: true, updated: true };
   }
@@ -91,7 +91,7 @@ export async function submitTaskAction({ taskId, submissionUrl, code, notes }) {
     console.error('Task submission error:', insErr);
     return { error: 'Failed to submit task.' };
   }
-  revalidatePath('/account/member/problem-set');
+  revalidatePath('/account/member/bootcamps');
   revalidatePath('/account/mentor/tasks');
   return { success: true, updated: false };
 }

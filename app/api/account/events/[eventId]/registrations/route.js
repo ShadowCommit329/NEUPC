@@ -37,7 +37,7 @@ export async function GET(req, { params }) {
   if (error) {
     console.error('Event registrations fetch error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch registrations' },
+      { error: error.message || 'Failed to fetch registrations' },
       { status: 500 }
     );
   }
