@@ -43,7 +43,7 @@ When you click **"Sync All Platforms"**, the enhanced sync will:
 
 ### Before Sync (Current State)
 
-```
+```text
 Contest Card:
 ┌────────────────────────────────────┐
 │ Rank: 11174                        │
@@ -55,7 +55,7 @@ Contest Card:
 
 ### After Sync (Enhanced State)
 
-```
+```text
 Contest Card:
 ┌────────────────────────────────────┐
 │ Rank: 11174                        │
@@ -134,7 +134,7 @@ WHERE user_id = '4d4f226e-3324-4680-936e-25c8e4aa41df';
 
 **Before:**
 
-```
+```text
  total | with_participants | with_problems | with_score
 -------+-------------------+---------------+------------
    474 |                 2 |             0 |          2
@@ -142,7 +142,7 @@ WHERE user_id = '4d4f226e-3324-4680-936e-25c8e4aa41df';
 
 **After (Expected):**
 
-```
+```text
  total | with_participants | with_problems | with_score
 -------+-------------------+---------------+------------
    474 |               474 |           474 |        474
@@ -192,7 +192,7 @@ After sync, verify:
 
 ## Troubleshooting
 
-### If sync fails with "Could not find the table" error:
+### If sync fails with "Could not find the table" error
 
 The migration may not have been applied. Run:
 
@@ -200,7 +200,7 @@ The migration may not have been applied. Run:
 npx supabase migration up
 ```
 
-### If percentage still doesn't show:
+### If percentage still doesn't show
 
 Check if `total_participants` is populated:
 
@@ -213,7 +213,7 @@ LIMIT 5;
 
 If still NULL, CLIST may not be providing this data. The UI will gracefully handle missing data.
 
-### If problem badges don't show:
+### If problem badges don't show
 
 Check if `problems_data` is populated:
 

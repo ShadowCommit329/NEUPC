@@ -98,7 +98,7 @@ class CodeforcesExtractor extends BaseExtractor {
         language: 'GNU C++17',
         executionTime: 100,
         memoryUsed: 1024,
-        submittedAt: new Date().toISOString(),
+        submittedAt: null,
         sourceCode: '// Test code',
         submissionUrl: window.location.href,
       };

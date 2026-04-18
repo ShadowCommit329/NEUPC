@@ -1,5 +1,50 @@
 <!-- Add this section to popup.html after the Settings card -->
 
+<style>
+  .import-progress {
+    margin-top: 12px;
+  }
+
+  .import-progress-track {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    height: 6px;
+  }
+
+  .import-progress-bar {
+    background: #10b981;
+    height: 100%;
+    border-radius: 8px;
+    width: 0%;
+    transition: width 0.3s;
+  }
+
+  .import-progress-text {
+    font-size: 11px;
+    margin-top: 4px;
+    text-align: center;
+  }
+
+  .manual-guide-body {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .manual-guide-steps {
+    padding-left: 16px;
+    margin: 8px 0;
+  }
+
+  .manual-guide-support-title {
+    margin-top: 12px;
+  }
+
+  .manual-guide-support-list {
+    font-size: 11px;
+    opacity: 0.8;
+  }
+</style>
+
 <!-- Bulk History Collection -->
 <div class="card">
   <div class="card-title">📥 Import Submission History</div>
@@ -28,29 +73,11 @@
   </button>
 
   <div id="importStatus" class="status hidden"></div>
-  <div id="importProgress" class="hidden" style="margin-top: 12px">
-    <div
-      style="
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-        height: 6px;
-      "
-    >
-      <div
-        id="progressBar"
-        style="
-          background: #10b981;
-          height: 100%;
-          border-radius: 8px;
-          width: 0%;
-          transition: width 0.3s;
-        "
-      ></div>
+  <div id="importProgress" class="hidden import-progress">
+    <div class="import-progress-track">
+      <div id="progressBar" class="import-progress-bar"></div>
     </div>
-    <p
-      style="font-size: 11px; margin-top: 4px; text-align: center"
-      id="progressText"
-    >
+    <p class="import-progress-text" id="progressText">
       0 / 0
     </p>
   </div>
@@ -59,17 +86,17 @@
 <!-- Manual Collection Instructions -->
 <div class="card">
   <div class="card-title">🔍 Manual Collection Guide</div>
-  <div style="font-size: 12px; line-height: 1.5">
+  <div class="manual-guide-body">
     <p><strong>For platforms without APIs:</strong></p>
-    <ol style="padding-left: 16px; margin: 8px 0">
+    <ol class="manual-guide-steps">
       <li>Go to your profile/submissions page</li>
       <li>Scroll through your AC submissions</li>
       <li>Visit each submission page (extension auto-caches)</li>
       <li>Return here and click "Sync All"</li>
     </ol>
 
-    <p style="margin-top: 12px"><strong>Supported for auto-import:</strong></p>
-    <div style="font-size: 11px; opacity: 0.8">
+    <p class="manual-guide-support-title"><strong>Supported for auto-import:</strong></p>
+    <div class="manual-guide-support-list">
       ✅ Codeforces, AtCoder, LeetCode<br />
       📋 Others: Manual collection required
     </div>

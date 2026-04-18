@@ -14,7 +14,7 @@
   'use strict';
 
   if (window.__NEUPC_LEETCODE_INJECTED__) {
-    console.log('[NEUPC:leetcode] Already injected, skipping');
+    console.warn('[NEUPC:leetcode] Already injected, skipping');
     return;
   }
   window.__NEUPC_LEETCODE_INJECTED__ = true;
@@ -32,7 +32,7 @@
         : null;
 
   function log(...args) {
-    console.log(`[NEUPC:${PLATFORM}]`, ...args);
+    console.warn(`[NEUPC:${PLATFORM}]`, ...args);
   }
 
   function logError(...args) {
@@ -54,7 +54,7 @@
   function safeQuery(selector, context = document) {
     try {
       return context.querySelector(selector);
-    } catch (e) {
+    } catch {
       return null;
     }
   }
@@ -62,7 +62,7 @@
   function safeQueryAll(selector, context = document) {
     try {
       return Array.from(context.querySelectorAll(selector));
-    } catch (e) {
+    } catch {
       return [];
     }
   }
@@ -130,7 +130,7 @@
       if (!isNaN(parsed.getTime())) {
         return parsed.toISOString();
       }
-    } catch (e) {
+    } catch {
       // Ignore parsing errors
     }
     return null;

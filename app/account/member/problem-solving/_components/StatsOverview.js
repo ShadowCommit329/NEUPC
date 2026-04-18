@@ -188,22 +188,22 @@ function CompactStatCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: delay * 0.1 }}
-      className="group relative overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 transition-all duration-300 hover:border-white/[0.12] hover:bg-white/[0.04] hover:shadow-lg sm:rounded-2xl sm:p-5"
+      className="group relative overflow-hidden rounded-xl border border-white/6 bg-white/2 p-4 transition-all duration-300 hover:border-white/12 hover:bg-white/4 hover:shadow-lg sm:rounded-2xl sm:p-5"
     >
       {/* Top accent line */}
       <div
-        className={`absolute top-0 right-0 left-0 h-[2px] bg-gradient-to-r ${gradient}`}
+        className={`absolute top-0 right-0 left-0 h-0.5 bg-linear-to-r ${gradient}`}
       />
 
       {/* Gradient background on hover */}
       <div
-        className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 transition-opacity duration-300 group-hover:opacity-[0.08]`}
+        className={`absolute inset-0 bg-linear-to-br ${gradient} opacity-0 transition-opacity duration-300 group-hover:opacity-[0.08]`}
       />
 
       <div className="relative">
         <div className="mb-3 flex items-center justify-between">
           <div
-            className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} shadow-lg ring-1 ring-white/10 transition-transform duration-300 group-hover:scale-105`}
+            className={`flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br ${gradient} shadow-lg ring-1 ring-white/10 transition-transform duration-300 group-hover:scale-105`}
           >
             <Icon className="h-5 w-5 text-white" />
           </div>
@@ -263,13 +263,13 @@ function DifficultyDistributionCard({ statistics }) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 shadow-lg shadow-black/5 sm:rounded-3xl sm:p-6"
+      className="relative overflow-hidden rounded-2xl border border-white/6 bg-white/2 p-5 shadow-lg shadow-black/5 sm:rounded-3xl sm:p-6"
     >
       {/* Top accent line */}
-      <div className="absolute top-0 right-0 left-0 h-[2px] rounded-t-2xl bg-gradient-to-r from-blue-500 to-indigo-500 sm:rounded-t-3xl" />
+      <div className="absolute top-0 right-0 left-0 h-0.5 rounded-t-2xl bg-linear-to-r from-blue-500 to-indigo-500 sm:rounded-t-3xl" />
 
       <div className="mb-5 flex items-center gap-3 sm:mb-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 shadow-lg ring-2 shadow-blue-500/20 ring-blue-400/20 xl:h-11 xl:w-11">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-indigo-500 shadow-lg ring-2 shadow-blue-500/20 ring-blue-400/20 xl:h-11 xl:w-11">
           <PieChart className="h-5 w-5 text-white" />
         </div>
         <div>
@@ -297,7 +297,7 @@ function DifficultyDistributionCard({ statistics }) {
               fill="none"
               stroke="currentColor"
               strokeWidth={strokeWidth}
-              className="text-white/[0.04]"
+              className="text-white/4"
             />
             {/* Segments */}
             {data.map((segment, index) => {
@@ -434,13 +434,13 @@ function TopicMasteryCard({ onTagClick }) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 shadow-lg shadow-black/5 sm:rounded-3xl sm:p-6"
+      className="relative overflow-hidden rounded-2xl border border-white/6 bg-white/2 p-5 shadow-lg shadow-black/5 sm:rounded-3xl sm:p-6"
     >
       {/* Top accent line */}
-      <div className="absolute top-0 right-0 left-0 h-[2px] rounded-t-2xl bg-gradient-to-r from-cyan-500 to-teal-500 sm:rounded-t-3xl" />
+      <div className="absolute top-0 right-0 left-0 h-0.5 rounded-t-2xl bg-linear-to-r from-cyan-500 to-teal-500 sm:rounded-t-3xl" />
 
       <div className="mb-5 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 shadow-lg ring-2 shadow-cyan-500/20 ring-cyan-400/20 xl:h-11 xl:w-11">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-cyan-500 to-teal-500 shadow-lg ring-2 shadow-cyan-500/20 ring-cyan-400/20 xl:h-11 xl:w-11">
           <Tag className="h-5 w-5 text-white" />
         </div>
         <div>
@@ -478,7 +478,7 @@ function TopicMasteryCard({ onTagClick }) {
 
       {!loading && !error && (!tagStats || totalTags === 0) && (
         <div className="py-10 text-center sm:py-16">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-white/[0.04] sm:mb-4 sm:h-16 sm:w-16 sm:rounded-2xl">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-white/4 sm:mb-4 sm:h-16 sm:w-16 sm:rounded-2xl">
             <Tag className="h-6 w-6 text-gray-600 sm:h-8 sm:w-8" />
           </div>
           <p className="text-xs text-gray-400 sm:text-sm">
@@ -507,7 +507,7 @@ function TopicMasteryCard({ onTagClick }) {
             <button
               onClick={handleUpdateMissingTags}
               disabled={updating}
-              className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-medium text-gray-400 transition-all hover:border-white/20 hover:bg-white/[0.06] hover:text-white disabled:opacity-50 sm:gap-2 sm:rounded-xl sm:px-4 sm:py-2 sm:text-xs"
+              className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/4 px-3 py-1.5 text-[10px] font-medium text-gray-400 transition-all hover:border-white/20 hover:bg-white/6 hover:text-white disabled:opacity-50 sm:gap-2 sm:rounded-xl sm:px-4 sm:py-2 sm:text-xs"
             >
               {updating ? (
                 <Loader2 className="h-3 w-3 animate-spin sm:h-3.5 sm:w-3.5" />

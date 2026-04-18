@@ -158,6 +158,7 @@
       } else {
         log('Browser storage API not available');
       }
+    }
     autoSyncIfEnabled(submission) {
       const browserAPI =
         typeof chrome !== 'undefined'

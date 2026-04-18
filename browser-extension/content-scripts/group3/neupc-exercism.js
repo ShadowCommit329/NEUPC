@@ -132,7 +132,8 @@
           const text = extractText(statusEl).toLowerCase();
           if (text.includes('completed') || text.includes('passed')) {
             verdict = 'AC';
-    autoSyncIfEnabled(submission) {
+    }
+    const autoSyncIfEnabled = (submission) => {
       const browserAPI =
         typeof chrome !== 'undefined'
           ? chrome
@@ -183,7 +184,7 @@
           language,
           executionTime: null,
           memoryUsed: null,
-          submittedAt: new Date().toISOString(),
+          submittedAt: null,
           sourceCode,
           track,
         };
@@ -208,7 +209,7 @@
       if (this.detectPageType() === 'submission') {
         const submission = await this.extractSubmission();
         if (submission) {
-          log\('Extracted:', submission\);
+          log('Extracted:', submission);
               
               // Auto-sync if enabled and submission is AC
               this.storeSubmission && this.autoSyncIfEnabled && this.autoSyncIfEnabled(submission);

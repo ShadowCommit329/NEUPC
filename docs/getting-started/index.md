@@ -57,11 +57,9 @@ SUPABASE_SERVICE_ROLE_KEY=<service_role key from output>
 
 **Local Supabase URLs:**
 
-| Service                  | URL                    |
-| ------------------------ | ---------------------- |
-| API Gateway              | http://127.0.0.1:54321 |
-| Studio (Dashboard)       | http://127.0.0.1:54323 |
-| Inbucket (Email Testing) | http://127.0.0.1:54324 |
+- API Gateway: [http://127.0.0.1:54321](http://127.0.0.1:54321)
+- Studio (Dashboard): [http://127.0.0.1:54323](http://127.0.0.1:54323)
+- Inbucket (Email Testing): [http://127.0.0.1:54324](http://127.0.0.1:54324)
 
 ### Option B: Remote Supabase (Cloud)
 
@@ -130,7 +128,7 @@ In [Google Cloud Console](https://console.cloud.google.com):
 3. Application type: **Web application**
 4. Add **Authorized redirect URIs**:
 
-```
+```text
 http://localhost:3000/api/auth/callback/google    ← development
 https://your-domain.com/api/auth/callback/google  ← production
 ```
@@ -188,7 +186,7 @@ Or import via [vercel.com/new](https://vercel.com/new):
 
 ### Post-deploy checklist
 
-```
+```text
 ✓ Google sign-in works on production
 ✓ /sitemap.xml and /robots.txt return valid responses
 ✓ Security headers pass at securityheaders.com

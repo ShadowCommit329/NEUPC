@@ -40,23 +40,164 @@ const PLATFORMS = {
     supportsFullImport: true,
     domains: ['leetcode.com', 'leetcode.cn'],
   },
+  cses: {
+    id: 'cses',
+    name: 'CSES',
+    shortName: 'CS',
+    handleLabel: 'CSES User ID',
+    handleHelp:
+      'Connect your CSES user id in NEUPC account settings (or leave as configured handle)',
+    supportsBulkImport: true,
+    supportsFullImport: true,
+    domains: ['cses.fi'],
+  },
+  codechef: {
+    id: 'codechef',
+    name: 'CodeChef',
+    shortName: 'CC',
+    handleLabel: 'CodeChef Username',
+    handleHelp: 'Connect your CodeChef username in NEUPC account settings',
+    supportsBulkImport: true,
+    supportsFullImport: true,
+    domains: ['codechef.com'],
+  },
+  hackerrank: {
+    id: 'hackerrank',
+    name: 'HackerRank',
+    shortName: 'HR',
+    handleLabel: 'HackerRank Username',
+    handleHelp: 'Connect your HackerRank username in NEUPC account settings',
+    supportsBulkImport: true,
+    supportsFullImport: true,
+    domains: ['hackerrank.com'],
+  },
+  facebookhackercup: {
+    id: 'facebookhackercup',
+    name: 'Hacker Cup',
+    shortName: 'HC',
+    handleLabel: 'Facebook Handle / Profile ID',
+    handleHelp:
+      'Optional: connect your Facebook Hacker Cup handle or profile ID in NEUPC account settings',
+    supportsBulkImport: true,
+    supportsFullImport: true,
+    domains: ['facebook.com/codingcompetitions'],
+  },
+  lightoj: {
+    id: 'lightoj',
+    name: 'LightOJ',
+    shortName: 'LO',
+    handleLabel: 'LightOJ Username',
+    handleHelp: 'Connect your LightOJ username in NEUPC account settings',
+    supportsBulkImport: true,
+    supportsFullImport: true,
+    domains: ['lightoj.com'],
+  },
+  uva: {
+    id: 'uva',
+    name: 'UVa Online Judge',
+    shortName: 'UV',
+    handleLabel: 'uHunt Username / ID',
+    handleHelp:
+      'Use your uHunt username, numeric uHunt ID, or uHunt profile URL',
+    supportsBulkImport: true,
+    supportsFullImport: true,
+    domains: ['onlinejudge.org', 'uhunt.onlinejudge.org'],
+  },
+  vjudge: {
+    id: 'vjudge',
+    name: 'VJudge',
+    shortName: 'VJ',
+    handleLabel: 'VJudge Username',
+    handleHelp: 'Connect your VJudge username in NEUPC account settings',
+    supportsBulkImport: true,
+    supportsFullImport: true,
+    domains: ['vjudge.net'],
+  },
+  spoj: {
+    id: 'spoj',
+    name: 'SPOJ',
+    shortName: 'SP',
+    handleLabel: 'SPOJ Username',
+    handleHelp: 'Connect your SPOJ username in NEUPC account settings',
+    supportsBulkImport: true,
+    supportsFullImport: true,
+    domains: ['spoj.com'],
+  },
   toph: {
     id: 'toph',
     name: 'Toph',
     shortName: 'TP',
-    handleLabel: 'Toph Username',
-    handleHelp: 'Connect your Toph username in NEUPC account settings',
-    supportsBulkImport: false, // Coming soon
-    supportsFullImport: false,
+    handleLabel: 'Toph Username / Author ID',
+    handleHelp:
+      'Use your Toph username, author ID, profile URL, or submissions/filter URL',
+    supportsBulkImport: true,
+    supportsFullImport: true,
     domains: ['toph.co'],
   },
+  beecrowd: {
+    id: 'beecrowd',
+    name: 'beecrowd',
+    shortName: 'BC',
+    handleLabel: 'beecrowd Profile ID / Username',
+    handleHelp:
+      'Connect your beecrowd profile id or username in NEUPC account settings',
+    supportsBulkImport: true,
+    supportsFullImport: true,
+    domains: ['beecrowd.com.br', 'judge.beecrowd.com', 'urionlinejudge.com.br'],
+  },
 };
+
+const PLATFORM_KEY_ALIASES = {
+  hackercup: 'facebookhackercup',
+  'hacker-cup': 'facebookhackercup',
+  facebookhackercup: 'facebookhackercup',
+  'facebook-hacker-cup': 'facebookhackercup',
+  metahackercup: 'facebookhackercup',
+  'meta-hacker-cup': 'facebookhackercup',
+};
+
+function normalizePlatformKey(platformId) {
+  const normalized = String(platformId || '')
+    .trim()
+    .toLowerCase();
+
+  if (!normalized) return '';
+  return PLATFORM_KEY_ALIASES[normalized] || normalized;
+}
+
+function normalizeConnectedHandlesMap(rawHandles) {
+  if (!rawHandles || typeof rawHandles !== 'object') {
+    return {};
+  }
+
+  const normalizedHandles = {};
+  for (const [platformId, handle] of Object.entries(rawHandles)) {
+    const normalizedPlatform = normalizePlatformKey(platformId);
+    if (!normalizedPlatform || !PLATFORMS[normalizedPlatform]) {
+      continue;
+    }
+
+    const normalizedHandle = String(handle || '').trim();
+    if (!normalizedHandle) {
+      continue;
+    }
+
+    normalizedHandles[normalizedPlatform] = normalizedHandle;
+  }
+
+  return normalizedHandles;
+}
 
 /**
  * Detect platform from URL hostname
  */
 function detectPlatformFromUrl(url) {
   try {
+    const normalizedUrl = String(url || '').toLowerCase();
+    if (/facebook\.com\/codingcompetitions\/hacker-cup/.test(normalizedUrl)) {
+      return 'facebookhackercup';
+    }
+
     const hostname = new URL(url).hostname.replace(/^www\./, '');
     for (const [platformId, platform] of Object.entries(PLATFORMS)) {
       if (platform.domains.some((domain) => hostname.includes(domain))) {
@@ -80,6 +221,91 @@ function normalizeLeetCodeHandle(rawHandle) {
   );
   normalized = normalized.replace(/^(?:u|profile)\//i, '');
   normalized = normalized.split(/[/?#]/)[0].replace(/^@+/, '').trim();
+  return normalized;
+}
+
+function normalizeHackerrankHandle(rawHandle) {
+  const value = String(rawHandle || '').trim();
+  if (!value) return '';
+
+  let normalized = value.replace(/^@+/, '');
+  normalized = normalized.replace(
+    /^(?:https?:\/\/)?(?:www\.)?hackerrank\.com\//i,
+    ''
+  );
+  normalized = normalized.replace(/^profile\//i, '');
+  normalized = normalized.split(/[/?#]/)[0].replace(/^@+/, '').trim();
+  return normalized;
+}
+
+function normalizeTophHandle(rawHandle) {
+  const value = String(rawHandle || '').trim();
+  if (!value) return '';
+
+  const authorParamMatch = value.match(/[?&]author=([a-f0-9]{24})/i);
+  if (authorParamMatch?.[1]) {
+    return authorParamMatch[1].toLowerCase();
+  }
+
+  const directAuthorIdMatch = value.match(/^([a-f0-9]{24})$/i);
+  if (directAuthorIdMatch?.[1]) {
+    return directAuthorIdMatch[1].toLowerCase();
+  }
+
+  let normalized = value.replace(/^@+/, '');
+  normalized = normalized.replace(/^(?:https?:\/\/)?(?:www\.)?toph\.co\//i, '');
+  normalized = normalized.replace(/^\/+/, '');
+  normalized = normalized.replace(/^(?:u|users|profile)\//i, '');
+  normalized = normalized.split(/[/?#]/)[0].replace(/^@+/, '').trim();
+
+  return normalized;
+}
+
+function normalizeHackerCupHandle(rawHandle) {
+  const value = String(rawHandle || '').trim();
+  if (!value) return '';
+
+  let normalized = value.replace(/^@+/, '');
+  normalized = normalized.replace(
+    /^(?:https?:\/\/)?(?:www\.)?facebook\.com\//i,
+    ''
+  );
+
+  const profileId = normalized.match(/profile\.php\?id=(\d+)/i)?.[1];
+  if (profileId) {
+    return `fb_${profileId}`;
+  }
+
+  normalized = normalized
+    .replace(/^people\//i, '')
+    .replace(/^user\//i, '')
+    .replace(/^codingcompetitions\//i, '')
+    .split(/[/?#&]/)[0]
+    .replace(/^@+/, '')
+    .trim();
+
+  return normalized;
+}
+
+function normalizeUvaHandle(rawHandle) {
+  const value = String(rawHandle || '').trim();
+  if (!value) return '';
+
+  const idFromQuery = value.match(/[?&]id=(\d+)/i);
+  if (idFromQuery?.[1]) {
+    return idFromQuery[1];
+  }
+
+  let normalized = value.replace(/^@+/, '');
+  normalized = normalized.replace(
+    /^(?:https?:\/\/)?(?:www\.)?uhunt\.onlinejudge\.org\/id\//i,
+    ''
+  );
+  normalized = normalized
+    .split(/[/?#&]/)[0]
+    .replace(/^@+/, '')
+    .trim();
+
   return normalized;
 }
 
@@ -142,6 +368,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Store for connected handles
   let connectedHandles = {};
+
+  function getConnectedHandle(platformId) {
+    const normalizedPlatform = normalizePlatformKey(platformId);
+    if (!normalizedPlatform) return '';
+    return connectedHandles[normalizedPlatform] || '';
+  }
 
   // ============================================================
   // STATUS HELPERS
@@ -291,7 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
     handleHelp.textContent = platform.handleHelp;
 
     // Update handle value from stored handles
-    const handle = connectedHandles[selectedPlatform];
+    const handle = getConnectedHandle(selectedPlatform);
     handleInput.value = handle || '';
     handleInput.style.color = handle ? '#00ff88' : '';
 
@@ -350,9 +582,12 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       if (selectedPlatform === 'codeforces') {
         modeDescription.textContent =
-          'Full: Extracts code/details before sync (slower, opens tabs).';
+          'Full: Extracts code/details and syncs all submissions (slower, opens tabs).';
+      } else if (selectedPlatform === 'uva') {
+        modeDescription.textContent =
+          'Full: Syncs all UVa submissions and enriches problem details (source code is unavailable on UVa).';
       } else {
-        modeDescription.textContent = `Full: Runs deep import for ${platformName} with filtered verdict support.`;
+        modeDescription.textContent = `Full: Runs deep import for ${platformName}, syncing new + existing submissions.`;
       }
       verdictFilterSelect.disabled = false;
       verdictFilterSelect.title = '';
@@ -404,6 +639,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const settings = {
       autoSyncEnabled: autoSyncEnabled.checked,
+      autoFetchEnabled: autoSyncEnabled.checked,
+      autoSync: autoSyncEnabled.checked,
       apiEndpoint: apiEndpointSelect.value,
       extensionToken: tokenValue,
     };
@@ -436,15 +673,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function loadSettings() {
     browserAPI.storage.sync.get(
-      ['autoSyncEnabled', 'apiEndpoint', 'extensionToken', 'connectedHandles'],
+      [
+        'autoSyncEnabled',
+        'autoFetchEnabled',
+        'autoSync',
+        'apiEndpoint',
+        'extensionToken',
+        'connectedHandles',
+      ],
       (result) => {
-        autoSyncEnabled.checked = result.autoSyncEnabled || false;
+        const resolvedAutoSyncSetting =
+          typeof result.autoSyncEnabled === 'boolean'
+            ? result.autoSyncEnabled
+            : typeof result.autoFetchEnabled === 'boolean'
+              ? result.autoFetchEnabled
+              : typeof result.autoSync === 'boolean'
+                ? result.autoSync
+                : false;
+
+        autoSyncEnabled.checked = resolvedAutoSyncSetting;
         apiEndpointSelect.value = result.apiEndpoint || 'http://localhost:3000';
         extensionTokenInput.value = result.extensionToken || '';
 
         // Load cached handles
         if (result.connectedHandles) {
-          connectedHandles = result.connectedHandles;
+          connectedHandles = normalizeConnectedHandlesMap(
+            result.connectedHandles
+          );
           updateConnectedHandlesUI();
           updatePlatformUI();
         }
@@ -509,8 +764,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Parse all platform handles
         connectedHandles = {};
         for (const platform of data.data.syncStatus.platforms) {
-          if (platform.handle) {
-            connectedHandles[platform.platform] = platform.handle;
+          const normalizedPlatform = normalizePlatformKey(platform.platform);
+          const normalizedHandle = String(platform.handle || '').trim();
+
+          if (
+            normalizedPlatform &&
+            PLATFORMS[normalizedPlatform] &&
+            normalizedHandle
+          ) {
+            connectedHandles[normalizedPlatform] = normalizedHandle;
           }
         }
 
@@ -533,12 +795,26 @@ document.addEventListener('DOMContentLoaded', () => {
   // ============================================================
 
   function updateConnectedHandlesUI() {
-    const platformsToShow = ['codeforces', 'atcoder', 'leetcode', 'toph'];
+    const platformsToShow = [
+      'codeforces',
+      'atcoder',
+      'leetcode',
+      'cses',
+      'codechef',
+      'hackerrank',
+      'facebookhackercup',
+      'lightoj',
+      'uva',
+      'vjudge',
+      'spoj',
+      'toph',
+      'beecrowd',
+    ];
     let html = '';
 
     for (const platformId of platformsToShow) {
       const platform = PLATFORMS[platformId];
-      const handle = connectedHandles[platformId];
+      const handle = getConnectedHandle(platformId);
 
       html += `
         <div class="handle-item">
@@ -602,7 +878,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // ============================================================
 
   autoSyncEnabled.addEventListener('change', () => {
-    browserAPI.storage.sync.set({ autoSyncEnabled: autoSyncEnabled.checked });
+    browserAPI.storage.sync.set({
+      autoSyncEnabled: autoSyncEnabled.checked,
+      autoFetchEnabled: autoSyncEnabled.checked,
+      autoSync: autoSyncEnabled.checked,
+    });
     showStatus(
       settingsStatus,
       autoSyncEnabled.checked ? 'Auto-sync enabled!' : 'Auto-sync disabled',
@@ -665,11 +945,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const rawHandle =
-      handleInput.value.trim() || connectedHandles[selectedPlatform];
-    const handle =
-      selectedPlatform === 'leetcode'
-        ? normalizeLeetCodeHandle(rawHandle)
-        : rawHandle;
+      handleInput.value.trim() || getConnectedHandle(selectedPlatform);
+    let handle = rawHandle;
+    if (selectedPlatform === 'leetcode') {
+      handle = normalizeLeetCodeHandle(rawHandle);
+    } else if (selectedPlatform === 'hackerrank') {
+      handle = normalizeHackerrankHandle(rawHandle);
+    } else if (selectedPlatform === 'facebookhackercup') {
+      handle = normalizeHackerCupHandle(rawHandle);
+    } else if (selectedPlatform === 'toph') {
+      handle = normalizeTophHandle(rawHandle);
+    } else if (selectedPlatform === 'uva') {
+      handle = normalizeUvaHandle(rawHandle);
+    }
+
+    if (!handle && selectedPlatform === 'facebookhackercup') {
+      handle = 'me';
+    }
 
     if (!handle) {
       showStatus(
@@ -731,8 +1023,8 @@ document.addEventListener('DOMContentLoaded', () => {
         options: {
           fetchCodes: !isQuickMode,
           onlyAC: isQuickMode ? false : verdictFilter === 'ac',
-          verdictFilter: isQuickMode ? 'all' : verdictFilter,
-          syncEverything: true,
+          verdictFilter,
+          syncEverything: !isQuickMode,
         },
       },
       (response) => {

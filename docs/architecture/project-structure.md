@@ -6,7 +6,7 @@ Detailed walkthrough of the NEUPC codebase file organization.
 
 ## Root Directory
 
-```
+```text
 neupc/
 ├── app/                    # Next.js App Router — all pages, components, and server logic
 ├── docs/                   # Developer documentation (this folder)
@@ -94,7 +94,7 @@ See [components.md](components.md) for the full catalog.
 
 Each folder under `app/` creates a route. All public pages are **server components** that fetch data and render a corresponding client component.
 
-```
+```text
 app/
 ├── about/              → /about              Club mission and vision
 ├── achievements/       → /achievements       Achievement records and timeline
@@ -121,7 +121,7 @@ app/
 
 All routes under `/account/` are **protected** by middleware (`proxy.js`) and server-side guards (`requireRole()`).
 
-```
+```text
 app/account/
 ├── _components/            # Dashboard-specific shared components (16 files)
 ├── layout.js               # Account layout — sidebar, header, chat FAB
@@ -204,7 +204,7 @@ app/account/
 
 ### API Routes — `app/api/`
 
-```
+```text
 app/api/
 ├── auth/[...nextauth]/     # NextAuth handler (Google OAuth)
 ├── account/
@@ -231,7 +231,7 @@ See [api-routes.md](api-routes.md) for full API documentation.
 
 ## Documentation — `docs/`
 
-```
+```text
 docs/
 ├── README.md                    # Documentation index
 ├── CONTRIBUTING.md              # Contribution guide

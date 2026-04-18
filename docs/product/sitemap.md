@@ -16,22 +16,22 @@
   - [Content Pages](#content-pages)
   - [Community Pages](#community-pages)
   - [Authentication & Legal Pages](#authentication--legal-pages)
-- [5. Internal Portal Routes](#5-internal-portal-routes)
+- [5. Internal Portal Routes](#5-internal-portal-routes-account)
 - [6. Directory Structure Tree](#6-directory-structure-tree)
 
 ### By Role
 
-- [Admin Hub](#admin-hub-accountadmin)
-- [Executive Hub](#executive-hub-accountexecutive)
-- [Advisor Hub](#advisor-hub-accountadvisor)
-- [Mentor Hub](#mentor-hub-accountmentor)
-- [Member Hub](#member-hub-accountmember)
-- [Guest Hub](#guest-hub-accountguest)
+- [Admin Hub](#-admin-hub-accountadmin)
+- [Executive Hub](#-executive-hub-accountexecutive)
+- [Advisor Hub](#-advisor-hub-accountadvisor)
+- [Mentor Hub](#-mentor-hub-accountmentor)
+- [Member Hub](#-member-hub-accountmember)
+- [Guest Hub](#-guest-hub-accountguest)
 
 ### By Route Type
 
 - [Public Pages](#-public-website)
-- [Internal Portal](#-internal-portal-accountadmin)
+- [Internal Portal](#-internal-portal-account)
 - [Legal & Auth](#authentication--legal-pages)
 
 ---
@@ -298,7 +298,7 @@ The user journey typically begins at the root landing page (`/`), branching out 
 
 ---
 
-**📍 Auth & Legal Pages Summary** | **[↑ Back to Top](#-table-of-contents)** | **[→ Next Section: Internal Portal](#5-internal-portal-routes)**
+**📍 Auth & Legal Pages Summary** | **[↑ Back to Top](#-table-of-contents)** | **[→ Next Section: Internal Portal](#5-internal-portal-routes-account)**
 
 ---
 
@@ -359,7 +359,7 @@ The internal portal uses dynamic routing to serve context-aware dashboards depen
 
 ---
 
-**📍 Internal Portal Summary** | **[↑ Back to Top](#-table-of-contents)** | **[View Role Comparison](#-internal-portal-accountadmin)** | **[→ Next Section: Directory Tree](#6-directory-structure-tree)**
+**📍 Internal Portal Summary** | **[↑ Back to Top](#-table-of-contents)** | **[View Role Comparison](#-internal-portal-account)** | **[→ Next Section: Directory Tree](#6-directory-structure-tree)**
 
 ---
 
@@ -497,7 +497,7 @@ app                                          // Root application directory
 
 ### By Access Level
 
-```
+```text
 PUBLIC (No Auth Required)
 ├── / (Home)
 ├── /about
@@ -539,10 +539,10 @@ AUTHENTICATED (Auth Required - Role-Based)
 2. **[Public Navigation Flow](#2-public-navigation-flow)** — Learn the typical user journey
 3. **[Route Categorization](#3-route-categorization)** — See all routes organized by type
 4. **[Public Route Documentation](#4-public-route-documentation)** — Detailed guide for each public-facing page
-5. **[Internal Portal Routes](#5-internal-portal-routes)** — Complete role-based portal documentation
+5. **[Internal Portal Routes](#5-internal-portal-routes-account)** — Complete role-based portal documentation
 6. **[Directory Structure Tree](#6-directory-structure-tree)** — File system layout overview
 
-### By Role
+### By Role (Internal Portal)
 
 - **[Admin Hub](#-admin-hub-accountadmin)** — System administration & content control
 - **[Executive Hub](#-executive-hub-accountexecutive)** — Club operations & events
@@ -564,7 +564,7 @@ AUTHENTICATED (Auth Required - Role-Based)
 
 ### Content Silo Entry Points
 
-```
+```text
 Public Discovery → Content Detail → Account Integration
 /blogs           → /blogs/[id]      → /account/member/...
 
@@ -574,14 +574,14 @@ Public Discovery → Content Detail → Account Integration
 
 ### Admin/Executive Management Workflows
 
-```
+```text
 View List → Create/Find → Edit Details → Publish/Approve → Track Analytics
 /account/*/[resource]       → /[resource]/manage → /[resource]/create → /admin/analytics
 ```
 
 ### Member Onboarding Flow
 
-```
+```text
 Public Site → Join Info → Application → Approval → Full Portal Access
 /       →    /join    →  /login      →    ✓      →  /account/member
 /about  →              /account/guest/...(pending)
@@ -1322,7 +1322,7 @@ INSERT INTO event_registrations (
 
 ### 📋 Registration State Machine
 
-```
+```text
 INDIVIDUAL REGISTRATION:
 ┌─────────────────────────────────────────┐
 │ Available (not registered)              │
@@ -1463,11 +1463,7 @@ getMyRegistrationAction(eventId);
 - status: "verification_sent"
 - message: "Check your email to verify"
 
-```
-
 **`POST /events/cancel-registration`** — Cancel Registration
-
-```
 
 Request:
 
@@ -1479,11 +1475,7 @@ Response:
 - status: "cancelled"
 - refund_eligible: boolean
 
-```
-
 **`GET /events/[eventId]/registrations`** — Get Registration Status
-
-```
 
 Response:
 
@@ -1491,8 +1483,6 @@ Response:
 - user_details: object
 - team_info?: object (if team member)
 - attendance_confirmed: boolean
-
-```
 
 ---
 
@@ -1553,5 +1543,4 @@ Response:
 
 ---
 
-**[↑ Back to Top](#-table-of-contents)** | **[View All Sections](#📑-table-of-contents)** | **[Archive Versions](./)**
-```
+**[↑ Back to Top](#-table-of-contents)** | **[View All Sections](#-table-of-contents)** | **[Archive Versions](./)**

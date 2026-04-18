@@ -41,6 +41,8 @@ const OPTIONAL_PROBLEM_DETAIL_FIELDS = [
   'memory_limit_kb',
 ];
 
+const VJUDGE_CORE_PROBLEM_DETAIL_FIELDS = ['description'];
+
 function normalizeProblemIds(problemIds) {
   if (!Array.isArray(problemIds)) return [];
 
@@ -59,14 +61,59 @@ function normalizeProblemIds(problemIds) {
   return normalized;
 }
 
-function normalizeSubmissionIds(submissionIds) {
+function normalizeVJudgeSubmissionId(submissionId) {
+  const raw = String(submissionId || '').trim();
+  if (!raw) return null;
+
+  const normalized = raw.replace(/^vj_/i, '');
+  return normalized ? `vj_${normalized}` : null;
+}
+
+function getVJudgeSubmissionIdVariants(submissionId) {
+  const canonical = normalizeVJudgeSubmissionId(submissionId);
+  if (!canonical) return [];
+
+  const raw = canonical.replace(/^vj_/i, '');
+  if (!raw) return [canonical];
+
+  return [canonical, raw];
+}
+
+function normalizeSubmissionIdForPlatform(
+  submissionId,
+  platform = 'codeforces'
+) {
+  const raw = String(submissionId || '').trim();
+  if (!raw) return null;
+
+  const normalizedPlatform = String(platform || '')
+    .trim()
+    .toLowerCase();
+
+  if (normalizedPlatform === 'vjudge') {
+    return normalizeVJudgeSubmissionId(raw);
+  }
+
+  return raw;
+}
+
+function normalizeSubmissionIds(submissionIds, platform = 'codeforces') {
   if (!Array.isArray(submissionIds)) return [];
+
+  const normalizedPlatform = String(platform || '')
+    .trim()
+    .toLowerCase();
 
   const seen = new Set();
   const normalized = [];
 
   for (const value of submissionIds) {
-    const id = String(value || '').trim();
+    let id = String(value || '').trim();
+
+    if (normalizedPlatform === 'vjudge') {
+      id = normalizeVJudgeSubmissionId(id) || '';
+    }
+
     if (!id || seen.has(id)) continue;
     seen.add(id);
     normalized.push(id);
@@ -137,14 +184,68 @@ function hasNumericValue(value) {
   return Number.isFinite(numeric) && numeric > 0;
 }
 
-function hasProblemFieldValue(problem, field, useV2) {
+function isLikelyVJudgeNoiseDescriptionText(value) {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase();
+  if (!normalized) return false;
+
+  const noiseHits = [
+    /discover more/i,
+    /leave a comment/i,
+    /all copyright reserved/i,
+    /server time:/i,
+    /submit\s+solutions?/i,
+    /\bleaderboard\b/i,
+    /\brecrawl\b/i,
+    /\btranslation\b/i,
+  ].filter((pattern) => pattern.test(normalized)).length;
+
+  const wordCount = normalized.split(/\s+/).filter(Boolean).length;
+  return noiseHits >= 2 || (noiseHits >= 1 && wordCount < 30);
+}
+
+function hasVJudgeDescriptionValue(value) {
+  if (typeof value !== 'string') return false;
+
+  const description = value.trim();
+  if (description.length < 20) return false;
+  if (isLikelyVJudgeNoiseDescriptionText(description)) return false;
+
+  const markerHits = [
+    /input\s+format/i,
+    /output\s+format/i,
+    /constraints?/i,
+    /sample\s+input/i,
+    /sample\s+output/i,
+    /problem\s+statement/i,
+    /\bgiven\b/i,
+    /\bfind\b/i,
+  ].filter((pattern) => pattern.test(description)).length;
+  const wordCount = description.split(/\s+/).filter(Boolean).length;
+
+  return markerHits >= 1 || wordCount >= 40;
+}
+
+function hasProblemFieldValue(problem, field, useV2, platform = 'codeforces') {
   if (!problem || typeof problem !== 'object') return false;
 
+  const normalizedPlatform = String(platform || '')
+    .trim()
+    .toLowerCase();
+
   switch (field) {
-    case 'description':
-      return hasTextValue(
-        useV2 ? problem.description : problem.problem_description
-      );
+    case 'description': {
+      const description = useV2
+        ? problem.description
+        : problem.problem_description;
+
+      if (normalizedPlatform === 'vjudge') {
+        return hasVJudgeDescriptionValue(description);
+      }
+
+      return hasTextValue(description);
+    }
     case 'input_format':
       return hasTextValue(problem.input_format);
     case 'output_format':
@@ -170,21 +271,68 @@ function hasProblemFieldValue(problem, field, useV2) {
   }
 }
 
-function buildProblemDetailStatus(problem, useV2) {
-  const missingCoreFields = CORE_PROBLEM_DETAIL_FIELDS.filter(
-    (field) => !hasProblemFieldValue(problem, field, useV2)
+function getCoreProblemDetailFields(platform = 'codeforces') {
+  const normalizedPlatform = String(platform || '')
+    .trim()
+    .toLowerCase();
+
+  if (normalizedPlatform === 'vjudge') {
+    return VJUDGE_CORE_PROBLEM_DETAIL_FIELDS;
+  }
+
+  return CORE_PROBLEM_DETAIL_FIELDS;
+}
+
+function shouldRequireOptionalProblemDetails(platform = 'codeforces') {
+  const normalizedPlatform = String(platform || '')
+    .trim()
+    .toLowerCase();
+
+  // VJudge commonly lacks stable optional fields (tutorial/time/memory/examples).
+  // Treat description as sufficient completion signal for cache/skip optimization.
+  return normalizedPlatform !== 'vjudge';
+}
+
+function buildProblemDetailStatus(problem, useV2, platform = 'codeforces') {
+  const coreFields = getCoreProblemDetailFields(platform);
+  const missingCoreFields = coreFields.filter(
+    (field) => !hasProblemFieldValue(problem, field, useV2, platform)
   );
   const missingOptionalFields = OPTIONAL_PROBLEM_DETAIL_FIELDS.filter(
-    (field) => !hasProblemFieldValue(problem, field, useV2)
+    (field) => !hasProblemFieldValue(problem, field, useV2, platform)
   );
+  const requireOptional = shouldRequireOptionalProblemDetails(platform);
 
   return {
     exists: !!problem,
     isComplete:
-      missingCoreFields.length === 0 && missingOptionalFields.length === 0,
+      missingCoreFields.length === 0 &&
+      (!requireOptional || missingOptionalFields.length === 0),
     missingCoreFields,
     missingOptionalFields,
     missingFields: [...missingCoreFields, ...missingOptionalFields],
+  };
+}
+
+function buildFullyCompleteProblemDetailStatus(problemIds) {
+  const normalizedProblemIds = Array.isArray(problemIds) ? problemIds : [];
+  const statusByProblemId = {};
+
+  normalizedProblemIds.forEach((problemId) => {
+    statusByProblemId[problemId] = {
+      exists: true,
+      isComplete: true,
+      missingCoreFields: [],
+      missingOptionalFields: [],
+      missingFields: [],
+    };
+  });
+
+  return {
+    checked: normalizedProblemIds.length,
+    completeProblemIds: normalizedProblemIds,
+    incompleteProblemIds: [],
+    statusByProblemId,
   };
 }
 
@@ -245,6 +393,9 @@ export async function GET(request) {
     // Get query parameters
     const { searchParams } = new URL(request.url);
     const platform = searchParams.get('platform') || 'codeforces';
+    const normalizedPlatform = String(platform || '')
+      .trim()
+      .toLowerCase();
     const withSourceCode = searchParams.get('withSourceCode') === 'true';
 
     console.log(
@@ -260,10 +411,10 @@ export async function GET(request) {
     // Get platform_id for V2 queries
     let platformId = null;
     if (useV2) {
-      platformId = await getPlatformId(platform);
+      platformId = await getPlatformId(normalizedPlatform);
       if (!platformId) {
         return NextResponse.json(
-          { error: `Unknown platform: ${platform}` },
+          { error: `Unknown platform: ${normalizedPlatform}` },
           { status: 400, headers: corsHeaders }
         );
       }
@@ -288,7 +439,7 @@ export async function GET(request) {
         .from(submissionsTable)
         .select('submission_id')
         .eq('user_id', userId)
-        .eq('platform', platform);
+        .eq('platform', normalizedPlatform);
 
       // If withSourceCode is true, only return submissions that have source code (legacy only)
       if (withSourceCode) {
@@ -317,31 +468,64 @@ export async function GET(request) {
           .filter((value) => value != null);
 
         if (submissionDbIds.length > 0) {
-          const { data: sourceRows, error: sourceError } = await supabaseAdmin
-            .from(V2_TABLES.SOLUTIONS)
-            .select('submission_id')
-            .in('submission_id', submissionDbIds)
-            .not('source_code', 'is', null)
-            .neq('source_code', '');
+          const [solutionSourceResult, unsolvedAttemptSourceResult] =
+            await Promise.allSettled([
+              supabaseAdmin
+                .from(V2_TABLES.SOLUTIONS)
+                .select('submission_id')
+                .in('submission_id', submissionDbIds)
+                .not('source_code', 'is', null)
+                .neq('source_code', ''),
+              supabaseAdmin
+                .from(V2_TABLES.UNSOLVED_ATTEMPTS)
+                .select('submission_id')
+                .in('submission_id', submissionDbIds)
+                .not('source_code', 'is', null)
+                .neq('source_code', ''),
+            ]);
 
-          if (sourceError) {
-            console.warn(
-              '[EXISTING-SUBMISSIONS] V2 source-code lookup failed:',
-              sourceError.message
-            );
-            submissionIds = [];
-          } else {
-            const withCodeDbIds = new Set(
-              (sourceRows || [])
-                .map((row) => row.submission_id)
-                .filter((value) => value != null)
-            );
+          const withCodeDbIds = new Set();
 
-            submissionIds = rows
-              .filter((row) => withCodeDbIds.has(row.id))
-              .map((row) => row.external_submission_id)
-              .filter(Boolean);
+          if (solutionSourceResult.status === 'fulfilled') {
+            const { data: sourceRows, error: sourceError } =
+              solutionSourceResult.value;
+
+            if (sourceError) {
+              console.warn(
+                '[EXISTING-SUBMISSIONS] V2 solution source-code lookup failed:',
+                sourceError.message
+              );
+            } else {
+              (sourceRows || []).forEach((row) => {
+                if (row?.submission_id != null) {
+                  withCodeDbIds.add(row.submission_id);
+                }
+              });
+            }
           }
+
+          if (unsolvedAttemptSourceResult.status === 'fulfilled') {
+            const { data: attemptRows, error: attemptError } =
+              unsolvedAttemptSourceResult.value;
+
+            if (attemptError) {
+              console.warn(
+                '[EXISTING-SUBMISSIONS] V2 unsolved-attempt source-code lookup failed:',
+                attemptError.message
+              );
+            } else {
+              (attemptRows || []).forEach((row) => {
+                if (row?.submission_id != null) {
+                  withCodeDbIds.add(row.submission_id);
+                }
+              });
+            }
+          }
+
+          submissionIds = rows
+            .filter((row) => withCodeDbIds.has(row.id))
+            .map((row) => row.external_submission_id)
+            .filter(Boolean);
         }
       } else {
         submissionIds = rows
@@ -354,6 +538,16 @@ export async function GET(request) {
         : [];
     }
 
+    submissionIds = [
+      ...new Set(
+        submissionIds
+          .map((submissionId) =>
+            normalizeSubmissionIdForPlatform(submissionId, normalizedPlatform)
+          )
+          .filter(Boolean)
+      ),
+    ];
+
     console.log(
       `[EXISTING-SUBMISSIONS] Found ${submissionIds.length} existing submissions`
     );
@@ -362,7 +556,7 @@ export async function GET(request) {
       {
         success: true,
         data: {
-          platform,
+          platform: normalizedPlatform,
           count: submissionIds.length,
           submissionIds,
         },
@@ -454,8 +648,24 @@ export async function POST(request) {
       pageNumber = null,
       pageSignature = '',
     } = body;
+    const normalizedPlatform = String(platform || '')
+      .trim()
+      .toLowerCase();
 
-    const normalizedSubmissionIds = normalizeSubmissionIds(submissionIds);
+    const normalizedSubmissionIds = normalizeSubmissionIds(
+      submissionIds,
+      normalizedPlatform
+    );
+    const submissionIdsForLookup =
+      normalizedPlatform === 'vjudge'
+        ? [
+            ...new Set(
+              normalizedSubmissionIds.flatMap((submissionId) =>
+                getVJudgeSubmissionIdVariants(submissionId)
+              )
+            ),
+          ]
+        : normalizedSubmissionIds;
     const normalizedProblemIds = normalizeProblemIds(problemIds);
     const shouldCheckSubmissions = normalizedSubmissionIds.length > 0;
     const shouldCheckProblemDetails =
@@ -477,10 +687,10 @@ export async function POST(request) {
     // Get platform_id for V2 queries
     let platformId = null;
     if (useV2) {
-      platformId = await getPlatformId(platform);
+      platformId = await getPlatformId(normalizedPlatform);
       if (!platformId) {
         return NextResponse.json(
-          { error: `Unknown platform: ${platform}` },
+          { error: `Unknown platform: ${normalizedPlatform}` },
           { status: 400, headers: corsHeaders }
         );
       }
@@ -488,7 +698,11 @@ export async function POST(request) {
 
     const pageOptimizationCacheKey =
       includePageOptimization && platformId
-        ? buildPageOptimizationCacheKey(platform, pageNumber, pageSignature)
+        ? buildPageOptimizationCacheKey(
+            normalizedPlatform,
+            pageNumber,
+            pageSignature
+          )
         : null;
 
     if (
@@ -516,20 +730,18 @@ export async function POST(request) {
           cachedOptimizationError.message
         );
       } else if (cachedPageOptimization) {
+        const cachedProblemDetails =
+          buildFullyCompleteProblemDetailStatus(normalizedProblemIds);
+
         return NextResponse.json(
           {
             success: true,
             data: {
-              platform,
+              platform: normalizedPlatform,
               checked: normalizedSubmissionIds.length,
-              existingWithCode: [],
+              existingWithCode: normalizedSubmissionIds,
               existingWithoutCode: [],
-              problemDetails: {
-                checked: normalizedProblemIds.length,
-                completeProblemIds: [],
-                incompleteProblemIds: [],
-                statusByProblemId: {},
-              },
+              problemDetails: cachedProblemDetails,
               pageOptimization: {
                 pageNumber:
                   Number.isFinite(Number(pageNumber)) && Number(pageNumber) > 0
@@ -560,7 +772,7 @@ export async function POST(request) {
           .from(submissionsTable)
           .select('id, external_submission_id')
           .eq('user_id', userId)
-          .in('external_submission_id', normalizedSubmissionIds);
+          .in('external_submission_id', submissionIdsForLookup);
 
         existingQuery = existingQuery.eq('platform_id', platformId);
       } else {
@@ -568,8 +780,8 @@ export async function POST(request) {
           .from(submissionsTable)
           .select('submission_id, source_code')
           .eq('user_id', userId)
-          .eq('platform', platform)
-          .in('submission_id', normalizedSubmissionIds);
+          .eq('platform', normalizedPlatform)
+          .in('submission_id', submissionIdsForLookup);
       }
 
       const { data: existing, error } = await existingQuery;
@@ -591,37 +803,84 @@ export async function POST(request) {
           let submissionIdsWithCode = new Set();
 
           if (submissionDbIds.length > 0) {
-            const { data: sourceRows, error: sourceError } = await supabaseAdmin
-              .from(V2_TABLES.SOLUTIONS)
-              .select('submission_id')
-              .in('submission_id', submissionDbIds)
-              .not('source_code', 'is', null)
-              .neq('source_code', '');
+            const [solutionSourceResult, unsolvedAttemptSourceResult] =
+              await Promise.allSettled([
+                supabaseAdmin
+                  .from(V2_TABLES.SOLUTIONS)
+                  .select('submission_id')
+                  .in('submission_id', submissionDbIds)
+                  .not('source_code', 'is', null)
+                  .neq('source_code', ''),
+                supabaseAdmin
+                  .from(V2_TABLES.UNSOLVED_ATTEMPTS)
+                  .select('submission_id')
+                  .in('submission_id', submissionDbIds)
+                  .not('source_code', 'is', null)
+                  .neq('source_code', ''),
+              ]);
 
-            if (sourceError) {
-              console.warn(
-                '[EXISTING-SUBMISSIONS] V2 submission source lookup failed:',
-                sourceError.message
-              );
-            } else {
-              submissionIdsWithCode = new Set(
-                (sourceRows || [])
-                  .map((row) => row.submission_id)
-                  .filter((value) => value != null)
-              );
+            if (solutionSourceResult.status === 'fulfilled') {
+              const { data: sourceRows, error: sourceError } =
+                solutionSourceResult.value;
+
+              if (sourceError) {
+                console.warn(
+                  '[EXISTING-SUBMISSIONS] V2 solution source lookup failed:',
+                  sourceError.message
+                );
+              } else {
+                (sourceRows || []).forEach((row) => {
+                  if (row?.submission_id != null) {
+                    submissionIdsWithCode.add(row.submission_id);
+                  }
+                });
+              }
+            }
+
+            if (unsolvedAttemptSourceResult.status === 'fulfilled') {
+              const { data: attemptRows, error: attemptError } =
+                unsolvedAttemptSourceResult.value;
+
+              if (attemptError) {
+                console.warn(
+                  '[EXISTING-SUBMISSIONS] V2 unsolved-attempt source lookup failed:',
+                  attemptError.message
+                );
+              } else {
+                (attemptRows || []).forEach((row) => {
+                  if (row?.submission_id != null) {
+                    submissionIdsWithCode.add(row.submission_id);
+                  }
+                });
+              }
             }
           }
 
           for (const sub of existing) {
+            const normalizedSubId = normalizeSubmissionIdForPlatform(
+              sub.external_submission_id,
+              normalizedPlatform
+            );
+            if (!normalizedSubId) {
+              continue;
+            }
+
             if (submissionIdsWithCode.has(sub.id)) {
-              existingWithCode.add(sub.external_submission_id);
+              existingWithCode.add(normalizedSubId);
             } else {
-              existingWithoutCode.add(sub.external_submission_id);
+              existingWithoutCode.add(normalizedSubId);
             }
           }
         } else {
           for (const sub of existing) {
-            const subId = sub.submission_id;
+            const subId = normalizeSubmissionIdForPlatform(
+              sub.submission_id,
+              normalizedPlatform
+            );
+            if (!subId) {
+              continue;
+            }
+
             if (sub.source_code) {
               existingWithCode.add(subId);
             } else {
@@ -660,7 +919,7 @@ export async function POST(request) {
           .select(
             'problem_id, problem_description, input_format, output_format, constraints, examples, notes, tutorial_url, tutorial_content, tutorial_solutions, time_limit_ms, memory_limit_kb'
           )
-          .eq('platform', platform)
+          .eq('platform', normalizedPlatform)
           .in('problem_id', normalizedProblemIds);
       }
 
@@ -694,7 +953,11 @@ export async function POST(request) {
 
       normalizedProblemIds.forEach((problemId) => {
         const problem = problemMap.get(problemId) || null;
-        const status = buildProblemDetailStatus(problem, useV2);
+        const status = buildProblemDetailStatus(
+          problem,
+          useV2,
+          normalizedPlatform
+        );
 
         statusByProblemId[problemId] = status;
         if (status.isComplete) {
@@ -821,7 +1084,7 @@ export async function POST(request) {
       {
         success: true,
         data: {
-          platform,
+          platform: normalizedPlatform,
           checked: normalizedSubmissionIds.length,
           existingWithCode: Array.from(existingWithCode),
           existingWithoutCode: Array.from(existingWithoutCode),

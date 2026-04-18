@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getProblemSolvingData,
   getMemberProblemSolvingData,
@@ -29,10 +29,21 @@ export function useProblemSolving() {
   const [error, setError] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [syncingPlatform, setSyncingPlatform] = useState(null);
+  const isFetchingRef = useRef(false);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (options = {}) => {
+    const { background = false } = options;
+
+    if (isFetchingRef.current) {
+      return;
+    }
+
     try {
-      setLoading(true);
+      isFetchingRef.current = true;
+      if (!background) {
+        setLoading(true);
+      }
+
       const result = await getProblemSolvingData();
 
       if (!result.success) {
@@ -44,9 +55,16 @@ export function useProblemSolving() {
       setData(result.data);
       setError(null);
     } catch (err) {
-      setError(err.message);
+      if (!background) {
+        setError(err.message);
+      } else {
+        console.warn('[useProblemSolving] Background refresh failed:', err);
+      }
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
+      isFetchingRef.current = false;
     }
   }, []);
 
@@ -141,6 +159,35 @@ export function useProblemSolving() {
 
   useEffect(() => {
     fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const refreshInBackground = () => fetchData({ background: true });
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshInBackground();
+      }
+    };
+
+    window.addEventListener('focus', refreshInBackground);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Keep dashboard stats fresh when extraction completes externally
+    // (browser extension/API import) while this page is already open.
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        refreshInBackground();
+      }
+    }, 20000);
+
+    return () => {
+      window.removeEventListener('focus', refreshInBackground);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.clearInterval(intervalId);
+    };
   }, [fetchData]);
 
   return {

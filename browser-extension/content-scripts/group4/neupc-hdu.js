@@ -116,7 +116,7 @@
             language,
             executionTime,
             memoryUsed,
-            submittedAt: submitTime || new Date().toISOString(),
+            submittedAt: submitTime || null,
             sourceCode: null,
           });
         }
@@ -165,7 +165,7 @@
           language: 'Unknown',
           executionTime: null,
           memoryUsed: null,
-          submittedAt: new Date().toISOString(),
+          submittedAt: null,
           sourceCode,
         };
       } catch (error) {
@@ -183,7 +183,7 @@
       if (pageType === 'submission') {
         const submission = await this.extractSubmission();
         if (submission) {
-          log\('Extracted:', submission\);
+          log('Extracted:', submission);
               
               // Auto-sync if enabled and submission is AC
               this.storeSubmission && this.autoSyncIfEnabled && this.autoSyncIfEnabled(submission);
@@ -219,6 +219,8 @@
           }
         });
       }
+    }
+
     autoSyncIfEnabled(submission) {
       const browserAPI =
         typeof chrome !== 'undefined'
@@ -248,7 +250,7 @@
     }
   }
 
-  //document.readyState === 'loading') {
+  if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () =>
       new HDUExtractor().init()
     );

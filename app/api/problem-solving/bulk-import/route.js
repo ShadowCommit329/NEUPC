@@ -54,6 +54,27 @@ function isMissingUnsolvedAttemptsTableError(error) {
   );
 }
 
+function isMissingColumnError(error, columnName) {
+  if (!error || !columnName) return false;
+
+  const code = (error.code || '').toString();
+  const message =
+    `${error.message || ''} ${error.details || ''} ${error.hint || ''}`.toLowerCase();
+  const normalizedColumn = String(columnName).toLowerCase();
+
+  return (
+    code === '42703' ||
+    (message.includes(normalizedColumn) && message.includes('does not exist'))
+  );
+}
+
+function normalizeHandleForComparison(value) {
+  if (value === null || value === undefined) return null;
+
+  const normalized = String(value).trim().toLowerCase();
+  return normalized || null;
+}
+
 const MIN_REASONABLE_SUBMISSION_MS = Date.parse('2005-01-01T00:00:00.000Z');
 const MAX_SUBMISSION_FUTURE_DRIFT_MS = 24 * 60 * 60 * 1000;
 
@@ -91,6 +112,68 @@ function normalizeSubmissionTimestamp(value) {
   return new Date(timestampMs).toISOString();
 }
 
+function normalizeSubmissionVerdict(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return 'UNKNOWN';
+
+  const upper = raw.toUpperCase().replace(/[_\s]+/g, ' ');
+
+  if (
+    upper.includes('EDIT SOURCE CODE') ||
+    upper.includes('VIEW DETAILS') ||
+    upper === 'DETAILS' ||
+    upper === 'SOURCE CODE'
+  ) {
+    return 'UNKNOWN';
+  }
+
+  if (upper === 'AC' || upper === 'OK' || upper.includes('ACCEPTED')) {
+    return 'AC';
+  }
+  if (upper === 'WA' || upper.includes('WRONG ANSWER')) {
+    return 'WA';
+  }
+  if (upper === 'TLE' || upper.includes('TIME LIMIT')) {
+    return 'TLE';
+  }
+  if (upper === 'MLE' || upper.includes('MEMORY LIMIT')) {
+    return 'MLE';
+  }
+  if (
+    upper === 'RE' ||
+    upper === 'RTE' ||
+    upper.includes('RUNTIME ERROR') ||
+    upper.includes('SIGSEGV') ||
+    upper.includes('SIGFPE')
+  ) {
+    return 'RE';
+  }
+  if (
+    upper === 'CE' ||
+    upper.includes('COMPILATION ERROR') ||
+    upper.includes('COMPILE ERROR')
+  ) {
+    return 'CE';
+  }
+  if (upper === 'PE' || upper.includes('PRESENTATION ERROR')) {
+    return 'PE';
+  }
+  if (upper === 'PC' || upper.includes('PARTIAL')) {
+    return 'PC';
+  }
+  if (
+    upper === 'PENDING' ||
+    upper.includes('QUEUE') ||
+    upper.includes('RUNNING') ||
+    upper.includes('JUDGING') ||
+    upper.includes('TESTING')
+  ) {
+    return 'PENDING';
+  }
+
+  return upper;
+}
+
 function normalizeLeetCodeProblemSlug(value) {
   if (value === null || value === undefined) return null;
 
@@ -104,6 +187,303 @@ function normalizeLeetCodeProblemSlug(value) {
   slug = slug.split(/[/?#]/)[0].trim();
 
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? slug : null;
+}
+
+function normalizeVJudgeSubmissionId(value) {
+  if (value === null || value === undefined) return null;
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  const normalized = raw.replace(/^vj_/i, '');
+  return normalized ? `vj_${normalized}` : null;
+}
+
+function getVJudgeSubmissionIdVariants(value) {
+  const canonical = normalizeVJudgeSubmissionId(value);
+  if (!canonical) return [];
+
+  const raw = canonical.replace(/^vj_/i, '');
+  if (!raw) return [canonical];
+
+  return [canonical, raw];
+}
+
+function normalizeSourceForQualityCheck(value) {
+  if (typeof value !== 'string') return '';
+
+  return value
+    .replace(/\r\n?/g, '\n')
+    .replace(/^\uFEFF/, '')
+    .replace(/\u0000/g, '')
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g, '')
+    .trim();
+}
+
+function countSourceNewlines(value) {
+  const source = normalizeSourceForQualityCheck(value);
+  if (!source) return 0;
+  return (source.match(/\n/g) || []).length;
+}
+
+function decodeEscapedAtCoderSourceSequences(value) {
+  if (typeof value !== 'string') return value;
+
+  // Decode when the payload is likely a single escaped blob ("\\n" text)
+  // instead of actual line breaks.
+  const hasRealNewline = value.includes('\n');
+  const escapedNewlineCount = (value.match(/\\n/g) || []).length;
+  if (hasRealNewline || escapedNewlineCount < 3) {
+    return value;
+  }
+
+  return value
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\n')
+    .replace(/\\t/g, '\t');
+}
+
+function normalizeAtCoderSourceCodeForImport(value) {
+  let source = decodeEscapedAtCoderSourceSequences(value);
+  source = normalizeSourceForQualityCheck(source);
+  if (!source) return null;
+
+  source = source.replace(/^\s*(?:\d{1,3}){8,}(?=\s*(?:#|[A-Za-z_]))/, '');
+
+  // Repair common collapsed-line patterns seen in older AtCoder captures.
+  source = source.replace(
+    /([^\n])(?=#(?:include|define|if|ifdef|ifndef|pragma|endif|elif|else)\b)/g,
+    '$1\n'
+  );
+  source = source.replace(/>(?=\s*using\s+namespace\b)/g, '>\n');
+  source = source.replace(
+    /;(?=\s*(?:#|using\s+namespace\b|int\s+main\b|signed\s+main\b|void\s+[A-Za-z_][A-Za-z0-9_]*\s*\())/g,
+    ';\n'
+  );
+
+  return source.trimEnd();
+}
+
+function calculateSourceContaminationPenalty(value) {
+  const source = normalizeSourceForQualityCheck(value);
+  if (!source) return 1000;
+
+  let penalty = 0;
+
+  if (/^\s*(?:\d{1,3}){8,}(?=\s*(?:#|[A-Za-z_]))/.test(source)) {
+    penalty += 700;
+  }
+
+  if (/(\.{3}|…)[\s\n]*$/.test(source)) {
+    penalty += 220;
+  }
+
+  if (/[^\x00-\x7F]{120,}/.test(source)) {
+    penalty += 320;
+  }
+
+  if (/([^\nA-Za-z0-9])\1{80,}/.test(source)) {
+    penalty += 220;
+  }
+
+  if (/([A-Za-z])\1{200,}/.test(source)) {
+    penalty += 220;
+  }
+
+  const newlineCount = (source.match(/\n/g) || []).length;
+  if (source.length > 450 && newlineCount <= 1) {
+    penalty += 280;
+  }
+
+  return penalty;
+}
+
+function calculateSourceQualityScore(value) {
+  const source = normalizeSourceForQualityCheck(value);
+  if (!source) {
+    return {
+      score: -1000,
+      length: 0,
+      penalty: 1000,
+    };
+  }
+
+  const length = source.length;
+  const penalty = calculateSourceContaminationPenalty(source);
+  const newlineCount = (source.match(/\n/g) || []).length;
+
+  // Keep length useful for tie-breaks, but cap it so noisy/merged code cannot
+  // win only by being very long.
+  const lengthSignal = Math.min(length, 2400);
+  const structureBonus = Math.min(newlineCount, 120) * 3;
+
+  return {
+    score: lengthSignal + structureBonus - penalty,
+    length,
+    penalty,
+  };
+}
+
+function shouldReplaceExistingSourceCode(
+  existingSource,
+  incomingSource,
+  options = {}
+) {
+  const platformCode = String(options.platformCode || '')
+    .trim()
+    .toLowerCase();
+  const incoming = calculateSourceQualityScore(incomingSource);
+  if (incoming.length <= 0) {
+    return false;
+  }
+
+  const existing = calculateSourceQualityScore(existingSource);
+  if (existing.length <= 0) {
+    return true;
+  }
+
+  if (platformCode === 'atcoder') {
+    const existingNewlines = countSourceNewlines(existingSource);
+    const incomingNewlines = countSourceNewlines(incomingSource);
+    const existingLooksCollapsed =
+      existing.length > 450 && existingNewlines <= 1;
+
+    if (existingLooksCollapsed && incomingNewlines >= 3) {
+      return true;
+    }
+  }
+
+  // Strong quality improvement: prefer cleaner incoming code even if shorter.
+  if (incoming.score >= existing.score + 120) {
+    return true;
+  }
+
+  // Mild quality difference: require some length improvement too.
+  if (
+    incoming.score >= existing.score - 40 &&
+    incoming.length >= existing.length + 40
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+async function deleteRowsByIds(table, ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return 0;
+
+  const CHUNK_SIZE = 500;
+  let deleted = 0;
+
+  for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+    const chunk = ids.slice(i, i + CHUNK_SIZE);
+    const { error } = await supabaseAdmin.from(table).delete().in('id', chunk);
+    if (error) throw error;
+    deleted += chunk.length;
+  }
+
+  return deleted;
+}
+
+async function collectSolutionIdsByForeignKey(column, ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return [];
+
+  const CHUNK_SIZE = 500;
+  const collected = [];
+
+  for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+    const chunk = ids.slice(i, i + CHUNK_SIZE);
+    const { data, error } = await supabaseAdmin
+      .from(V2_TABLES.SOLUTIONS)
+      .select('id')
+      .in(column, chunk);
+
+    if (error) throw error;
+
+    (data || []).forEach((row) => {
+      if (row?.id) collected.push(row.id);
+    });
+  }
+
+  return collected;
+}
+
+async function purgePlatformTrackV2({ userId, platformId }) {
+  if (!userId || !platformId) {
+    throw new Error('userId and platformId are required for purge');
+  }
+
+  const { data: existingSubmissions, error: submissionsError } =
+    await supabaseAdmin
+      .from(V2_TABLES.SUBMISSIONS)
+      .select('id')
+      .eq('user_id', userId)
+      .eq('platform_id', platformId);
+  if (submissionsError) throw submissionsError;
+  const submissionIds = (existingSubmissions || []).map((row) => row.id);
+
+  const { data: existingSolves, error: solvesError } = await supabaseAdmin
+    .from(V2_TABLES.USER_SOLVES)
+    .select('id, problems!inner(platform_id)')
+    .eq('user_id', userId)
+    .eq('problems.platform_id', platformId);
+  if (solvesError) throw solvesError;
+  const solveIds = (existingSolves || []).map((row) => row.id);
+
+  const relatedSolutionIds = new Set([
+    ...(await collectSolutionIdsByForeignKey('submission_id', submissionIds)),
+    ...(await collectSolutionIdsByForeignKey('user_solve_id', solveIds)),
+  ]);
+
+  const deletedSolutions = await deleteRowsByIds(V2_TABLES.SOLUTIONS, [
+    ...relatedSolutionIds,
+  ]);
+
+  const { error: deleteSubmissionsError } = await supabaseAdmin
+    .from(V2_TABLES.SUBMISSIONS)
+    .delete()
+    .eq('user_id', userId)
+    .eq('platform_id', platformId);
+  if (deleteSubmissionsError) throw deleteSubmissionsError;
+
+  const deletedSolves = await deleteRowsByIds(V2_TABLES.USER_SOLVES, solveIds);
+
+  let deletedAttempts = 0;
+  const { error: deleteAttemptsError } = await supabaseAdmin
+    .from(V2_TABLES.UNSOLVED_ATTEMPTS)
+    .delete()
+    .eq('user_id', userId)
+    .eq('platform_id', platformId);
+
+  if (deleteAttemptsError) {
+    if (!isMissingUnsolvedAttemptsTableError(deleteAttemptsError)) {
+      throw deleteAttemptsError;
+    }
+  } else {
+    deletedAttempts = 1;
+  }
+
+  const { error: deletePlatformStatsError } = await supabaseAdmin
+    .from(V2_TABLES.USER_PLATFORM_STATS)
+    .delete()
+    .eq('user_id', userId)
+    .eq('platform_id', platformId);
+  if (deletePlatformStatsError) throw deletePlatformStatsError;
+
+  const { error: deleteSyncJobsError } = await supabaseAdmin
+    .from(V2_TABLES.SYNC_JOBS)
+    .delete()
+    .eq('user_id', userId)
+    .eq('platform_id', platformId);
+  if (deleteSyncJobsError) throw deleteSyncJobsError;
+
+  return {
+    deletedSubmissions: submissionIds.length,
+    deletedSolves,
+    deletedSolutions,
+    deletedAttempts,
+  };
 }
 
 function isSyntheticLeetCodeSubmissionId(value) {
@@ -191,8 +571,11 @@ export async function POST(request) {
     // PARSE REQUEST
     // ============================================================
     const body = request.bodyData || (await request.json());
-    const { submissions: incomingSubmissions = [], platform = 'codeforces' } =
-      body;
+    const {
+      submissions: incomingSubmissions = [],
+      platform = 'codeforces',
+      replaceExisting = false,
+    } = body;
 
     // Normalize platform name
     const normalizedPlatform = platform.toLowerCase();
@@ -203,6 +586,7 @@ export async function POST(request) {
       submissionsReceived: Array.isArray(incomingSubmissions)
         ? incomingSubmissions.length
         : 0,
+      replaceExisting: Boolean(replaceExisting),
     });
 
     if (
@@ -225,17 +609,21 @@ export async function POST(request) {
 
     const submissionsReceived = incomingSubmissions.length;
     let rejectedLeetCodeSubmissions = 0;
+    let rejectedCsesSubmissions = 0;
 
-    const submissions = incomingSubmissions
+    let submissions = incomingSubmissions
       .map((rawSubmission) => {
         if (!rawSubmission || typeof rawSubmission !== 'object') {
           return null;
         }
 
         const normalizedSubmission = { ...rawSubmission };
-        const normalizedSubmissionId = rawSubmission.submission_id
-          ? String(rawSubmission.submission_id).trim()
-          : '';
+        const rawSubmissionId =
+          rawSubmission.submission_id ?? rawSubmission.submissionId;
+        const normalizedSubmissionId =
+          rawSubmissionId === undefined || rawSubmissionId === null
+            ? ''
+            : String(rawSubmissionId).trim();
         const normalizedTimestamp = normalizeSubmissionTimestamp(
           rawSubmission.submitted_at ??
             rawSubmission.submission_time ??
@@ -247,9 +635,27 @@ export async function POST(request) {
           normalizedSubmission.submission_id = normalizedSubmissionId;
         }
 
+        if (normalizedPlatform === 'vjudge') {
+          const canonicalVJudgeSubmissionId = normalizeVJudgeSubmissionId(
+            normalizedSubmissionId
+          );
+          if (!canonicalVJudgeSubmissionId) {
+            return null;
+          }
+          normalizedSubmission.submission_id = canonicalVJudgeSubmissionId;
+        }
+
         if (normalizedTimestamp) {
           normalizedSubmission.submitted_at = normalizedTimestamp;
         }
+
+        normalizedSubmission.verdict = normalizeSubmissionVerdict(
+          rawSubmission.verdict ??
+            rawSubmission.status ??
+            rawSubmission.result ??
+            rawSubmission.statusDisplay ??
+            rawSubmission.status_display
+        );
 
         if (normalizedPlatform === 'leetcode') {
           const normalizedProblemId = normalizeLeetCodeProblemSlug(
@@ -270,6 +676,36 @@ export async function POST(request) {
           normalizedSubmission.submitted_at = normalizedTimestamp;
         }
 
+        if (normalizedPlatform === 'cses') {
+          const hasNumericSubmissionId = /^\d+$/.test(normalizedSubmissionId);
+
+          if (!hasNumericSubmissionId || !normalizedTimestamp) {
+            rejectedCsesSubmissions++;
+            return null;
+          }
+
+          normalizedSubmission.submission_id = normalizedSubmissionId;
+          normalizedSubmission.submitted_at = normalizedTimestamp;
+        }
+
+        if (normalizedPlatform === 'atcoder') {
+          const cleanedSource = normalizeAtCoderSourceCodeForImport(
+            rawSubmission.source_code
+          );
+          if (cleanedSource) {
+            const contaminationPenalty =
+              calculateSourceContaminationPenalty(cleanedSource);
+            const newlineCount = countSourceNewlines(cleanedSource);
+            const looksCorrupted =
+              contaminationPenalty >= 500 ||
+              (cleanedSource.length > 600 && newlineCount <= 1);
+
+            if (!looksCorrupted) {
+              normalizedSubmission.source_code = cleanedSource;
+            }
+          }
+        }
+
         return normalizedSubmission;
       })
       .filter(Boolean);
@@ -280,6 +716,7 @@ export async function POST(request) {
       submissionsAccepted: submissions.length,
       submissionsRejected: submissionsReceived - submissions.length,
       rejectedLeetCodeSubmissions,
+      rejectedCsesSubmissions,
     });
 
     if (submissions.length === 0) {
@@ -287,6 +724,7 @@ export async function POST(request) {
         platform: normalizedPlatform,
         submissionsReceived,
         rejectedLeetCodeSubmissions,
+        rejectedCsesSubmissions,
       });
       return NextResponse.json(
         {
@@ -297,6 +735,7 @@ export async function POST(request) {
             submissionsAccepted: 0,
             submissionsRejected: submissionsReceived,
             rejectedLeetCodeSubmissions,
+            rejectedCsesSubmissions,
           },
         },
         { status: 400, headers: corsHeaders }
@@ -326,7 +765,7 @@ export async function POST(request) {
     }
 
     // ============================================================
-    // VERIFY USER HAS PLATFORM HANDLE
+    // VERIFY USER HAS PLATFORM HANDLE (auto-connect if from extension)
     // ============================================================
     let userHandleQuery;
     if (useV2) {
@@ -345,7 +784,56 @@ export async function POST(request) {
         .eq('platform', normalizedPlatform);
     }
 
-    const { data: userHandle } = await userHandleQuery.maybeSingle();
+    let { data: userHandle } = await userHandleQuery.maybeSingle();
+
+    // Auto-connect handle if extension sent a handle but user hasn't connected it yet
+    if (!userHandle) {
+      const extensionHandle = body.handle?.toString().trim();
+      if (extensionHandle) {
+        logBulkImportTest('auto_connecting_handle', {
+          platform: normalizedPlatform,
+          handle: extensionHandle,
+          userId,
+        });
+
+        try {
+          if (useV2 && platformId) {
+            await supabaseAdmin.from(handlesTable).upsert(
+              {
+                user_id: userId,
+                platform_id: platformId,
+                handle: extensionHandle,
+                is_verified: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'user_id,platform_id' }
+            );
+          } else {
+            await supabaseAdmin.from(handlesTable).upsert(
+              {
+                user_id: userId,
+                platform: normalizedPlatform,
+                handle: extensionHandle,
+                is_verified: false,
+              },
+              { onConflict: 'user_id,platform' }
+            );
+          }
+          userHandle = { handle: extensionHandle };
+          logBulkImportTest('auto_connect_success', {
+            platform: normalizedPlatform,
+            handle: extensionHandle,
+          });
+        } catch (autoConnectError) {
+          logBulkImportTest('auto_connect_failed', {
+            platform: normalizedPlatform,
+            handle: extensionHandle,
+            error: autoConnectError.message,
+          });
+        }
+      }
+    }
 
     if (!userHandle) {
       logBulkImportTest('validation_failed_missing_handle', {
@@ -362,12 +850,81 @@ export async function POST(request) {
       );
     }
 
+    if (normalizedPlatform === 'spoj') {
+      const connectedHandleNormalized = normalizeHandleForComparison(
+        userHandle.handle
+      );
+
+      if (connectedHandleNormalized) {
+        const beforeFilterCount = submissions.length;
+
+        submissions = submissions.filter((submission) => {
+          const submissionHandle = normalizeHandleForComparison(
+            submission.handle ??
+              submission.user ??
+              submission.username ??
+              submission.user_handle
+          );
+
+          // Accept submissions that either:
+          // 1. Have no handle (extension-sourced, already authenticated via token)
+          // 2. Have a handle matching the connected handle
+          if (submissionHandle === null) return true;
+          return submissionHandle === connectedHandleNormalized;
+        });
+
+        const rejectedByHandle = beforeFilterCount - submissions.length;
+        if (rejectedByHandle > 0) {
+          logBulkImportTest('spoj_handle_filter_applied', {
+            connectedHandle: connectedHandleNormalized,
+            accepted: submissions.length,
+            rejected: rejectedByHandle,
+          });
+        }
+
+        if (submissions.length === 0) {
+          return NextResponse.json(
+            {
+              success: false,
+              error:
+                'No SPOJ submissions matched your connected handle. Open a handle-specific SPOJ status page and retry extraction.',
+            },
+            { status: 400, headers: corsHeaders }
+          );
+        }
+      }
+    }
+
+    if (
+      normalizedPlatform === 'spoj' &&
+      replaceExisting &&
+      useV2 &&
+      platformId
+    ) {
+      const purgeResult = await purgePlatformTrackV2({ userId, platformId });
+      logBulkImportTest('spoj_existing_track_purged', {
+        userId,
+        platform: normalizedPlatform,
+        ...purgeResult,
+      });
+    }
+
     // ============================================================
     // STEP 1: GET EXISTING SUBMISSIONS (single query)
     // ============================================================
     const submissionIds = submissions
       .map((s) => s.submission_id?.toString())
       .filter(Boolean);
+    const submissionIdsForLookup =
+      normalizedPlatform === 'vjudge'
+        ? [
+            ...new Set(
+              submissionIds.flatMap((submissionId) =>
+                getVJudgeSubmissionIdVariants(submissionId)
+              )
+            ),
+          ]
+        : submissionIds;
 
     let existingQuery;
     if (useV2) {
@@ -376,7 +933,7 @@ export async function POST(request) {
         .from(submissionsTable)
         .select('id, external_submission_id')
         .eq('user_id', userId)
-        .in('external_submission_id', submissionIds);
+        .in('external_submission_id', submissionIdsForLookup);
       if (platformId) {
         existingQuery = existingQuery.eq('platform_id', platformId);
       }
@@ -386,7 +943,7 @@ export async function POST(request) {
         .select('submission_id, source_code')
         .eq('user_id', userId)
         .eq('platform', normalizedPlatform)
-        .in('submission_id', submissionIds);
+        .in('submission_id', submissionIdsForLookup);
     }
 
     const { data: existingSubmissions } = await existingQuery;
@@ -395,6 +952,18 @@ export async function POST(request) {
     if (existingSubmissions) {
       for (const sub of existingSubmissions) {
         const subId = useV2 ? sub.external_submission_id : sub.submission_id;
+        if (normalizedPlatform === 'vjudge') {
+          const variants = getVJudgeSubmissionIdVariants(subId);
+          if (variants.length === 0) {
+            continue;
+          }
+
+          variants.forEach((variantId) => {
+            existingSubMap.set(variantId, sub);
+          });
+          continue;
+        }
+
         existingSubMap.set(subId, sub);
       }
     }
@@ -421,6 +990,8 @@ export async function POST(request) {
       const subId = sub.submission_id?.toString();
       if (!subId) continue;
 
+      const normalizedVerdict = normalizeSubmissionVerdict(sub.verdict);
+
       const existing = existingSubMap.get(subId);
 
       if (existing) {
@@ -435,9 +1006,7 @@ export async function POST(request) {
             updatePayload.problem_name = sub.problem_name;
           }
 
-          if (sub.verdict) {
-            updatePayload.verdict = sub.verdict;
-          }
+          updatePayload.verdict = normalizedVerdict;
 
           const langId = languageMap.get(sub.language);
           if (langId != null) {
@@ -465,8 +1034,16 @@ export async function POST(request) {
               updates: updatePayload,
             });
           }
-        } else if (sub.source_code && !existing.source_code) {
-          // Legacy schema: update source_code directly
+        } else if (
+          shouldReplaceExistingSourceCode(
+            existing.source_code,
+            sub.source_code,
+            {
+              platformCode: normalizedPlatform,
+            }
+          )
+        ) {
+          // Legacy schema: refresh source_code when incoming is clearly better.
           updateSubmissions.push({
             submission_id: subId,
             source_code: sub.source_code,
@@ -487,12 +1064,12 @@ export async function POST(request) {
               user_id: userId,
               platform_id: platformId,
               external_submission_id: subId,
-              external_problem_id: sub.problem_id,
-              problem_name: sub.problem_name || sub.problem_id,
-              verdict: sub.verdict || 'UNKNOWN',
+              external_problem_id: sub.problem_id || null,
+              problem_name: sub.problem_name || sub.problem_id || null,
+              verdict: normalizedVerdict,
               language_id: languageMap.get(sub.language) || null,
-              execution_time_ms: sub.execution_time_ms || null,
-              memory_kb: sub.memory_kb || null,
+              execution_time_ms: sub.execution_time_ms ?? null,
+              memory_kb: sub.memory_kb ?? null,
               submitted_at: submittedAt,
               // Note: source_code, contest_id, difficulty_rating, tags, problem_url
               // are NOT in V2 submissions table - they go elsewhere
@@ -505,10 +1082,10 @@ export async function POST(request) {
               problem_name: sub.problem_name || sub.problem_id,
               problem_url: sub.problem_url || null,
               contest_id: sub.contest_id?.toString() || null,
-              verdict: sub.verdict || 'UNKNOWN',
+              verdict: normalizedVerdict,
               language: sub.language || 'Unknown',
-              execution_time_ms: sub.execution_time_ms || null,
-              memory_kb: sub.memory_kb || null,
+              execution_time_ms: sub.execution_time_ms ?? null,
+              memory_kb: sub.memory_kb ?? null,
               difficulty_rating: sub.difficulty_rating
                 ? Number(sub.difficulty_rating)
                 : null,
@@ -528,18 +1105,25 @@ export async function POST(request) {
     let submissionsUpdated = 0;
 
     if (newSubmissions.length > 0) {
+      const upsertConflict = useV2
+        ? 'user_id,platform_id,external_submission_id'
+        : 'user_id,platform,submission_id';
+
       const { data: inserted, error: insertError } = await supabaseAdmin
         .from(submissionsTable)
-        .insert(newSubmissions)
+        .upsert(newSubmissions, {
+          onConflict: upsertConflict,
+          ignoreDuplicates: true,
+        })
         .select('id');
 
       if (insertError) {
-        console.error('[BULK-IMPORT] Bulk insert error:', insertError.message);
-        // Try inserting one by one as fallback
+        console.error('[BULK-IMPORT] Bulk upsert error:', insertError.message);
+        // Try upserting one by one as fallback
         for (const sub of newSubmissions) {
           const { error } = await supabaseAdmin
             .from(submissionsTable)
-            .insert(sub);
+            .upsert(sub, { onConflict: upsertConflict, ignoreDuplicates: true });
           if (!error) submissionsCreated++;
         }
       } else {
@@ -592,7 +1176,7 @@ export async function POST(request) {
 
     // Build lookup map for submission UUIDs so solutions can be linked back to submissions.
     const submissionRecordByExternalId = new Map();
-    if (useV2 && submissionIds.length > 0) {
+    if (useV2 && submissionIdsForLookup.length > 0) {
       const { data: submissionRecords, error: submissionRecordError } =
         await supabaseAdmin
           .from(submissionsTable)
@@ -601,7 +1185,7 @@ export async function POST(request) {
           )
           .eq('user_id', userId)
           .eq('platform_id', platformId)
-          .in('external_submission_id', submissionIds);
+          .in('external_submission_id', submissionIdsForLookup);
 
       if (submissionRecordError) {
         console.warn(
@@ -610,6 +1194,17 @@ export async function POST(request) {
         );
       } else {
         (submissionRecords || []).forEach((row) => {
+          if (normalizedPlatform === 'vjudge') {
+            const variants = getVJudgeSubmissionIdVariants(
+              row.external_submission_id
+            );
+
+            variants.forEach((variantId) => {
+              submissionRecordByExternalId.set(variantId, row);
+            });
+            return;
+          }
+
           submissionRecordByExternalId.set(row.external_submission_id, row);
         });
       }
@@ -822,24 +1417,59 @@ export async function POST(request) {
       }
     }
 
-    // Link submissions.problem_id FK for V2 (batch update)
-    if (useV2 && newSubmissions.length > 0) {
-      for (const sub of newSubmissions) {
-        const dbProblemId = problemIdToDbId.get(sub.external_problem_id);
-        if (!dbProblemId || !sub.external_submission_id) continue;
-        // Fire-and-forget; non-critical
-        supabaseAdmin
-          .from(V2_TABLES.SUBMISSIONS)
-          .update({ problem_id: dbProblemId })
-          .eq('external_submission_id', sub.external_submission_id)
-          .eq('platform_id', platformId)
-          .then(({ error }) => {
-            if (error)
+    // Link submissions.problem_id FK for V2.
+    // AtCoder/VJudge imports can carry external problem IDs while historical
+    // records still have null FK values.
+    if (
+      useV2 &&
+      (normalizedPlatform === 'atcoder' || normalizedPlatform === 'vjudge') &&
+      submissions.length > 0
+    ) {
+      const seenSubmissionIds = new Set();
+      const linkTargets = [];
+
+      for (const sub of submissions) {
+        const externalSubmissionId = sub.submission_id?.toString()?.trim();
+        if (
+          !externalSubmissionId ||
+          seenSubmissionIds.has(externalSubmissionId)
+        ) {
+          continue;
+        }
+
+        seenSubmissionIds.add(externalSubmissionId);
+        const dbProblemId = problemIdToDbId.get(sub.problem_id);
+        if (!dbProblemId) {
+          continue;
+        }
+
+        linkTargets.push({
+          externalSubmissionId,
+          dbProblemId,
+        });
+      }
+
+      const updateBatchSize = 25;
+      for (let i = 0; i < linkTargets.length; i += updateBatchSize) {
+        const batch = linkTargets.slice(i, i + updateBatchSize);
+        await Promise.all(
+          batch.map(async ({ externalSubmissionId, dbProblemId }) => {
+            const { error } = await supabaseAdmin
+              .from(V2_TABLES.SUBMISSIONS)
+              .update({ problem_id: dbProblemId })
+              .eq('external_submission_id', externalSubmissionId)
+              .eq('platform_id', platformId)
+              .eq('user_id', userId)
+              .is('problem_id', null);
+
+            if (error) {
               console.warn(
-                '[BULK-IMPORT] submission problem_id link failed:',
+                '[BULK-IMPORT] Submission problem_id link failed:',
                 error.message
               );
-          });
+            }
+          })
+        );
       }
     }
 
@@ -857,9 +1487,11 @@ export async function POST(request) {
 
     let solvesCreated = 0;
     let solutionsCreated = 0;
+    let solveTimestampCorrections = 0;
     let unsolvedAttemptsStored = 0;
     let unsolvedAttemptStorageAvailable = true;
     const problemToSolveId = new Map();
+    const problemToSolveFirstSolvedAt = new Map();
     const newlySolvedSubmissions = [];
 
     // Build a map from problem_id to the best AC submission with source code
@@ -886,7 +1518,7 @@ export async function POST(request) {
         const { data: existingSolves, error: existingSolveError } =
           await supabaseAdmin
             .from(V2_TABLES.USER_SOLVES)
-            .select('id, problem_id')
+            .select('id, problem_id, first_solved_at')
             .eq('user_id', userId)
             .in('problem_id', allDbProblemIds);
 
@@ -896,9 +1528,12 @@ export async function POST(request) {
             existingSolveError.message
           );
         } else {
-          (existingSolves || []).forEach((s) =>
-            problemToSolveId.set(s.problem_id, s.id)
-          );
+          (existingSolves || []).forEach((s) => {
+            problemToSolveId.set(s.problem_id, s.id);
+            if (s.first_solved_at) {
+              problemToSolveFirstSolvedAt.set(s.problem_id, s.first_solved_at);
+            }
+          });
         }
       }
     }
@@ -926,18 +1561,22 @@ export async function POST(request) {
             .map((problemId) => ({
               problem_id: problemId,
               id: problemToSolveId.get(problemId),
+              first_solved_at: problemToSolveFirstSolvedAt.get(problemId) || null,
             }))
             .filter((s) => s.id);
         } else {
           const { data } = await supabaseAdmin
             .from(solvesTable)
-            .select('id, problem_id')
+            .select('id, problem_id, first_solved_at')
             .eq('user_id', userId)
             .in('problem_id', dbProblemIds);
           existingSolves = data || [];
-          existingSolves.forEach((s) =>
-            problemToSolveId.set(s.problem_id, s.id)
-          );
+          existingSolves.forEach((s) => {
+            problemToSolveId.set(s.problem_id, s.id);
+            if (s.first_solved_at) {
+              problemToSolveFirstSolvedAt.set(s.problem_id, s.first_solved_at);
+            }
+          });
         }
 
         const existingSolveIds = new Set(
@@ -945,11 +1584,76 @@ export async function POST(request) {
         );
 
         // Create new solves - include problem_id in return for mapping
+        const earliestAcSolvedAtByProblemId = new Map();
+        const earliestAcSubmissionByProblemId = new Map();
+        const representativeAcSubmissionByProblemId = new Map();
+
+        for (const sub of acSubmissions) {
+          if (!sub.problem_id) continue;
+          const dbProblemId = problemIdToDbId.get(sub.problem_id);
+          if (!dbProblemId) continue;
+
+          if (!representativeAcSubmissionByProblemId.has(dbProblemId)) {
+            representativeAcSubmissionByProblemId.set(dbProblemId, sub);
+          }
+
+          if (!sub.submitted_at) continue;
+
+          const submittedDate = new Date(sub.submitted_at);
+          if (Number.isNaN(submittedDate.getTime())) continue;
+
+          const submittedAt = submittedDate.toISOString();
+          const existingEarliest = earliestAcSolvedAtByProblemId.get(dbProblemId);
+
+          if (!existingEarliest || submittedAt < existingEarliest) {
+            earliestAcSolvedAtByProblemId.set(dbProblemId, submittedAt);
+            earliestAcSubmissionByProblemId.set(dbProblemId, sub);
+          }
+        }
+
+        const solveTimestampUpdates = [];
+        for (const solve of existingSolves) {
+          if (!solve?.id || !solve?.problem_id) continue;
+          const candidate = earliestAcSolvedAtByProblemId.get(solve.problem_id);
+          if (!candidate) continue;
+
+          const existingDate = solve.first_solved_at
+            ? new Date(solve.first_solved_at)
+            : null;
+          const existingIso =
+            existingDate && !Number.isNaN(existingDate.getTime())
+              ? existingDate.toISOString()
+              : null;
+
+          if (!existingIso || candidate < existingIso) {
+            solveTimestampUpdates.push({ id: solve.id, first_solved_at: candidate });
+          }
+        }
+
+        if (solveTimestampUpdates.length > 0) {
+          solveTimestampCorrections = solveTimestampUpdates.length;
+          for (const update of solveTimestampUpdates) {
+            const { error: solveUpdateError } = await supabaseAdmin
+              .from(solvesTable)
+              .update({
+                first_solved_at: update.first_solved_at,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', update.id);
+
+            if (solveUpdateError) {
+              console.warn(
+                '[BULK-IMPORT] Solve timestamp update failed:',
+                solveUpdateError.message
+              );
+            }
+          }
+        }
+
         const newSolves = [];
         const seenSolveIds = new Set();
 
-        for (const sub of acSubmissions) {
-          const dbProblemId = problemIdToDbId.get(sub.problem_id);
+        for (const dbProblemId of dbProblemIds) {
           if (
             !dbProblemId ||
             existingSolveIds.has(dbProblemId) ||
@@ -959,9 +1663,13 @@ export async function POST(request) {
           }
           seenSolveIds.add(dbProblemId);
 
-          const submittedAt = sub.submitted_at
-            ? new Date(sub.submitted_at).toISOString()
-            : new Date().toISOString();
+          const submittedAt =
+            earliestAcSolvedAtByProblemId.get(dbProblemId) ||
+            (normalizedPlatform === 'cses' ? null : new Date().toISOString());
+
+          if (!submittedAt) {
+            continue;
+          }
 
           newSolves.push({
             user_id: userId,
@@ -969,7 +1677,16 @@ export async function POST(request) {
             first_solved_at: submittedAt,
             solve_count: 1,
           });
-          newlySolvedSubmissions.push(sub);
+
+          const solvedSubmission = earliestAcSubmissionByProblemId.get(dbProblemId);
+          const representativeSubmission =
+            solvedSubmission || representativeAcSubmissionByProblemId.get(dbProblemId);
+          if (representativeSubmission) {
+            newlySolvedSubmissions.push({
+              ...representativeSubmission,
+              submitted_at: submittedAt,
+            });
+          }
         }
 
         if (newSolves.length > 0) {
@@ -1031,7 +1748,9 @@ export async function POST(request) {
                 submissionRecord.language_id ||
                 languageMap.get(sub.language) ||
                 null,
-              verdict: submissionRecord.verdict || sub.verdict || 'AC',
+              verdict: normalizeSubmissionVerdict(
+                submissionRecord.verdict || sub.verdict || 'AC'
+              ),
               is_primary: true,
               submitted_at: submittedAt,
               created_at: submittedAt,
@@ -1044,17 +1763,51 @@ export async function POST(request) {
             );
             const { data: existingPrimarySolutions } = await supabaseAdmin
               .from(V2_TABLES.SOLUTIONS)
-              .select('user_solve_id')
+              .select('id, user_solve_id, source_code')
               .in('user_solve_id', solveIdsWithCode)
               .eq('is_primary', true);
 
-            const solvesWithPrimary = new Set(
-              existingPrimarySolutions?.map((s) => s.user_solve_id) || []
-            );
+            const existingPrimaryBySolveId = new Map();
+            (existingPrimarySolutions || []).forEach((solution) => {
+              if (!solution?.user_solve_id) return;
+              if (!existingPrimaryBySolveId.has(solution.user_solve_id)) {
+                existingPrimaryBySolveId.set(solution.user_solve_id, solution);
+              }
+            });
 
-            const newPrimarySolutions = primarySolutionsToStore.filter(
-              (s) => !solvesWithPrimary.has(s.user_solve_id)
-            );
+            const newPrimarySolutions = [];
+            const primaryReplacementCandidates = [];
+
+            primarySolutionsToStore.forEach((candidate) => {
+              const existingPrimary = existingPrimaryBySolveId.get(
+                candidate.user_solve_id
+              );
+
+              if (!existingPrimary) {
+                newPrimarySolutions.push(candidate);
+                return;
+              }
+
+              if (
+                existingPrimary?.id &&
+                shouldReplaceExistingSourceCode(
+                  existingPrimary.source_code,
+                  candidate.source_code,
+                  {
+                    platformCode: normalizedPlatform,
+                  }
+                )
+              ) {
+                primaryReplacementCandidates.push({
+                  id: existingPrimary.id,
+                  source_code: candidate.source_code,
+                  submission_id: candidate.submission_id,
+                  language_id: candidate.language_id,
+                  verdict: candidate.verdict,
+                  submitted_at: candidate.submitted_at,
+                });
+              }
+            });
 
             if (newPrimarySolutions.length > 0) {
               const { data: insertedPrimarySolutions, error: solutionError } =
@@ -1072,6 +1825,28 @@ export async function POST(request) {
                 solutionsCreated +=
                   insertedPrimarySolutions?.length ||
                   newPrimarySolutions.length;
+              }
+            }
+
+            if (primaryReplacementCandidates.length > 0) {
+              for (const replacement of primaryReplacementCandidates) {
+                const { error: replacementError } = await supabaseAdmin
+                  .from(V2_TABLES.SOLUTIONS)
+                  .update({
+                    source_code: replacement.source_code,
+                    submission_id: replacement.submission_id,
+                    language_id: replacement.language_id,
+                    verdict: replacement.verdict,
+                    submitted_at: replacement.submitted_at,
+                  })
+                  .eq('id', replacement.id);
+
+                if (replacementError) {
+                  console.warn(
+                    '[BULK-IMPORT] Primary solution source refresh failed:',
+                    replacementError.message
+                  );
+                }
               }
             }
           }
@@ -1115,7 +1890,9 @@ export async function POST(request) {
                 submissionRecord.language_id ||
                 languageMap.get(sub.language) ||
                 null,
-              verdict: submissionRecord.verdict || sub.verdict || null,
+              verdict: normalizeSubmissionVerdict(
+                submissionRecord.verdict || sub.verdict || null
+              ),
               is_primary: false,
               submitted_at: submittedAt,
               created_at: submittedAt,
@@ -1124,8 +1901,9 @@ export async function POST(request) {
           continue;
         }
 
-        const verdictValue =
-          submissionRecord.verdict || sub.verdict || 'UNKNOWN';
+        const verdictValue = normalizeSubmissionVerdict(
+          submissionRecord.verdict || sub.verdict || 'UNKNOWN'
+        );
         if (isAccepted(verdictValue)) {
           continue;
         }
@@ -1169,18 +1947,51 @@ export async function POST(request) {
 
         const { data: existingSubmissionLinkedSolutions } = await supabaseAdmin
           .from(V2_TABLES.SOLUTIONS)
-          .select('submission_id')
+          .select('id, submission_id, source_code')
           .in('submission_id', submissionIdsWithCode);
 
-        const existingSubmissionIds = new Set(
-          (existingSubmissionLinkedSolutions || [])
-            .map((s) => s.submission_id)
-            .filter(Boolean)
-        );
+        const existingSolutionBySubmissionId = new Map();
+        (existingSubmissionLinkedSolutions || []).forEach((solution) => {
+          if (
+            solution?.submission_id &&
+            !existingSolutionBySubmissionId.has(solution.submission_id)
+          ) {
+            existingSolutionBySubmissionId.set(
+              solution.submission_id,
+              solution
+            );
+          }
+        });
 
-        const newAdditionalSolutions = additionalSolutions.filter(
-          (s) => !existingSubmissionIds.has(s.submission_id)
-        );
+        const newAdditionalSolutions = [];
+        const replacementCandidates = [];
+
+        additionalSolutions.forEach((candidate) => {
+          const existing = existingSolutionBySubmissionId.get(
+            candidate.submission_id
+          );
+
+          if (!existing) {
+            newAdditionalSolutions.push(candidate);
+            return;
+          }
+
+          if (
+            existing?.id &&
+            shouldReplaceExistingSourceCode(
+              existing.source_code,
+              candidate.source_code,
+              {
+                platformCode: normalizedPlatform,
+              }
+            )
+          ) {
+            replacementCandidates.push({
+              id: existing.id,
+              source_code: candidate.source_code,
+            });
+          }
+        });
 
         if (newAdditionalSolutions.length > 0) {
           const { data: insertedAdditionalSolutions, error: additionalError } =
@@ -1198,6 +2009,22 @@ export async function POST(request) {
             solutionsCreated +=
               insertedAdditionalSolutions?.length ||
               newAdditionalSolutions.length;
+          }
+        }
+
+        if (replacementCandidates.length > 0) {
+          for (const replacement of replacementCandidates) {
+            const { error: replacementError } = await supabaseAdmin
+              .from(V2_TABLES.SOLUTIONS)
+              .update({ source_code: replacement.source_code })
+              .eq('id', replacement.id);
+
+            if (replacementError) {
+              console.warn(
+                '[BULK-IMPORT] Existing solution source refresh failed:',
+                replacementError.message
+              );
+            }
           }
         }
       }
@@ -1277,33 +2104,91 @@ export async function POST(request) {
 
       // user_platform_stats: increment problems_solved
       try {
-        const { data: platStats } = await supabaseAdmin
+        const nowIso = new Date().toISOString();
+
+        let usesLegacySubmissionCountColumn = false;
+        let platformStatsRow = null;
+
+        let { data: v3StatsRow, error: v3StatsError } = await supabaseAdmin
           .from(V2_TABLES.USER_PLATFORM_STATS)
-          .select('problems_solved, submissions_count')
+          .select('problems_solved, total_submissions')
           .eq('user_id', userId)
           .eq('platform_id', platformId)
-          .single();
+          .maybeSingle();
 
-        if (platStats) {
-          await supabaseAdmin
+        if (
+          v3StatsError &&
+          isMissingColumnError(v3StatsError, 'total_submissions')
+        ) {
+          usesLegacySubmissionCountColumn = true;
+
+          const { data: legacyStatsRow, error: legacyStatsError } =
+            await supabaseAdmin
+              .from(V2_TABLES.USER_PLATFORM_STATS)
+              .select('problems_solved, submissions_count')
+              .eq('user_id', userId)
+              .eq('platform_id', platformId)
+              .maybeSingle();
+
+          if (legacyStatsError) {
+            throw legacyStatsError;
+          }
+
+          platformStatsRow = legacyStatsRow;
+        } else {
+          if (v3StatsError) {
+            throw v3StatsError;
+          }
+
+          platformStatsRow = v3StatsRow;
+        }
+
+        const submissionCountField = usesLegacySubmissionCountColumn
+          ? 'submissions_count'
+          : 'total_submissions';
+
+        const existingSubmissionCount = Number(
+          platformStatsRow?.[submissionCountField] || 0
+        );
+        const safeExistingSubmissionCount = Number.isFinite(
+          existingSubmissionCount
+        )
+          ? Math.max(0, existingSubmissionCount)
+          : 0;
+
+        if (platformStatsRow) {
+          const { error: updatePlatStatsError } = await supabaseAdmin
             .from(V2_TABLES.USER_PLATFORM_STATS)
             .update({
-              problems_solved: (platStats.problems_solved || 0) + solvesCreated,
-              submissions_count:
-                (platStats.submissions_count || 0) + submissionsCreated,
-              last_synced_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
+              problems_solved:
+                (Number(platformStatsRow.problems_solved) || 0) + solvesCreated,
+              [submissionCountField]:
+                safeExistingSubmissionCount + submissionsCreated,
+              last_synced_at: nowIso,
+              updated_at: nowIso,
             })
             .eq('user_id', userId)
             .eq('platform_id', platformId);
+
+          if (updatePlatStatsError) {
+            throw updatePlatStatsError;
+          }
         } else {
-          await supabaseAdmin.from(V2_TABLES.USER_PLATFORM_STATS).insert({
+          const insertPayload = {
             user_id: userId,
             platform_id: platformId,
             problems_solved: solvesCreated,
-            submissions_count: submissionsCreated,
-            last_synced_at: new Date().toISOString(),
-          });
+            [submissionCountField]: submissionsCreated,
+            last_synced_at: nowIso,
+          };
+
+          const { error: insertPlatStatsError } = await supabaseAdmin
+            .from(V2_TABLES.USER_PLATFORM_STATS)
+            .insert(insertPayload);
+
+          if (insertPlatStatsError) {
+            throw insertPlatStatsError;
+          }
         }
       } catch (platErr) {
         console.warn(
@@ -1589,6 +2474,17 @@ export async function POST(request) {
         .eq('platform', normalizedPlatform);
     }
 
+    if (useV2 && solveTimestampCorrections > 0 && solvesCreated === 0) {
+      try {
+        await recalcUserStreaks(userId);
+      } catch (streakError) {
+        console.warn(
+          '[BULK-IMPORT] Streak recalculation after solve timestamp correction failed:',
+          streakError?.message || String(streakError)
+        );
+      }
+    }
+
     const duration = Date.now() - startTime;
 
     logBulkImportTest('request_success', {
@@ -1619,6 +2515,7 @@ export async function POST(request) {
           submissionsAccepted: submissions.length,
           submissionsRejected: submissionsReceived - submissions.length,
           rejectedLeetCodeSubmissions,
+          rejectedCsesSubmissions,
           submissionsCreated,
           submissionsUpdated,
           problemsCreated,

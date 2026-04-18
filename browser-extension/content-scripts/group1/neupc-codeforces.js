@@ -14,7 +14,7 @@
 
   // Prevent multiple injections
   if (window.__NEUPC_CF_INJECTED__) {
-    console.log('[NEUPC:codeforces] Already injected, skipping');
+    console.warn('[NEUPC:codeforces] Already injected, skipping');
     return;
   }
   window.__NEUPC_CF_INJECTED__ = true;
@@ -32,7 +32,7 @@
         : null;
 
   function log(...args) {
-    console.log(`[NEUPC:${PLATFORM}]`, ...args);
+    console.warn(`[NEUPC:${PLATFORM}]`, ...args);
   }
 
   function logError(...args) {
@@ -53,7 +53,7 @@
         return null;
       }
       return context.querySelector(selector);
-    } catch (e) {
+    } catch {
       return null;
     }
   }
@@ -61,7 +61,7 @@
   function safeQueryAll(selector, context = document) {
     try {
       return Array.from(context.querySelectorAll(selector));
-    } catch (e) {
+    } catch {
       return [];
     }
   }
@@ -76,28 +76,6 @@
 
   function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  async function waitForElement(selector, timeout = 10000) {
-    const el = safeQuery(selector);
-    if (el) return el;
-
-    return new Promise((resolve) => {
-      const observer = new MutationObserver(() => {
-        const found = safeQuery(selector);
-        if (found) {
-          observer.disconnect();
-          resolve(found);
-        }
-      });
-
-      observer.observe(document.body, { childList: true, subtree: true });
-
-      setTimeout(() => {
-        observer.disconnect();
-        resolve(null);
-      }, timeout);
-    });
   }
 
   function normalizeVerdict(verdict) {
@@ -134,7 +112,6 @@
 
     detectPageType() {
       const path = window.location.pathname;
-      const url = window.location.href;
 
       // Submission pages
       // Covers: /contest/id/submission/id, /gym/id/submission/id,
@@ -433,7 +410,7 @@
               if (!isNaN(parsed.getTime())) {
                 info.submittedAt = parsed.toISOString();
               }
-            } catch (_) {}
+            } catch {}
           }
         }
       }
@@ -821,10 +798,23 @@
 
       // Try to find tutorial/editorial link
       const tutorialLink = safeQuery(
-        'a[href*="/blog/entry/"], a[href*="tutorial"], a:contains("Tutorial")'
+        'a[href*="/blog/entry/"], a[href*="tutorial"], a[href*="editorial"]'
       );
       if (tutorialLink) {
         details.tutorialUrl = tutorialLink.href;
+      } else {
+        const tutorialTextLink = safeQueryAll('a[href]').find((link) => {
+          const text = extractText(link).toLowerCase();
+          return (
+            text.includes('tutorial') ||
+            text.includes('editorial') ||
+            text.includes('solution')
+          );
+        });
+
+        if (tutorialTextLink?.href) {
+          details.tutorialUrl = tutorialTextLink.href;
+        }
       }
 
       // Fetch additional metadata from API

@@ -842,8 +842,7 @@ export async function recordSubmissionV2(userId, platformCode, submissionData) {
         memory_kb: submissionData.memory_kb,
         submitted_at: submissionData.submitted_at,
       },
-      // Matches schema: UNIQUE (platform_id, external_submission_id)
-      { onConflict: 'platform_id,external_submission_id' }
+      { onConflict: 'user_id,platform_id,external_submission_id' }
     )
     .select()
     .single();
@@ -1029,20 +1028,29 @@ export async function updateUserDailyActivity(
 
 /**
  * Recalculate current_streak and longest_streak for a user
- * from their user_daily_activity records. Updates user_stats in place.
- * Call after updating daily activity.
+ * from their solved dates (user_solves.first_solved_at). Updates user_stats in place.
  * @param {string} userId
  */
 export async function recalcUserStreaks(userId) {
   try {
-    const { data: days } = await supabaseAdmin
-      .from(V2_TABLES.USER_DAILY_ACTIVITY)
-      .select('activity_date, problems_solved')
+    const { data: solves } = await supabaseAdmin
+      .from(V2_TABLES.USER_SOLVES)
+      .select('first_solved_at')
       .eq('user_id', userId)
-      .gt('problems_solved', 0)
-      .order('activity_date', { ascending: false });
+      .not('first_solved_at', 'is', null)
+      .order('first_solved_at', { ascending: false });
 
-    if (!days || days.length === 0) {
+    const solveDates = new Set();
+    (solves || []).forEach((row) => {
+      if (!row?.first_solved_at) return;
+      const d = new Date(row.first_solved_at);
+      if (Number.isNaN(d.getTime())) return;
+      solveDates.add(d.toISOString().slice(0, 10));
+    });
+
+    const days = Array.from(solveDates).sort((a, b) => b.localeCompare(a));
+
+    if (days.length === 0) {
       await supabaseAdmin
         .from(V2_TABLES.USER_STATS)
         .upsert(
@@ -1061,14 +1069,14 @@ export async function recalcUserStreaks(userId) {
     const yesterdayStr = new Date(Date.now() - 86400000)
       .toISOString()
       .slice(0, 10);
-    const mostRecent = days[0].activity_date;
+    const mostRecent = days[0];
 
     // current_streak: consecutive days ending today or yesterday
     let currentStreak = 0;
     if (mostRecent === todayStr || mostRecent === yesterdayStr) {
       let prev = new Date(mostRecent);
-      for (const row of days) {
-        const d = new Date(row.activity_date);
+      for (const dateStr of days) {
+        const d = new Date(dateStr);
         const diffDays = Math.round((prev - d) / 86400000);
         if (diffDays <= 1) {
           currentStreak++;
@@ -1083,8 +1091,8 @@ export async function recalcUserStreaks(userId) {
     let longest = 0;
     let run = 1;
     for (let i = 1; i < days.length; i++) {
-      const d1 = new Date(days[i - 1].activity_date);
-      const d2 = new Date(days[i].activity_date);
+      const d1 = new Date(days[i - 1]);
+      const d2 = new Date(days[i]);
       const diff = Math.round((d1 - d2) / 86400000);
       if (diff === 1) {
         run++;
@@ -1096,7 +1104,7 @@ export async function recalcUserStreaks(userId) {
     if (run > longest) longest = run;
     if (days.length === 1) longest = 1;
 
-    const lastSolveDate = days[0].activity_date;
+    const lastSolveDate = days[0];
 
     await supabaseAdmin.from(V2_TABLES.USER_STATS).upsert(
       {

@@ -456,7 +456,7 @@ export async function POST(request) {
           submitted_at: normalizedTimestamp || new Date().toISOString(),
         },
         {
-          onConflict: 'platform_id,external_submission_id',
+          onConflict: 'user_id,platform_id,external_submission_id',
         }
       )
       .select(

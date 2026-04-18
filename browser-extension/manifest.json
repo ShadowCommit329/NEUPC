@@ -15,14 +15,17 @@
     "https://codeforces.com/*",
     "https://atcoder.jp/*",
     "https://toph.co/*",
+    "https://www.toph.co/*",
     "https://leetcode.com/*",
     "https://cses.fi/*",
     "https://www.codechef.com/*",
     "https://www.topcoder.com/*",
+    "https://hackerrank.com/*",
     "https://www.hackerrank.com/*",
     "https://open.kattis.com/*",
     "https://*.kattis.com/*",
     "https://lightoj.com/*",
+    "https://www.lightoj.com/*",
     "https://onlinejudge.org/*",
     "https://uhunt.onlinejudge.org/*",
     "https://www.spoj.com/*",
@@ -35,7 +38,10 @@
     "https://dimikoj.com/*",
     "https://loj.ac/*",
     "https://www.beecrowd.com.br/*",
+    "https://beecrowd.com.br/*",
     "https://judge.beecrowd.com/*",
+    "https://www.urionlinejudge.com.br/*",
+    "https://urionlinejudge.com.br/*",
     "https://coj.uci.cu/*",
     "https://acm.timus.ru/*",
     "https://acmp.ru/*",
@@ -44,6 +50,8 @@
     "https://exercism.org/*",
     "https://projecteuler.net/*",
     "https://codingcompetitions.withgoogle.com/*",
+    "https://*.facebook.com/codingcompetitions/*",
+    "https://facebook.com/codingcompetitions/*",
     "https://www.facebook.com/codingcompetitions/*",
     "https://leetcode.cn/*",
     "https://www.luogu.com.cn/*",
@@ -59,7 +67,9 @@
     "https://onlinejudge.u-aizu.ac.jp/*",
     "https://judge.yosupo.jp/*",
     "http://localhost:3000/*",
-    "https://neupc.vercel.app/*"
+    "https://neupc.vercel.app/*",
+    "*://*.spoj.com/*",
+    "*://spoj.com/*"
   ],
   "background": {
     "scripts": ["background.js"]
@@ -83,7 +93,14 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://toph.co/s/*", "https://toph.co/submissions*"],
+      "matches": [
+        "https://toph.co/s/*",
+        "https://toph.co/submissions*",
+        "https://toph.co/u/*/submissions*",
+        "https://www.toph.co/s/*",
+        "https://www.toph.co/submissions*",
+        "https://www.toph.co/u/*/submissions*"
+      ],
       "js": ["content-scripts/group1/neupc-toph.js"],
       "run_at": "document_idle"
     },
@@ -98,7 +115,13 @@
     {
       "matches": [
         "https://cses.fi/problemset/result/*",
-        "https://cses.fi/*/result/*"
+        "https://cses.fi/result/*",
+        "https://cses.fi/*/result/*",
+        "https://cses.fi/problemset/list*",
+        "https://cses.fi/problemset/status*",
+        "https://cses.fi/problemset/submissions*",
+        "https://cses.fi/problemset/task/*",
+        "https://cses.fi/user/*"
       ],
       "js": ["content-scripts/group1/neupc-cses.js"],
       "run_at": "document_idle"
@@ -122,7 +145,11 @@
     },
     {
       "matches": [
+        "https://hackerrank.com/challenges/*/submissions/*",
         "https://www.hackerrank.com/challenges/*/submissions/*",
+        "https://hackerrank.com/contests/*/challenges/*/submissions/*",
+        "https://www.hackerrank.com/contests/*/challenges/*/submissions/*",
+        "https://hackerrank.com/rest/contests/*/challenges/*/submissions/*",
         "https://www.hackerrank.com/rest/contests/*/challenges/*/submissions/*"
       ],
       "js": ["content-scripts/group1/neupc-hackerrank.js"],
@@ -139,7 +166,9 @@
     {
       "matches": [
         "https://lightoj.com/submission/*",
-        "https://lightoj.com/submissions*"
+        "https://www.lightoj.com/submission/*",
+        "https://lightoj.com/submissions*",
+        "https://www.lightoj.com/submissions*"
       ],
       "js": ["content-scripts/group1/neupc-lightoj.js"],
       "run_at": "document_idle"
@@ -155,7 +184,9 @@
     {
       "matches": [
         "https://www.spoj.com/status/*",
-        "https://www.spoj.com/submit/*"
+        "https://www.spoj.com/submit/*",
+        "https://www.spoj.com/problems/*",
+        "https://www.spoj.com/users/*"
       ],
       "js": ["content-scripts/group1/neupc-spoj.js"],
       "run_at": "document_idle"
@@ -222,7 +253,29 @@
     {
       "matches": [
         "https://www.beecrowd.com.br/judge/*/runs/*",
-        "https://judge.beecrowd.com/*/runs/*"
+        "https://www.beecrowd.com.br/judge/*/runs/code/*",
+        "https://www.beecrowd.com.br/judge/*/runs",
+        "https://www.beecrowd.com.br/judge/*/problems/*",
+        "https://beecrowd.com.br/judge/*/runs/*",
+        "https://beecrowd.com.br/judge/*/runs/code/*",
+        "https://beecrowd.com.br/judge/*/runs",
+        "https://beecrowd.com.br/judge/*/problems/*",
+        "https://judge.beecrowd.com/*/runs/*",
+        "https://judge.beecrowd.com/*/runs/code/*",
+        "https://judge.beecrowd.com/*/runs",
+        "https://judge.beecrowd.com/runs/*",
+        "https://judge.beecrowd.com/runs/code/*",
+        "https://judge.beecrowd.com/runs",
+        "https://judge.beecrowd.com/*/problems/*",
+        "https://judge.beecrowd.com/problems/*",
+        "https://www.urionlinejudge.com.br/judge/*/runs/*",
+        "https://www.urionlinejudge.com.br/judge/*/runs/code/*",
+        "https://www.urionlinejudge.com.br/judge/*/runs",
+        "https://www.urionlinejudge.com.br/judge/*/problems/*",
+        "https://urionlinejudge.com.br/judge/*/runs/*",
+        "https://urionlinejudge.com.br/judge/*/runs/code/*",
+        "https://urionlinejudge.com.br/judge/*/runs",
+        "https://urionlinejudge.com.br/judge/*/problems/*"
       ],
       "js": ["content-scripts/group2/neupc-beecrowd.js"],
       "run_at": "document_idle"
@@ -293,7 +346,18 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://www.facebook.com/codingcompetitions/hacker-cup/*"],
+      "matches": [
+        "https://*.facebook.com/codingcompetitions/hacker-cup",
+        "https://*.facebook.com/codingcompetitions/hacker-cup/*",
+        "https://m.facebook.com/codingcompetitions/hacker-cup",
+        "https://m.facebook.com/codingcompetitions/hacker-cup/*",
+        "https://web.facebook.com/codingcompetitions/hacker-cup",
+        "https://web.facebook.com/codingcompetitions/hacker-cup/*",
+        "https://www.facebook.com/codingcompetitions/hacker-cup",
+        "https://www.facebook.com/codingcompetitions/hacker-cup/*",
+        "https://facebook.com/codingcompetitions/hacker-cup",
+        "https://facebook.com/codingcompetitions/hacker-cup/*"
+      ],
       "js": ["content-scripts/group3/neupc-fbhc.js"],
       "run_at": "document_idle"
     },

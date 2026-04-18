@@ -12,6 +12,12 @@
 (function () {
   'use strict';
 
+  if (window.__NEUPC_ATCODER_INJECTED__) {
+    console.warn('[NEUPC:atcoder] Already injected, skipping');
+    return;
+  }
+  window.__NEUPC_ATCODER_INJECTED__ = true;
+
   // ============================================================
   // UTILITIES
   // ============================================================
@@ -25,7 +31,7 @@
         : null;
 
   function log(...args) {
-    console.log(`[NEUPC:${PLATFORM}]`, ...args);
+    console.warn(`[NEUPC:${PLATFORM}]`, ...args);
   }
 
   function logError(...args) {
@@ -39,7 +45,7 @@
   function safeQuery(selector, context = document) {
     try {
       return context.querySelector(selector);
-    } catch (e) {
+    } catch {
       return null;
     }
   }
@@ -47,7 +53,7 @@
   function safeQueryAll(selector, context = document) {
     try {
       return Array.from(context.querySelectorAll(selector));
-    } catch (e) {
+    } catch {
       return [];
     }
   }
@@ -113,6 +119,8 @@
       this.initialized = false;
       this.extractionComplete = false;
       this.extractionResult = null;
+      this.clickedExpandTargets = new WeakSet();
+      this.clickedSourceTabTargets = new WeakSet();
     }
 
     detectPageType() {
@@ -323,6 +331,10 @@
         // ============================================================
 
         sourceCode = await this.extractSourceCode();
+        if (this.isLikelyTruncatedSource(sourceCode)) {
+          logWarn('Extracted source still looks truncated, requesting retry');
+          sourceCode = null;
+        }
 
         // ============================================================
         // Build submission object
@@ -341,7 +353,7 @@
           language: language || '',
           executionTime: executionTime,
           memoryUsed: memoryUsed,
-          submittedAt: submittedAt || new Date().toISOString(),
+          submittedAt: submittedAt || null,
           sourceCode: sourceCode,
           difficultyRating: null,
           tags: [],
@@ -360,7 +372,341 @@
       }
     }
 
-    async extractSourceCode() {
+    isElementVisible(element) {
+      if (!element) return false;
+
+      const style = window.getComputedStyle(element);
+      if (
+        style.display === 'none' ||
+        style.visibility === 'hidden' ||
+        style.opacity === '0'
+      ) {
+        return false;
+      }
+
+      if (
+        element.hasAttribute('hidden') ||
+        element.getAttribute('aria-hidden') === 'true'
+      ) {
+        return false;
+      }
+
+      const rect = element.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    }
+
+    getCurrentSourceLengthEstimate() {
+      const selectors = [
+        '#submission-code',
+        'pre.prettyprint',
+        'pre.linenums',
+        '.submission-code pre',
+        '.ace_text-layer',
+        '.ace_content',
+        '.ace_editor',
+        'pre[id*="source"]',
+      ];
+
+      let bestLength = 0;
+
+      for (const selector of selectors) {
+        const el = safeQuery(selector);
+        if (!el) continue;
+
+        const textContentLength = String(el.textContent || '').length;
+        const innerTextLength = String(el.innerText || '').length;
+        bestLength = Math.max(bestLength, textContentLength, innerTextLength);
+      }
+
+      const lineItems = safeQueryAll(
+        '#submission-code li, ol.linenums li, .prettyprint li, #submission-code .ace_line, .ace_text-layer .ace_line, .ace_content .ace_line'
+      );
+      if (lineItems.length > 0) {
+        const joinedLength = lineItems
+          .map((line) => String(line.textContent || ''))
+          .join('\n').length;
+        bestLength = Math.max(bestLength, joinedLength);
+      }
+
+      return bestLength;
+    }
+
+    getSourceRootElement(root = document) {
+      return (
+        safeQuery('#submission-code', root) ||
+        safeQuery('pre.prettyprint', root) ||
+        safeQuery('pre.linenums', root) ||
+        safeQuery('.submission-code pre', root) ||
+        safeQuery('.ace_text-layer', root) ||
+        safeQuery('.ace_content', root) ||
+        safeQuery('.ace_editor', root)
+      );
+    }
+
+    isSourceTabTrigger(element) {
+      if (!element || !this.isElementVisible(element)) {
+        return false;
+      }
+
+      const tagName = String(element.tagName || '').toLowerCase();
+      const href = String(element.getAttribute('href') || '');
+      const dataTarget = String(element.getAttribute('data-target') || '');
+      const ariaControls = String(element.getAttribute('aria-controls') || '');
+      const text = String(
+        element.innerText || element.textContent || ''
+      ).trim();
+      const className = String(element.className || '');
+      const id = String(element.id || '');
+
+      const sourcePattern =
+        /(source\s*code|source|submission\s*code|code|ソース|コード)/i;
+      const structuralPattern =
+        /submission-code|source|tab|nav|toggle|prettyprint|linenums/i;
+
+      const sourceSignal =
+        sourcePattern.test(text) ||
+        sourcePattern.test(href) ||
+        sourcePattern.test(dataTarget) ||
+        sourcePattern.test(ariaControls);
+
+      if (!sourceSignal) {
+        return false;
+      }
+
+      if (tagName === 'a' && href && !href.startsWith('#')) {
+        // Avoid navigating away from the current page.
+        return false;
+      }
+
+      return (
+        sourceSignal &&
+        (structuralPattern.test(
+          `${href} ${dataTarget} ${ariaControls} ${className} ${id}`
+        ) ||
+          element.getAttribute('role') === 'tab' ||
+          href.startsWith('#'))
+      );
+    }
+
+    async ensureSourceTabActivated() {
+      const existingRoot = this.getSourceRootElement();
+      if (existingRoot && this.getCurrentSourceLengthEstimate() > 20) {
+        const existingText =
+          String(existingRoot.innerText || '') ||
+          String(existingRoot.textContent || '');
+        const existingCode = this.cleanSourceCode(existingText);
+        if (
+          existingCode &&
+          existingCode.length > 20 &&
+          !this.isLikelyTruncatedSource(existingCode)
+        ) {
+          return false;
+        }
+      }
+
+      const tabCandidates = safeQueryAll(
+        'a, button, [role="tab"], [data-toggle="tab"], [aria-controls]'
+      ).filter((el) => this.isSourceTabTrigger(el));
+
+      if (tabCandidates.length === 0) {
+        return false;
+      }
+
+      let clicks = 0;
+      for (const candidate of tabCandidates) {
+        if (this.clickedSourceTabTargets.has(candidate)) {
+          continue;
+        }
+
+        this.clickedSourceTabTargets.add(candidate);
+        candidate.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        clicks++;
+        await sleep(180);
+      }
+
+      if (clicks === 0) {
+        return false;
+      }
+
+      await sleep(420);
+      log('Source tab activation attempt:', {
+        clicks,
+        sourceLength: this.getCurrentSourceLengthEstimate(),
+      });
+
+      return true;
+    }
+
+    isExpandTrigger(element) {
+      if (!element || !this.isElementVisible(element)) return false;
+
+      const text = String(
+        element.innerText || element.textContent || ''
+      ).trim();
+      const id = String(element.id || '');
+      const className = String(element.className || '');
+      const ariaLabel = String(element.getAttribute('aria-label') || '');
+      const title = String(element.getAttribute('title') || '');
+      const dataAction = String(element.getAttribute('data-action') || '');
+
+      const haystack = `${text} ${id} ${className} ${ariaLabel} ${title} ${dataAction}`;
+
+      const expandPattern =
+        /(expand|show\s*all|view\s*all|open|more|full\s*screen|fullscreen|全文|全体|展開|もっと|表示)/i;
+      const collapsePattern = /(collapse|hide|less|閉じる|折りたた)/i;
+
+      if (!expandPattern.test(haystack)) {
+        return false;
+      }
+
+      if (collapsePattern.test(text) && !/expand|open|show/i.test(text)) {
+        return false;
+      }
+
+      return true;
+    }
+
+    async ensureSourceExpanded() {
+      const sourceRoot =
+        safeQuery('#submission-code') ||
+        safeQuery('pre.prettyprint') ||
+        safeQuery('pre.linenums') ||
+        safeQuery('.submission-code pre') ||
+        safeQuery('.ace_text-layer') ||
+        safeQuery('.ace_content') ||
+        safeQuery('.ace_editor');
+
+      if (!sourceRoot) {
+        return false;
+      }
+
+      const searchRoot =
+        sourceRoot.closest('.panel, .part, .container, .col-sm-12') ||
+        sourceRoot.parentElement ||
+        document;
+
+      const explicitTargets = safeQueryAll(
+        '#expand-source, #source-expand, #toggle-source, #toggle-expand, [data-action*="expand"], [aria-label*="expand" i], [title*="expand" i]',
+        searchRoot
+      );
+      const nearbyTargets = safeQueryAll(
+        'button, a, [role="button"]',
+        searchRoot
+      );
+
+      const targets = [
+        ...new Set([...explicitTargets, ...nearbyTargets]),
+      ].filter((target) => this.isExpandTrigger(target));
+
+      if (targets.length === 0) {
+        return false;
+      }
+
+      const beforeLength = this.getCurrentSourceLengthEstimate();
+      let clicks = 0;
+
+      for (const target of targets) {
+        if (this.clickedExpandTargets.has(target)) {
+          continue;
+        }
+
+        this.clickedExpandTargets.add(target);
+        target.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        clicks++;
+        await sleep(140);
+      }
+
+      if (clicks === 0) {
+        return false;
+      }
+
+      await sleep(320);
+      const afterLength = this.getCurrentSourceLengthEstimate();
+
+      log('Expand attempt on source block:', {
+        clicks,
+        beforeLength,
+        afterLength,
+      });
+
+      return true;
+    }
+
+    isLikelyTruncatedSource(code) {
+      if (typeof code !== 'string' || !code.trim()) {
+        return true;
+      }
+
+      const normalized = code.trim();
+      const newlineCount = (normalized.match(/\n/g) || []).length;
+
+      if (/\.{3}\s*$|…\s*$/.test(normalized)) {
+        return true;
+      }
+
+      if (/^\s*(?:\d{1,3}){8,}(?=\s*(?:#|[A-Za-z_]))/.test(normalized)) {
+        return true;
+      }
+
+      if (/[^\x00-\x7F]{80,}/.test(normalized)) {
+        return true;
+      }
+
+      if (normalized.length > 500 && newlineCount <= 1) {
+        return true;
+      }
+
+      const lineCount = newlineCount + 1;
+      const avgLineLength = normalized.length / Math.max(1, lineCount);
+      if (normalized.length > 1200 && avgLineLength > 220) {
+        return true;
+      }
+
+      return false;
+    }
+
+    isLikelyMidSliceAceLines(lines = []) {
+      if (!Array.isArray(lines) || lines.length === 0) {
+        return true;
+      }
+
+      const normalizedLines = lines.map((line) =>
+        String(line || '').replace(/\u00A0/g, ' ')
+      );
+      const nonEmptyLines = normalizedLines.filter(
+        (line) => line.trim().length > 0
+      );
+
+      if (nonEmptyLines.length === 0) {
+        return true;
+      }
+
+      const firstRaw = nonEmptyLines[0];
+      const first = firstRaw.trim();
+
+      // For ACE virtualized views, a snippet from the middle often starts
+      // indented or with a closing token. Prefer full-file starts.
+      const looksLikeFileStart =
+        /^(#include|#define|#pragma|import\b|from\b|package\b|using\b|class\b|struct\b|def\b|fn\b|namespace\b|template\b|\/\/|\/\*|int\s+main\b|signed\s+main\b)/.test(
+          first
+        );
+
+      if (looksLikeFileStart) {
+        return false;
+      }
+
+      if (/^[ \t]/.test(firstRaw) && nonEmptyLines.length < 25) {
+        return true;
+      }
+
+      if (/^[)\]}]/.test(first) && nonEmptyLines.length < 40) {
+        return true;
+      }
+
+      return false;
+    }
+
+    buildSourceCandidatesFromRoot(root, sourceContext = 'live-dom') {
       const codeSelectors = [
         '#submission-code',
         'pre.prettyprint',
@@ -369,36 +715,359 @@
         'pre[id*="source"]',
       ];
 
-      for (const selector of codeSelectors) {
-        const codeEl = safeQuery(selector);
-        if (!codeEl || !codeEl.textContent.trim()) continue;
+      const lineSelectors = [
+        '#submission-code li',
+        'ol.linenums li',
+        '.prettyprint li',
+        '#submission-code .ace_line',
+        '.ace_text-layer .ace_line',
+        '.ace_content .ace_line',
+      ];
 
-        let sourceCode = '';
+      const textareaSelectors = [
+        'textarea#submission-code',
+        'textarea[name="sourceCode"]',
+        'textarea[name="submission_code"]',
+      ];
 
-        // AtCoder wraps code in <ol><li> elements for line numbers
-        const listItems = safeQueryAll('li', codeEl);
-        if (listItems.length > 0) {
-          sourceCode = listItems.map((li) => li.textContent).join('\n');
-          log('Found source code from list items, lines:', listItems.length);
-        } else {
-          // No list items - get directly
-          const codeInner = safeQuery('code', codeEl) || codeEl;
-          sourceCode = codeInner.textContent;
+      const query = (selector, context = root) => {
+        try {
+          return context.querySelector(selector);
+        } catch {
+          return null;
+        }
+      };
+
+      const queryAll = (selector, context = root) => {
+        try {
+          return Array.from(context.querySelectorAll(selector));
+        } catch {
+          return [];
+        }
+      };
+
+      const candidates = [];
+      const seen = new Set();
+
+      const addCandidate = (rawCode, selector, strategy) => {
+        if (typeof rawCode !== 'string') return;
+
+        const normalized = this.cleanSourceCode(rawCode);
+        if (!normalized) return;
+
+        const fingerprint = `${sourceContext}|${selector}|${strategy}|${normalized.length}|${normalized.slice(0, 140)}`;
+        if (seen.has(fingerprint)) {
+          return;
+        }
+        seen.add(fingerprint);
+
+        const contaminationPenalty =
+          this.calculateSourceContaminationPenalty(normalized);
+        if (contaminationPenalty >= 560) {
+          return;
         }
 
-        // Clean up the source code
-        if (sourceCode) {
-          sourceCode = this.cleanSourceCode(sourceCode);
-          if (sourceCode.length > 20) {
-            log(
-              'Found source code with selector:',
-              selector,
-              'length:',
-              sourceCode.length
-            );
-            return sourceCode;
+        // Prefer canonical source node, but let clearly longer candidates win.
+        const selectorBonus = selector === '#submission-code' ? 220 : 0;
+        const strategyBonus =
+          strategy === 'globalLineItems'
+            ? 165
+            : strategy === 'listItems'
+              ? 145
+              : strategy === 'aceLineItems'
+                ? 180
+                : strategy === 'textareaValue'
+                  ? 130
+                  : strategy === 'innerText' || strategy === 'codeInnerText'
+                    ? 95
+                    : strategy === 'codeElement'
+                      ? 80
+                      : 0;
+
+        candidates.push({
+          code: normalized,
+          selector,
+          strategy,
+          length: normalized.length,
+          score:
+            normalized.length +
+            selectorBonus +
+            strategyBonus -
+            contaminationPenalty,
+        });
+      };
+
+      for (const selector of codeSelectors) {
+        const codeEl = query(selector);
+        if (!codeEl) continue;
+
+        // Collect both DOM text channels because one can include hidden/merged junk.
+        addCandidate(codeEl.textContent, selector, 'textContent');
+        addCandidate(codeEl.innerText, selector, 'innerText');
+
+        const codeInner = query('code', codeEl);
+        if (codeInner && codeInner !== codeEl) {
+          addCandidate(codeInner.textContent, selector, 'codeElement');
+          addCandidate(codeInner.innerText, selector, 'codeInnerText');
+        }
+
+        // Fallback for line-number based renderers.
+        const listItems = queryAll('li', codeEl);
+        if (listItems.length > 0) {
+          addCandidate(
+            listItems.map((li) => li.textContent).join('\n'),
+            selector,
+            'listItems'
+          );
+        }
+      }
+
+      for (const selector of lineSelectors) {
+        const lineItems = queryAll(selector);
+        if (lineItems.length === 0) continue;
+
+        const lineTexts = lineItems.map((line) =>
+          String(line.textContent || '').replace(/\u00A0/g, ' ')
+        );
+
+        if (selector.includes('ace_line')) {
+          if (this.isLikelyMidSliceAceLines(lineTexts)) {
+            continue;
+          }
+
+          addCandidate(lineTexts.join('\n'), selector, 'aceLineItems');
+          continue;
+        }
+
+        addCandidate(lineTexts.join('\n'), selector, 'globalLineItems');
+      }
+
+      for (const selector of textareaSelectors) {
+        const textarea = query(selector);
+        if (!textarea) continue;
+
+        addCandidate(textarea.value, selector, 'textareaValue');
+        addCandidate(textarea.textContent, selector, 'textareaTextContent');
+      }
+
+      candidates.sort((a, b) => b.score - a.score);
+      return candidates;
+    }
+
+    async extractSourceCodeFromFetchedHtml() {
+      try {
+        const response = await fetch(window.location.href, {
+          credentials: 'include',
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          logWarn('Fetched HTML fallback failed with status:', response.status);
+          return null;
+        }
+
+        const html = await response.text();
+        if (!html || html.length < 1000) {
+          return null;
+        }
+
+        const parsed = new DOMParser().parseFromString(html, 'text/html');
+
+        const title = String(parsed.title || '')
+          .trim()
+          .toLowerCase();
+        if (title.includes('sign in')) {
+          return null;
+        }
+
+        const candidates = this.buildSourceCandidatesFromRoot(
+          parsed,
+          'fetched-html'
+        );
+        if (candidates.length === 0) {
+          return null;
+        }
+
+        const best = candidates[0];
+        if (this.isLikelyTruncatedSource(best.code)) {
+          return null;
+        }
+
+        log('Selected source code from fetched HTML:', {
+          selector: best.selector,
+          strategy: best.strategy,
+          length: best.length,
+        });
+
+        return best.code;
+      } catch (error) {
+        logWarn(
+          'Fetched HTML fallback error:',
+          error?.message || String(error)
+        );
+        return null;
+      }
+    }
+
+    getSourceDownloadUrl() {
+      const downloadLink = safeQuery(
+        'a[href$="/download"], a[href*="/submissions/"][href*="/download"]'
+      );
+      if (downloadLink) {
+        try {
+          const href = downloadLink.getAttribute('href') || downloadLink.href;
+          if (href) {
+            return new URL(href, window.location.href).href;
+          }
+        } catch {
+          // Ignore URL parsing errors and continue with inferred path.
+        }
+      }
+
+      const match = window.location.pathname.match(
+        /^(\/contests\/[^/]+\/submissions\/\d+)$/
+      );
+      if (!match) {
+        return null;
+      }
+
+      return `${window.location.origin}${match[1]}/download`;
+    }
+
+    async extractSourceCodeFromDownloadEndpoint() {
+      const downloadUrl = this.getSourceDownloadUrl();
+      if (!downloadUrl) {
+        return null;
+      }
+
+      try {
+        const response = await fetch(downloadUrl, {
+          credentials: 'include',
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          return null;
+        }
+
+        const raw = await response.text();
+        if (!raw || raw.length < 5) {
+          return null;
+        }
+
+        // A sign-in or error page means download endpoint is not usable.
+        if (/^\s*<!doctype html|^\s*<html/i.test(raw)) {
+          return null;
+        }
+
+        const cleaned = this.cleanSourceCode(raw);
+        if (!cleaned || cleaned.length < 5) {
+          return null;
+        }
+
+        log('Selected source code from download endpoint:', {
+          length: cleaned.length,
+          downloadUrl,
+        });
+
+        return cleaned;
+      } catch (error) {
+        logWarn(
+          'Download endpoint fallback error:',
+          error?.message || String(error)
+        );
+        return null;
+      }
+    }
+
+    async extractSourceCode() {
+      const downloadFallback =
+        await this.extractSourceCodeFromDownloadEndpoint();
+      if (downloadFallback) {
+        return downloadFallback;
+      }
+
+      let bestOverall = null;
+      let lastBestLength = 0;
+      let stableAttempts = 0;
+      const maxAttempts = 16;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        if (attempt === 0 || attempt === 1 || attempt === 3 || attempt === 5) {
+          await this.ensureSourceTabActivated();
+        }
+
+        if (attempt === 0 || attempt === 2 || attempt === 4 || attempt === 6) {
+          await this.ensureSourceExpanded();
+        }
+
+        const candidates = this.buildSourceCandidatesFromRoot(
+          document,
+          'live-dom'
+        );
+        if (candidates.length > 0) {
+          const best = candidates[0];
+
+          if (!bestOverall || best.score > bestOverall.score) {
+            bestOverall = best;
+          }
+
+          if (best.length > lastBestLength) {
+            lastBestLength = best.length;
+            stableAttempts = 0;
+          } else {
+            stableAttempts++;
+          }
+
+          if (best.length > 20 && stableAttempts >= 2) {
+            if (this.isLikelyTruncatedSource(best.code)) {
+              logWarn('Best source candidate still looks truncated, retrying', {
+                selector: best.selector,
+                strategy: best.strategy,
+                length: best.length,
+                attempts: attempt + 1,
+              });
+              await sleep(300);
+              continue;
+            }
+
+            log('Selected source code candidate:', {
+              selector: best.selector,
+              strategy: best.strategy,
+              length: best.length,
+              attempts: attempt + 1,
+            });
+            return best.code;
           }
         }
+
+        await sleep(250);
+      }
+
+      if (bestOverall?.code) {
+        if (this.isLikelyTruncatedSource(bestOverall.code)) {
+          logWarn(
+            'Fallback source candidate appears truncated; forcing retry',
+            {
+              selector: bestOverall.selector,
+              strategy: bestOverall.strategy,
+              length: bestOverall.length,
+            }
+          );
+        } else {
+          log('Selected source code fallback candidate:', {
+            selector: bestOverall.selector,
+            strategy: bestOverall.strategy,
+            length: bestOverall.length,
+            attempts: maxAttempts,
+          });
+          return bestOverall.code;
+        }
+      }
+
+      const fetchedFallback = await this.extractSourceCodeFromFetchedHtml();
+      if (fetchedFallback) {
+        return fetchedFallback;
       }
 
       logWarn('No source code found');
@@ -408,22 +1077,135 @@
     cleanSourceCode(code) {
       if (!code) return '';
 
-      // Remove non-ASCII characters that aren't common programming symbols
-      code = code.replace(/[^\x00-\x7F\u00A0-\u00FF]/g, '');
+      let normalized = String(code);
 
-      // Remove line numbers if they appear at the start (e.g., "123456789..." pattern)
-      code = code.replace(/^(\d{10,})/, '');
-
-      // Remove line number prefix before common code patterns
-      code = code.replace(
-        /^\d+(?=#include|#define|#pragma|\/\/|\/\*|using |import |package |class |public |def |fn |func |int |void |auto )/,
+      normalized = normalized.replace(/\r\n?/g, '\n');
+      normalized = normalized.replace(/^\uFEFF/, '');
+      normalized = normalized.replace(/\u0000/g, '');
+      normalized = normalized.replace(
+        /[\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g,
         ''
       );
+      normalized = normalized.replace(/\u00A0/g, ' ');
+      normalized = this.stripLeadingMergedLineNumbers(normalized);
+      normalized = this.stripSuspiciousNoise(normalized);
+      normalized = this.repairCollapsedPreprocessorLines(normalized);
+      normalized = normalized.replace(/\n{5,}/g, '\n\n\n');
 
-      // Clean up excessive whitespace
-      code = code.replace(/\n{3,}/g, '\n\n');
+      // Preserve leading indentation to avoid mutating source semantics.
+      return normalized.trimEnd();
+    }
 
-      return code.trim();
+    stripLeadingMergedLineNumbers(code) {
+      let normalized = String(code || '');
+      const leadingDigitsMatch = normalized.match(
+        /^\s*(?:\d{1,3}){8,}(?=\s*(?:#|[A-Za-z_]))/
+      );
+
+      if (leadingDigitsMatch) {
+        normalized = normalized.slice(leadingDigitsMatch[0].length).trimStart();
+      }
+
+      const lines = normalized.split('\n');
+      if (lines.length >= 3) {
+        const numberedLines = lines.filter((line) =>
+          /^\s*\d+\s*(?:#|[A-Za-z_])/.test(line)
+        ).length;
+
+        if (numberedLines >= Math.max(3, Math.floor(lines.length * 0.35))) {
+          normalized = lines
+            .map((line) => line.replace(/^\s*\d+\s*(?=\S)/, ''))
+            .join('\n');
+        }
+      }
+
+      return normalized;
+    }
+
+    stripSuspiciousNoise(code) {
+      let normalized = String(code || '');
+
+      // Remove corruption chunks but keep trailing code after the chunk.
+      normalized = normalized.replace(/[^\x00-\x7F]{120,}/g, '\n');
+      normalized = normalized.replace(/([^\nA-Za-z0-9])\1{80,}/g, '\n');
+      normalized = normalized.replace(/([A-Za-z])\1{200,}/g, '\n');
+      normalized = normalized.replace(/\n{4,}/g, '\n\n\n');
+
+      return normalized;
+    }
+
+    repairCollapsedPreprocessorLines(code) {
+      let normalized = String(code || '');
+      const directiveCount = (
+        normalized.match(
+          /#(?:include|define|if|ifdef|ifndef|pragma|endif|elif|else)\b/g
+        ) || []
+      ).length;
+      const newlineCount = (normalized.match(/\n/g) || []).length;
+
+      if (directiveCount < 2 || newlineCount > 3) {
+        return normalized;
+      }
+
+      normalized = normalized.replace(
+        /([^\n])(?=#(?:include|define|if|ifdef|ifndef|pragma|endif|elif|else)\b)/g,
+        '$1\n'
+      );
+
+      normalized = normalized.replace(/>(?=\s*using\s+namespace\b)/g, '>\n');
+      normalized = normalized.replace(
+        /;(?=\s*(?:#|using\s+namespace\b|int\s+main\b|signed\s+main\b|void\s+[A-Za-z_][A-Za-z0-9_]*\s*\())/g,
+        ';\n'
+      );
+
+      return normalized;
+    }
+
+    calculateSourceContaminationPenalty(code) {
+      const normalized = String(code || '');
+      if (!normalized) {
+        return 1000;
+      }
+
+      let penalty = 0;
+
+      if (/^\s*(?:\d{1,3}){8,}(?=\s*(?:#|[A-Za-z_]))/.test(normalized)) {
+        penalty += 240;
+      }
+
+      const unicodeChars = normalized.match(/[^\x00-\x7F]/g) || [];
+      const unicodeRatio = unicodeChars.length / Math.max(1, normalized.length);
+      if (unicodeChars.length > 80 && unicodeRatio > 0.08) {
+        penalty += 260;
+      }
+
+      if (/[^\x00-\x7F]{120,}/.test(normalized)) {
+        penalty += 320;
+      }
+
+      if (/([^\nA-Za-z0-9])\1{80,}/.test(normalized)) {
+        penalty += 220;
+      }
+
+      if (/([A-Za-z])\1{200,}/.test(normalized)) {
+        penalty += 220;
+      }
+
+      const newlineCount = (normalized.match(/\n/g) || []).length;
+      if (normalized.length > 400 && newlineCount <= 1) {
+        penalty += 220;
+      }
+
+      const directiveCount = (
+        normalized.match(
+          /#(?:include|define|if|ifdef|ifndef|pragma|endif|elif|else)\b/g
+        ) || []
+      ).length;
+      if (directiveCount >= 3 && newlineCount <= 2) {
+        penalty += 130;
+      }
+
+      return penalty;
     }
 
     parseMemoryLimitToKb(value, unit) {
@@ -688,8 +1470,12 @@
 
     async handleExtractSubmissionMessage(sendResponse) {
       try {
-        // Return cached result if available
-        if (this.extractionComplete && this.extractionResult) {
+        // Return cached result only when source looks complete.
+        if (
+          this.extractionComplete &&
+          this.extractionResult?.sourceCode &&
+          !this.isLikelyTruncatedSource(this.extractionResult.sourceCode)
+        ) {
           sendResponse({ success: true, data: this.extractionResult });
           return;
         }
@@ -697,12 +1483,33 @@
         // Extract submission
         const submission = await this.extractSubmission();
         this.extractionResult = submission;
-        this.extractionComplete = true;
+        const hasCompleteSource =
+          !!submission?.sourceCode &&
+          !this.isLikelyTruncatedSource(submission.sourceCode);
+        this.extractionComplete = hasCompleteSource;
+
+        if (!submission) {
+          sendResponse({
+            success: false,
+            error: 'No submission found',
+          });
+          return;
+        }
+
+        if (!hasCompleteSource) {
+          sendResponse({
+            success: false,
+            pending: true,
+            data: submission,
+            error: 'Source code not fully expanded yet',
+          });
+          return;
+        }
 
         sendResponse({
-          success: !!submission?.sourceCode,
+          success: true,
           data: submission,
-          error: submission ? null : 'No submission found',
+          error: null,
         });
       } catch (error) {
         logError('Extract submission error:', error);
@@ -791,12 +1598,18 @@
 
         const submission = await this.extractSubmission();
         this.extractionResult = submission;
-        this.extractionComplete = true;
+        this.extractionComplete =
+          !!submission?.sourceCode &&
+          !this.isLikelyTruncatedSource(submission.sourceCode);
 
-        if (submission) {
+        if (submission && this.extractionComplete) {
           log('Successfully extracted submission');
           this.cacheSubmission(submission);
           await this.autoSyncIfEnabled(submission);
+        } else if (submission) {
+          logWarn(
+            'Submission extracted but source is incomplete; waiting for retry'
+          );
         } else {
           logWarn('Failed to extract submission data');
         }

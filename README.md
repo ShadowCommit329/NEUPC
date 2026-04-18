@@ -138,7 +138,7 @@ WHERE u.email = 'your@email.com' AND r.name = 'admin';
 
 ## Project Structure
 
-```
+```text
 neupc/
 ├── app/
 │   ├── _components/          # Shared UI components
@@ -185,7 +185,7 @@ neupc/
 
 ### Security (4-Layer Guard)
 
-```
+```text
 proxy.js (middleware)      → Blocks unauthenticated /account/* requests
   └── layout.js/page.js    → requireRole() checks role + status
       └── *-actions.js     → Re-validates auth at mutation level
@@ -194,7 +194,7 @@ proxy.js (middleware)      → Blocks unauthenticated /account/* requests
 
 ### Data Flow
 
-```
+```text
 Request → Middleware → RSC (requireRole) → data-service.js → Supabase
                                               ↓
 Form Submit → Server Action → Validation → Mutation → revalidatePath()

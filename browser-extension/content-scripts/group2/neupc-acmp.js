@@ -214,7 +214,7 @@
           language,
           executionTime,
           memoryUsed,
-          submittedAt: new Date().toISOString(),
+          submittedAt: null,
           sourceCode,
         };
       } catch (error) {
@@ -241,7 +241,7 @@
       if (this.detectPageType() === 'submission') {
         const submission = await this.extractSubmission();
         if (submission) {
-          log\('Extracted:', submission\);
+          log('Extracted:', submission);
               
               // Auto-sync if enabled and submission is AC
               this.storeSubmission && this.autoSyncIfEnabled && this.autoSyncIfEnabled(submission);
@@ -270,6 +270,8 @@
           }
         });
       }
+    }
+
     autoSyncIfEnabled(submission) {
       const browserAPI =
         typeof chrome !== 'undefined'
@@ -299,7 +301,7 @@
     }
   }
 
-  //document.readyState === 'loading') {
+  if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () =>
       new ACMPExtractor().init()
     );

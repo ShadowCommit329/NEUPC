@@ -202,7 +202,8 @@
             if (earned === total) verdict = 'AC';
             else if (parseInt(earned) > 0) verdict = 'PARTIAL';
             else verdict = 'WA';
-    autoSyncIfEnabled(submission) {
+    }
+    const autoSyncIfEnabled = (submission) => {
       const browserAPI =
         typeof chrome !== 'undefined'
           ? chrome
@@ -270,7 +271,7 @@
           language,
           executionTime,
           memoryUsed: null,
-          submittedAt: new Date().toISOString(),
+          submittedAt: null,
           sourceCode,
           contestId: roundId,
           competitionType,
@@ -334,7 +335,7 @@
             pc.unshift(submission);
             if (pc.length > 100) pc.pop();
             cached[this.platform] = pc;
-            api\.storage\.local\.set\(\{ cachedSubmissions: cached \}\);
+            api.storage.local.set({ cachedSubmissions: cached });
               
               // Auto-sync if enabled and submission is AC
               this.storeSubmission && this.autoSyncIfEnabled && this.autoSyncIfEnabled(submission);

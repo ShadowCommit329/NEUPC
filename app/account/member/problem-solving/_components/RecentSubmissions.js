@@ -400,7 +400,7 @@ export default function RecentSubmissions({
 
       <div className="mb-4 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 shadow-lg ring-2 shadow-blue-500/20 ring-blue-400/20">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-cyan-500 shadow-lg ring-2 shadow-blue-500/20 ring-blue-400/20">
             <Clock className="h-4 w-4 text-white" />
           </div>
           <div>
@@ -487,7 +487,7 @@ export default function RecentSubmissions({
 
       {submissions.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-10 text-center">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04]">
+          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/4">
             <Clock className="h-7 w-7 text-gray-600" />
           </div>
           <p className="text-sm font-medium text-gray-400">
@@ -533,7 +533,7 @@ export default function RecentSubmissions({
                   }
                 }}
                 disabled={currentPage === 1}
-                className="flex items-center gap-1 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-gray-400 transition-all duration-200 hover:border-white/[0.15] hover:bg-white/[0.06] hover:text-white disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-1 rounded-xl border border-white/8 bg-white/3 px-3 py-1.5 text-[11px] font-medium text-gray-400 transition-all duration-200 hover:border-white/15 hover:bg-white/6 hover:text-white disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <ChevronLeft className="h-3 w-3" />
                 <span className="hidden sm:inline">Prev</span>
@@ -585,7 +585,7 @@ export default function RecentSubmissions({
                     onViewAllProblems();
                   }
                 }}
-                className="flex items-center gap-1 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-gray-400 transition-all duration-200 hover:border-white/[0.15] hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex items-center gap-1 rounded-xl border border-white/8 bg-white/3 px-3 py-1.5 text-[11px] font-medium text-gray-400 transition-all duration-200 hover:border-white/15 hover:bg-white/6 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                 title={
                   currentPage === totalPages ? 'View all problems' : 'Next page'
                 }

@@ -148,7 +148,8 @@
             if (score === 100) verdict = 'AC';
             else if (score > 0) verdict = 'PARTIAL';
             else verdict = 'WA';
-    autoSyncIfEnabled(submission) {
+    }
+    const autoSyncIfEnabled = (submission) => {
       const browserAPI =
         typeof chrome !== 'undefined'
           ? chrome
@@ -213,7 +214,7 @@
           language,
           executionTime,
           memoryUsed,
-          submittedAt: new Date().toISOString(),
+          submittedAt: null,
           sourceCode,
         };
       } catch (error) {
@@ -239,7 +240,7 @@
       if (pageType === 'submission') {
         const submission = await this.extractSubmission();
         if (submission) {
-          log\('Extracted:', submission\);
+          log('Extracted:', submission);
               
               // Auto-sync if enabled and submission is AC
               this.storeSubmission && this.autoSyncIfEnabled && this.autoSyncIfEnabled(submission);

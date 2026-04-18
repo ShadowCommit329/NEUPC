@@ -605,7 +605,7 @@ export class BaseExtractor {
       sourceCode: data.sourceCode || null,
       executionTime: parseTime(data.executionTime),
       memoryUsed: parseMemory(data.memoryUsed),
-      submittedAt: parseDate(data.submittedAt) || new Date().toISOString(),
+      submittedAt: parseDate(data.submittedAt) || null,
       contestId: data.contestId || '',
       difficultyRating: data.difficultyRating || null,
       tags: Array.isArray(data.tags) ? data.tags : [],

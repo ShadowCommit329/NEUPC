@@ -4352,35 +4352,134 @@ export class SPOJService {
   }
 
   async getSubmissions(username, fromTimestamp = null) {
-    // SPOJ is protected by Cloudflare and requires browser extension for syncing
-    // The extension can access the DOM after Cloudflare challenge is solved
-    throw new Error(
-      'SPOJ syncing requires the browser extension due to Cloudflare protection. ' +
-        'Please use the NEUPC browser extension to sync SPOJ data.'
-    );
+    const cacheKey = `spoj_subs_${username}_${fromTimestamp || 'all'}`;
+    const cached = await this.getCache(cacheKey);
+    if (cached) return cached;
+
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      throw new Error('Invalid SPOJ username format');
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/users/${username}/`, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+        },
+      });
+
+      const html = await response.text();
+
+      // Cloudflare challenge pages are not parseable server-side.
+      if (
+        html.includes('Just a moment...') ||
+        html.includes('cf_chl_opt') ||
+        html.includes('Enable JavaScript and cookies') ||
+        html.includes('challenge-platform')
+      ) {
+        await this.setCache(cacheKey, [], 120);
+        return [];
+      }
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('SPOJ user not found');
+        }
+
+        await this.setCache(cacheKey, [], 120);
+        return [];
+      }
+
+      const parsed = this.parseSolvedProblems(html);
+
+      // SPOJ solved lists don't include submit timestamps. Keep timestamps stable
+      // across incremental syncs to avoid drifting solve dates on re-sync.
+      const syntheticSubmittedAt =
+        normalizeSubmissionTimestamp(fromTimestamp) || new Date().toISOString();
+
+      const submissions = parsed.map((submission) => ({
+        ...submission,
+        submitted_at: syntheticSubmittedAt,
+      }));
+
+      await this.setCache(cacheKey, submissions, 120);
+      return submissions;
+    } catch (error) {
+      if (
+        error.message.includes('fetch') ||
+        error.message.includes('network') ||
+        error.message.includes('ENOTFOUND') ||
+        error.message.includes('ETIMEDOUT')
+      ) {
+        await this.setCache(cacheKey, [], 120);
+        return [];
+      }
+
+      throw error;
+    }
   }
 
-  parseSolvedProblems(html) {
+  parseSolvedProblems(input) {
     const submissions = [];
-    // Parse problem codes from solved section
-    const problemSection = html.match(
-      /solved-problems[^>]*>([\s\S]*?)<\/table>/i
-    );
-    if (!problemSection) return submissions;
+    const seen = new Set();
 
-    const problemRegex = /<a[^>]*href="\/problems\/([^"]+)"[^>]*>/gi;
-    let match;
+    const addProblem = (problemId) => {
+      const id = problemId.trim();
+      if (!id || seen.has(id)) return;
+      // SPOJ problem IDs are alphanumeric with possible underscores, 2-20 chars
+      if (!/^[A-Z0-9_]{2,20}$/i.test(id)) return;
+      // Filter out common false positives from page chrome
+      const NOISE = new Set([
+        'AC', 'WA', 'RE', 'TLE', 'MLE', 'CE', 'PE', 'OK', 'SPOJ', 'HTML',
+        'CSS', 'PDF', 'FAQ', 'API', 'RSS', 'URL', 'YES', 'NO', 'OR', 'AND',
+        'IF', 'ID', 'BY', 'TO', 'OF', 'IN', 'ON', 'AT', 'UP',
+      ]);
+      if (NOISE.has(id.toUpperCase())) return;
 
-    while ((match = problemRegex.exec(problemSection[1])) !== null) {
-      const problemId = match[1];
+      seen.add(id);
       submissions.push({
-        submission_id: `spoj_${problemId}`,
-        problem_id: problemId,
-        problem_name: problemId,
-        problem_url: `${this.baseUrl}/problems/${problemId}`,
+        submission_id: `spoj_${id}`,
+        problem_id: id,
+        problem_name: id,
+        problem_url: `${this.baseUrl}/problems/${id}/`,
         verdict: 'AC',
         submitted_at: new Date().toISOString(),
       });
+    };
+
+    // Strategy 1: Extract from HTML anchor tags (href="/problems/CODE")
+    const linkRegex = /href=["']\/problems\/([^"'/]+)/gi;
+    let match;
+    while ((match = linkRegex.exec(input)) !== null) {
+      addProblem(match[1]);
+    }
+
+    if (submissions.length > 0) {
+      return submissions;
+    }
+
+    // Strategy 2: Plain-text extraction (Ctrl+A copy-paste from SPOJ profile)
+    // SPOJ profiles list solved problems after a heading like
+    // "List of solved problems" or "solved classical problems", with codes
+    // separated by pipes, commas, spaces, or newlines.
+    const text = input.replace(/<[^>]+>/g, ' '); // strip any residual tags
+
+    // Try to isolate the solved-problems section
+    const sectionMatch = text.match(
+      /(?:list\s+of\s+solved|solved\s+(?:classical\s+)?problems?)[:\s]*([\s\S]*?)(?:todo|to\s*solve|unsolved|list\s+of\s+todo|$)/i
+    );
+    const section = sectionMatch ? sectionMatch[1] : text;
+
+    // Split on common delimiters: pipe, comma, whitespace, parentheses
+    const tokens = section.split(/[|,\s()[\]{}]+/).filter(Boolean);
+    for (const token of tokens) {
+      // SPOJ classical problem codes are typically all-uppercase, 2-20 chars
+      if (/^[A-Z][A-Z0-9_]{1,19}$/.test(token)) {
+        addProblem(token);
+      }
     }
 
     return submissions;
@@ -5637,6 +5736,92 @@ export class ProblemSolvingAggregator {
   }
 
   /**
+   * SPOJ fallback via VJudge's public solved-problems API.
+   * Used when native SPOJ sync is blocked by Cloudflare.
+   */
+  async getSpojSubmissionsFromVJudge(
+    userId,
+    fromTimestamp = null,
+    useV2 = null
+  ) {
+    try {
+      const resolvedUseV2 =
+        typeof useV2 === 'boolean' ? useV2 : await isV2SchemaAvailable();
+
+      let vjHandle = null;
+
+      if (resolvedUseV2) {
+        const vjPlatformId = await getPlatformId('vjudge');
+        if (vjPlatformId) {
+          const { data } = await supabaseAdmin
+            .from(V2_TABLES.USER_HANDLES)
+            .select('handle')
+            .eq('user_id', userId)
+            .eq('platform_id', vjPlatformId)
+            .maybeSingle();
+          vjHandle = data?.handle || null;
+        }
+      } else {
+        const { data } = await supabaseAdmin
+          .from('user_handles')
+          .select('handle')
+          .eq('user_id', userId)
+          .eq('platform', 'vjudge')
+          .maybeSingle();
+        vjHandle = data?.handle || null;
+      }
+
+      if (!vjHandle) {
+        return [];
+      }
+
+      const response = await fetch(
+        `https://vjudge.net/user/solveDetail/${encodeURIComponent(vjHandle)}`,
+        {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            Accept: 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        return [];
+      }
+
+      const payload = await response.json();
+      const spojSolves = Array.isArray(payload?.acRecords?.SPOJ)
+        ? payload.acRecords.SPOJ
+        : [];
+
+      if (spojSolves.length === 0) {
+        return [];
+      }
+
+      // VJudge solve details don't include actual submission timestamps.
+      const syntheticSubmittedAt =
+        normalizeSubmissionTimestamp(fromTimestamp) || new Date().toISOString();
+
+      return spojSolves
+        .map((code) => String(code || '').trim())
+        .filter(Boolean)
+        .map((problemCode) => ({
+          submission_id: `vj_spoj_${problemCode}`,
+          problem_id: problemCode,
+          problem_name: problemCode,
+          problem_url: `https://www.spoj.com/problems/${problemCode}/`,
+          verdict: 'AC',
+          language: 'Unknown',
+          submitted_at: syntheticSubmittedAt,
+        }));
+    } catch (error) {
+      console.warn(`[SPOJ] VJudge fallback failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
    * Universal fallback to fetch submissions/solved problems using Clist API's contest statistics.
    * This handles platforms that don't have a dedicated scraper/API client.
    */
@@ -5818,6 +6003,7 @@ export class ProblemSolvingAggregator {
           }
 
           let submissions = [];
+          let extensionRequired = false;
           switch (handle.platform) {
             case 'codeforces':
               submissions = await this.codeforces.getSubmissions(
@@ -5887,19 +6073,32 @@ export class ProblemSolvingAggregator {
             case 'spoj':
               if (manualHtml) {
                 submissions = this.spoj.parseSolvedProblems(manualHtml);
-              } else {
-                submissions = await this.spoj.getSubmissions(
-                  handle.handle,
-                  fromTimestamp
-                );
-                // If native scraping fails, it will fall through to CLIST API in default case
-                // or user can use browser extension for manual sync
                 if (!submissions || submissions.length === 0) {
-                  // Try CLIST API as fallback
-                  submissions = await this.getSubmissionsFromClist(
-                    'spoj',
+                  return {
+                    platform: handle.platform,
+                    synced: 0,
+                    handle: handle.handle,
+                    success: false,
+                    error: 'Could not parse any solved problems from the pasted content. Make sure you copied from your SPOJ profile page.',
+                  };
+                }
+              } else {
+                try {
+                  submissions = await this.spoj.getSubmissions(
                     handle.handle,
                     fromTimestamp
+                  );
+                } catch (spojError) {
+                  console.warn(
+                    `[SPOJ] Native sync unavailable: ${spojError.message}`
+                  );
+                  submissions = [];
+                }
+                if (!submissions || submissions.length === 0) {
+                  extensionRequired = true;
+                  submissions = [];
+                  console.warn(
+                    '[SPOJ] No reliable server-side submissions due to Cloudflare. Use browser extension import.'
                   );
                 }
               }
@@ -5975,6 +6174,7 @@ export class ProblemSolvingAggregator {
               error_details: {
                 total_fetched: submissions.length,
                 success: insertResult.success,
+                extension_required: extensionRequired,
                 errors: insertResult.errors,
                 batches: insertResult.batches,
               },
@@ -6001,6 +6201,7 @@ export class ProblemSolvingAggregator {
             total: insertResult.total,
             handle: handle.handle,
             success: insertResult.success,
+            extensionRequired,
             errors: insertResult.errors,
             batches: insertResult.batches,
           };
@@ -6081,6 +6282,8 @@ export class ProblemSolvingAggregator {
     forceFullSync = false,
     manualHtml = null
   ) {
+    const useV2 = await isV2SchemaAvailable();
+
     // Get the handle for this platform
     const platformId = await getPlatformId(platform);
     const { data } = await supabaseAdmin
@@ -6107,6 +6310,7 @@ export class ProblemSolvingAggregator {
       }
 
       let submissions = [];
+      let extensionRequired = false;
 
       // Fetch submissions based on platform
       switch (platform) {
@@ -6245,77 +6449,35 @@ export class ProblemSolvingAggregator {
         case 'spoj':
           if (manualHtml) {
             submissions = this.spoj.parseSolvedProblems(manualHtml);
-          } else {
-            submissions = await this.spoj.getSubmissions(
-              handle.handle,
-              fromTimestamp
-            );
-            // If native scraping fails (Cloudflare 403), fallback to VJudge if the user has a VJudge connected
             if (!submissions || submissions.length === 0) {
-              try {
-                // Get the user's VJudge handle from the database (V2 or legacy)
-                let vjHandles = null;
-                if (useV2) {
-                  const { getPlatformId } =
-                    await import('./problem-solving-v2-helpers.js');
-                  const vjPlatformId = await getPlatformId('vjudge');
-                  const { data } = await supabaseAdmin
-                    .from(V2_TABLES.USER_HANDLES)
-                    .select('handle')
-                    .eq('user_id', userId)
-                    .eq('platform_id', vjPlatformId)
-                    .limit(1);
-                  vjHandles = data;
-                } else {
-                  const { data } = await supabaseAdmin
-                    .from('user_handles')
-                    .select('handle')
-                    .eq('user_id', userId)
-                    .eq('platform', 'vjudge')
-                    .limit(1);
-                  vjHandles = data;
-                }
-
-                if (vjHandles && vjHandles.length > 0) {
-                  const vjHandle = vjHandles[0].handle;
-                  const response = await fetch(
-                    `https://vjudge.net/user/solveDetail/${vjHandle}`,
-                    {
-                      headers: {
-                        'User-Agent':
-                          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        Accept: 'application/json',
-                      },
-                    }
-                  );
-                  if (response.ok) {
-                    const data = await response.json();
-                    const spojSolves =
-                      data.acRecords && data.acRecords['SPOJ']
-                        ? data.acRecords['SPOJ']
-                        : [];
-                    if (spojSolves.length > 0) {
-                      submissions = spojSolves.map((probCode) => {
-                        return {
-                          submission_id: `vj_spoj_${probCode}`,
-                          problem_id: probCode,
-                          problem_name: probCode,
-                          problem_url: `https://www.spoj.com/problems/${probCode}/`,
-                          verdict: 'AC',
-                          language: 'Unknown',
-                          submitted_at: new Date().toISOString(),
-                        };
-                      });
-                    }
-                  }
-                }
-              } catch (fallbackError) {
-                console.warn(
-                  `[SPOJ] VJudge fallback failed: ${fallbackError.message}`
-                );
-              }
+              return {
+                platform: handle.platform,
+                synced: 0,
+                handle: handle.handle,
+                success: false,
+                error: 'Could not parse any solved problems from the pasted content. Make sure you copied from your SPOJ profile page.',
+              };
             }
-          } // Close the `else` block for `if (manualHtml) { ... } else { ... }`
+          } else {
+            try {
+              submissions = await this.spoj.getSubmissions(
+                handle.handle,
+                fromTimestamp
+              );
+            } catch (spojError) {
+              console.warn(
+                `[SPOJ] Native sync unavailable: ${spojError.message}`
+              );
+              submissions = [];
+            }
+            if (!submissions || submissions.length === 0) {
+              extensionRequired = true;
+              submissions = [];
+              console.warn(
+                '[SPOJ] No reliable server-side submissions due to Cloudflare. Use browser extension import.'
+              );
+            }
+          }
           break;
         case 'vjudge':
           submissions = await this.vjudge.getSubmissions(
@@ -6361,11 +6523,21 @@ export class ProblemSolvingAggregator {
           break;
       }
 
-      const insertedCount = await this.insertSubmissions(
+      const insertResult = await this.insertSubmissions(
         userId,
         platform,
         submissions
       );
+
+      if (!insertResult.success) {
+        console.warn(
+          `[SYNC] ${platform}: insert completed with errors`,
+          insertResult.errors
+        );
+      }
+
+      const insertedCount = insertResult.inserted || 0;
+
       await this.updateSolves(userId, platform);
       await this.updateDailyActivity(userId);
       await this.updateUserStatistics(userId);
@@ -6375,6 +6547,10 @@ export class ProblemSolvingAggregator {
 
       return {
         synced: insertedCount,
+        total: insertResult.total || submissions.length,
+        success: insertResult.success,
+        extensionRequired,
+        errors: insertResult.errors,
         platform,
         handle: handle.handle,
       };
@@ -6576,6 +6752,10 @@ export class ProblemSolvingAggregator {
 
       const toInsert = await Promise.all(
         validSubmissions.map(async (sub) => {
+          const normalizedVerdict = normalizeSubmissionVerdict(
+            sub.verdict || 'PENDING'
+          );
+
           if (useV2) {
             // V2 schema: submissions table has specific columns
             // id, user_id, problem_id (uuid FK), platform_id, external_submission_id,
@@ -6589,7 +6769,7 @@ export class ProblemSolvingAggregator {
               external_submission_id: sub.submission_id,
               external_problem_id: sub.problem_id,
               problem_name: sub.problem_name || null,
-              verdict: sub.verdict || 'PENDING',
+              verdict: normalizedVerdict,
               language_id: languageId,
               execution_time_ms:
                 sub.runtime_ms || sub.execution_time_ms || null,
@@ -6606,7 +6786,7 @@ export class ProblemSolvingAggregator {
               problem_name: sub.problem_name || null,
               problem_url: sub.problem_url || sub.original_url || null,
               contest_id: sub.contest_id || null,
-              verdict: sub.verdict || 'PENDING',
+              verdict: normalizedVerdict,
               language: sub.language || null,
               execution_time_ms:
                 sub.runtime_ms || sub.execution_time_ms || null,
@@ -6632,9 +6812,8 @@ export class ProblemSolvingAggregator {
       const submissionsTable = useV2
         ? V2_TABLES.SUBMISSIONS
         : 'problem_submissions';
-      // V2 schema unique constraint is on (platform_id, external_submission_id)
       const conflictColumn = useV2
-        ? 'platform_id,external_submission_id'
+        ? 'user_id,platform_id,external_submission_id'
         : 'user_id,platform,submission_id';
 
       for (let i = 0; i < batches.length; i++) {
@@ -6750,10 +6929,11 @@ export class ProblemSolvingAggregator {
         .select('*')
         .eq('user_id', userId)
         .eq('platform_id', platformId)
-        .eq('verdict', 'AC')
         .order('submitted_at', { ascending: true });
 
-      submissions = data || [];
+      submissions = (data || []).filter(
+        (sub) => normalizeSubmissionVerdict(sub.verdict) === 'AC'
+      );
     } else {
       // Legacy: Query from problem_submissions
       const { data } = await supabaseAdmin
@@ -6761,23 +6941,27 @@ export class ProblemSolvingAggregator {
         .select('*')
         .eq('user_id', userId)
         .eq('platform', platform)
-        .eq('verdict', 'AC')
         .order('submitted_at', { ascending: true });
 
-      submissions = data || [];
+      submissions = (data || []).filter(
+        (sub) => normalizeSubmissionVerdict(sub.verdict) === 'AC'
+      );
     }
-
-    if (!submissions || submissions.length === 0) return;
 
     // Build solves map - use external_problem_id for V2, problem_id for legacy
     const solvesByProblem = {};
     for (const sub of submissions) {
       // V2 schema uses external_problem_id, legacy uses problem_id
-      const problemKey = useV2 ? sub.external_problem_id : sub.problem_id;
+      const rawProblemKey = useV2 ? sub.external_problem_id : sub.problem_id;
+      const problemKey = rawProblemKey ? String(rawProblemKey).trim() : '';
       const submittedAt =
         sub.submitted_at && Number.isFinite(Date.parse(sub.submitted_at))
           ? sub.submitted_at
           : null;
+
+      if (!problemKey) {
+        continue;
+      }
 
       // Skip bad data with acRecords/failRecords patterns
       if (
@@ -6833,6 +7017,74 @@ export class ProblemSolvingAggregator {
         }
       }
     }
+
+    // V2 cleanup: remove stale solves (and linked solutions) for this platform
+    // so verdict corrections cannot leave orphaned solved-problem entries.
+    if (useV2) {
+      const validProblemKeys = new Set(Object.keys(solvesByProblem));
+
+      try {
+        const { data: existingSolveRows, error: existingSolveError } =
+          await supabaseAdmin
+            .from(V2_TABLES.USER_SOLVES)
+            .select('id, problems!inner(external_id, platform_id)')
+            .eq('user_id', userId)
+            .eq('problems.platform_id', platformId);
+
+        if (existingSolveError) {
+          console.warn(
+            `[${platform.toUpperCase()}] V2 stale solve lookup failed:`,
+            existingSolveError.message
+          );
+        } else {
+          const orphanSolveIds = (existingSolveRows || [])
+            .filter((row) => {
+              const joinedProblem = Array.isArray(row.problems)
+                ? row.problems[0]
+                : row.problems;
+              const externalId = String(
+                joinedProblem?.external_id || ''
+              ).trim();
+              return !externalId || !validProblemKeys.has(externalId);
+            })
+            .map((row) => row.id)
+            .filter(Boolean);
+
+          if (orphanSolveIds.length > 0) {
+            const { error: deleteSolutionsError } = await supabaseAdmin
+              .from(V2_TABLES.SOLUTIONS)
+              .delete()
+              .in('user_solve_id', orphanSolveIds);
+
+            if (deleteSolutionsError) {
+              console.warn(
+                `[${platform.toUpperCase()}] V2 stale solution cleanup failed:`,
+                deleteSolutionsError.message
+              );
+            }
+
+            const { error: deleteSolvesError } = await supabaseAdmin
+              .from(V2_TABLES.USER_SOLVES)
+              .delete()
+              .in('id', orphanSolveIds);
+
+            if (deleteSolvesError) {
+              console.warn(
+                `[${platform.toUpperCase()}] V2 stale solve cleanup failed:`,
+                deleteSolvesError.message
+              );
+            }
+          }
+        }
+      } catch (cleanupError) {
+        console.warn(
+          `[${platform.toUpperCase()}] V2 stale solve cleanup exception:`,
+          cleanupError.message
+        );
+      }
+    }
+
+    if (!submissions || submissions.length === 0) return;
 
     const solves = Object.values(solvesByProblem);
     const BATCH_SIZE = 100;
@@ -7517,17 +7769,39 @@ export class ProblemSolvingAggregator {
           (contestsByPlatform[contest.platform_id] || 0) + 1;
       });
 
-      // Count total submissions per platform
-      const { data: subs } = await supabaseAdmin
-        .from(V2_TABLES.SUBMISSIONS)
-        .select('platform_id')
-        .eq('user_id', userId);
-
+      // Count total submissions per platform.
+      // Supabase/PostgREST returns paged results; fetch all pages to avoid
+      // under-counting users with >1000 submissions.
       const subsByPlatform = {};
-      (subs || []).forEach((s) => {
-        subsByPlatform[s.platform_id] =
-          (subsByPlatform[s.platform_id] || 0) + 1;
-      });
+      const SUBMISSIONS_PAGE_SIZE = 1000;
+      for (let offset = 0; ; offset += SUBMISSIONS_PAGE_SIZE) {
+        const { data: subsPage, error: subsPageError } = await supabaseAdmin
+          .from(V2_TABLES.SUBMISSIONS)
+          .select('platform_id')
+          .eq('user_id', userId)
+          .range(offset, offset + SUBMISSIONS_PAGE_SIZE - 1);
+
+        if (subsPageError) {
+          console.warn(
+            `[STATS] Failed to fetch submissions page at offset ${offset}:`,
+            subsPageError.message
+          );
+          break;
+        }
+
+        if (!subsPage || subsPage.length === 0) {
+          break;
+        }
+
+        subsPage.forEach((s) => {
+          subsByPlatform[s.platform_id] =
+            (subsByPlatform[s.platform_id] || 0) + 1;
+        });
+
+        if (subsPage.length < SUBMISSIONS_PAGE_SIZE) {
+          break;
+        }
+      }
 
       const platformStatRows = handles.map((h) => ({
         user_id: userId,

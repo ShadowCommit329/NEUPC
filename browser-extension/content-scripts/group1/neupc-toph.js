@@ -60,6 +60,10 @@
     return el ? el.textContent.trim() : '';
   }
 
+  function escapeRegex(value) {
+    return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
   function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
@@ -125,7 +129,7 @@
       const path = window.location.pathname;
 
       // Single submission page: /s/{id}
-      if (path.match(/\/s\/[a-z0-9]+$/i)) {
+      if (path.match(/\/s\/[a-z0-9]+\/?$/i)) {
         return 'submission';
       }
 
@@ -135,7 +139,7 @@
       }
 
       // Problem page: /p/{slug}
-      if (path.match(/\/p\/[^/]+$/)) {
+      if (path.match(/\/p\/[^/?#]+\/?$/i)) {
         return 'problem';
       }
 
@@ -152,7 +156,7 @@
       const userLinks = safeQueryAll('a[href*="/u/"]');
       for (const link of userLinks) {
         const href = link.getAttribute('href');
-        const match = href.match(/\/u\/([^/]+)$/);
+        const match = href?.match(/\/u\/([^/?#]+)/);
         if (match) {
           return match[1];
         }
@@ -173,7 +177,7 @@
         const path = window.location.pathname;
 
         // Extract submission ID from URL: /s/{id}
-        const submissionMatch = path.match(/\/s\/([a-z0-9]+)$/i);
+        const submissionMatch = path.match(/\/s\/([a-z0-9]+)\/?$/i);
         if (!submissionMatch) {
           log('No submission ID in URL');
           return null;
@@ -313,27 +317,13 @@
         // Extract source code
         // ============================================================
 
-        const codeSelectors = [
-          'pre.code',
-          '.source-code pre',
-          'pre[class*="source"]',
-          '.submission-code pre',
-          'pre.prettyprint',
-          '.code-area pre',
-          'pre.highlight',
-          'pre',
-        ];
+        await this.revealSourceCodeIfNeeded();
 
-        for (const selector of codeSelectors) {
-          const codeEl = safeQuery(selector);
-          if (codeEl) {
-            const text = codeEl.textContent.trim();
-            if (text.length > 20 && this.looksLikeCode(text)) {
-              sourceCode = text;
-              log('Found source code with selector:', selector);
-              break;
-            }
-          }
+        sourceCode = this.extractBestSourceCode();
+        if (sourceCode) {
+          log('Found source code candidate', {
+            length: sourceCode.length,
+          });
         }
 
         // ============================================================
@@ -353,7 +343,7 @@
           language: language || '',
           executionTime: executionTime,
           memoryUsed: memoryUsed,
-          submittedAt: submittedAt || new Date().toISOString(),
+          submittedAt: submittedAt || null,
           sourceCode: sourceCode,
           difficultyRating: null,
           tags: [],
@@ -399,6 +389,354 @@
       return indicators.some((ind) => text.includes(ind));
     }
 
+    normalizeCodeCandidate(text) {
+      if (typeof text !== 'string') return '';
+
+      return text
+        .replace(/\r\n?/g, '\n')
+        .replace(/^\uFEFF/, '')
+        .replace(/[\u0000\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g, '')
+        .trim();
+    }
+
+    isPlausibleCode(text) {
+      const normalized = this.normalizeCodeCandidate(text);
+      if (!normalized || normalized.length < 10) return false;
+
+      if (this.looksLikeCode(normalized)) return true;
+      if (/^\s*#!/m.test(normalized)) return true;
+      if (
+        /\b(echo|read|printf|then|fi|elif|done|function)\b/i.test(normalized)
+      ) {
+        return true;
+      }
+      if (normalized.length >= 120) return true;
+      if (normalized.includes('\n') && /[{}();=#<>\[\]]/.test(normalized)) {
+        return true;
+      }
+
+      return false;
+    }
+
+    async revealSourceCodeIfNeeded() {
+      const triggers = safeQueryAll('a, button, [role="button"]').filter(
+        (el) => {
+          const label = extractText(el).toLowerCase();
+          const href = String(el.getAttribute('href') || '').toLowerCase();
+          const id = String(el.id || '').toLowerCase();
+          const className = String(el.className || '').toLowerCase();
+          const tagName = String(el.tagName || '').toLowerCase();
+
+          const mentionsSourceOrCode =
+            /source|code/.test(label) ||
+            /source|code/.test(href) ||
+            /source|code/.test(id) ||
+            /source|code/.test(className);
+
+          if (!mentionsSourceOrCode) {
+            return false;
+          }
+
+          // Never click controls that look like file/download actions.
+          if (
+            /download|attachment|export|raw/.test(
+              `${label} ${href} ${id} ${className}`
+            )
+          ) {
+            return false;
+          }
+
+          if (tagName === 'a') {
+            // Avoid navigation/download links. Only allow in-page tab anchors.
+            const hasDownloadAttr = el.hasAttribute('download');
+            if (hasDownloadAttr) {
+              return false;
+            }
+
+            if (href.length === 0) {
+              return true;
+            }
+
+            if (href.startsWith('#') || href.startsWith('javascript:')) {
+              return true;
+            }
+
+            return false;
+          }
+
+          return true;
+        }
+      );
+
+      for (const trigger of triggers.slice(0, 3)) {
+        try {
+          trigger.click();
+          await sleep(250);
+        } catch {
+          // Ignore click failures and continue with extraction.
+        }
+      }
+    }
+
+    extractBestSourceCode() {
+      const candidates = [];
+
+      const pushCandidate = (text, selector, bonus = 0) => {
+        const normalized = this.normalizeCodeCandidate(text);
+        if (!normalized) return;
+
+        const score =
+          normalized.length +
+          (normalized.includes('\n') ? 40 : 0) +
+          (this.looksLikeCode(normalized) ? 180 : 0) +
+          bonus;
+
+        candidates.push({ text: normalized, selector, score });
+      };
+
+      const lineSelectors = [
+        '.CodeMirror-code pre',
+        '.CodeMirror-line',
+        '.ace_line',
+        '.ace_text-layer .ace_line',
+      ];
+
+      for (const selector of lineSelectors) {
+        const lines = safeQueryAll(selector)
+          .map((el) => (el.textContent || '').replace(/\u00A0/g, ' '))
+          .filter((line) => line.trim().length > 0);
+        if (lines.length > 0) {
+          pushCandidate(lines.join('\n'), selector, 260);
+        }
+      }
+
+      const blockSelectors = [
+        'pre#program-source-text',
+        '#program-source-text',
+        '.source-code pre',
+        '.source-code code',
+        'pre[class*="source"]',
+        '.submission-code pre',
+        '.submission-code code',
+        'pre.prettyprint',
+        '.code-area pre',
+        '.codehilite pre',
+        'textarea#sourceCodeTextarea',
+        'textarea[name*="source"]',
+        'textarea',
+        '.ace_content',
+        '.CodeMirror-code',
+        'pre code',
+        'pre',
+      ];
+
+      for (const selector of blockSelectors) {
+        const elements = safeQueryAll(selector);
+        for (const el of elements) {
+          const text = el?.textContent || el?.value || '';
+          if (text && text.trim().length >= 8) {
+            const selectorBonus = selector === 'pre code' ? 120 : 0;
+            pushCandidate(text, selector, selectorBonus);
+          }
+        }
+      }
+
+      const plausible = candidates.filter((candidate) =>
+        this.isPlausibleCode(candidate.text)
+      );
+      const pool = plausible.length > 0 ? plausible : candidates;
+      if (pool.length === 0) {
+        return null;
+      }
+
+      pool.sort((a, b) => b.score - a.score);
+      return pool[0].text;
+    }
+
+    extractLabeledSectionFromText(text, labels, allSectionLabels) {
+      if (typeof text !== 'string' || !text.trim()) return null;
+      if (!Array.isArray(labels) || labels.length === 0) return null;
+
+      const labelPattern = labels.map((label) => escapeRegex(label)).join('|');
+      const boundaryPattern = allSectionLabels
+        .map((label) => escapeRegex(label))
+        .join('|');
+
+      const regex = new RegExp(
+        `(?:^|\\n)\\s*(?:${labelPattern})\\s*:?\\s*([\\s\\S]*?)(?=\\n\\s*(?:${boundaryPattern})\\s*:?|$)`,
+        'i'
+      );
+
+      const match = text.match(regex);
+      if (!match?.[1]) return null;
+
+      const section = match[1].trim();
+      return section.length > 0 ? section : null;
+    }
+
+    extractProblemDetails() {
+      const path = window.location.pathname;
+      const problemMatch = path.match(/\/p\/([^/?#]+)\/?$/i);
+      const problemId = problemMatch?.[1] || null;
+
+      const headingEl =
+        safeQuery('h1') ||
+        safeQuery('.problem-title') ||
+        safeQuery('.panel__title h3') ||
+        safeQuery('main h2');
+
+      const titleFromHeading = extractText(headingEl);
+      const titleFromDocument =
+        document?.title
+          ?.replace(/\s*\|\s*Toph.*$/i, '')
+          .replace(/\s*-\s*Toph.*$/i, '')
+          .trim() || '';
+      const problemName =
+        titleFromHeading || titleFromDocument || problemId || '';
+
+      const rootSelectors = [
+        '.problem-statement',
+        '.statement',
+        '.problem-body',
+        '.problem',
+        'article',
+        '.panel__body',
+        'main',
+      ];
+
+      let bestRoot = null;
+      let bestLength = 0;
+      for (const selector of rootSelectors) {
+        const elements = safeQueryAll(selector);
+        for (const el of elements) {
+          const length = (el?.textContent || '').trim().length;
+          if (length > bestLength) {
+            bestLength = length;
+            bestRoot = el;
+          }
+        }
+      }
+
+      const root = bestRoot || document.body;
+      const rootText = this.normalizeCodeCandidate(root?.textContent || '');
+
+      const sectionLabels = [
+        'Input Format',
+        'Input',
+        'Output Format',
+        'Output',
+        'Constraints',
+        'Sample Input',
+        'Sample Output',
+        'Example',
+        'Examples',
+        'Explanation',
+        'Note',
+        'Notes',
+      ];
+
+      const firstSectionRegex = new RegExp(
+        `\\n\\s*(?:${sectionLabels.map((label) => escapeRegex(label)).join('|')})\\s*:`,
+        'i'
+      );
+      const firstSectionIndex = rootText.search(firstSectionRegex);
+      const description =
+        firstSectionIndex > 0
+          ? rootText.slice(0, firstSectionIndex).trim()
+          : rootText.trim();
+
+      const inputFormat = this.extractLabeledSectionFromText(
+        rootText,
+        ['Input Format', 'Input'],
+        sectionLabels
+      );
+      const outputFormat = this.extractLabeledSectionFromText(
+        rootText,
+        ['Output Format', 'Output'],
+        sectionLabels
+      );
+      const constraints = this.extractLabeledSectionFromText(
+        rootText,
+        ['Constraints'],
+        sectionLabels
+      );
+
+      const examples = [];
+      const sampleRegex =
+        /Sample\s*Input\s*:?\s*([\s\S]*?)\n\s*Sample\s*Output\s*:?\s*([\s\S]*?)(?=\n\s*(?:Sample\s*Input|Explanation|Notes?|Constraints?|$))/gi;
+      let sampleMatch;
+      while ((sampleMatch = sampleRegex.exec(rootText)) !== null) {
+        const input = (sampleMatch[1] || '').trim();
+        const output = (sampleMatch[2] || '').trim();
+        if (input || output) {
+          examples.push({ input, output, explanation: '' });
+        }
+      }
+
+      const tutorialLink = safeQueryAll('a[href]').find((link) => {
+        const href = String(link?.href || '').toLowerCase();
+        const text = extractText(link).toLowerCase();
+        return (
+          href.includes('tutorial') ||
+          href.includes('editorial') ||
+          href.includes('solution') ||
+          text.includes('tutorial') ||
+          text.includes('editorial') ||
+          text.includes('solution')
+        );
+      });
+
+      return {
+        platform: this.platform,
+        problemId: problemId || null,
+        problemName,
+        problemUrl: window.location.href,
+        problemDescription: description || null,
+        description: description || null,
+        inputFormat: inputFormat || null,
+        input_format: inputFormat || null,
+        outputFormat: outputFormat || null,
+        output_format: outputFormat || null,
+        constraints: constraints || null,
+        examples,
+        notes: null,
+        tutorialUrl: tutorialLink?.href || null,
+        tutorial_url: tutorialLink?.href || null,
+        tutorialContent: null,
+        tutorial_content: null,
+        tutorialSolutions: [],
+        tutorial_solutions: [],
+        difficultyRating: null,
+        difficulty_rating: null,
+        tags: [],
+      };
+    }
+
+    hasMeaningfulProblemDetails(details) {
+      if (!details || typeof details !== 'object') {
+        return false;
+      }
+
+      const description = String(
+        details.problemDescription || details.description || ''
+      ).trim();
+      const inputFormat = String(
+        details.inputFormat || details.input_format || ''
+      ).trim();
+      const outputFormat = String(
+        details.outputFormat || details.output_format || ''
+      ).trim();
+      const constraints = String(details.constraints || '').trim();
+      const examples = Array.isArray(details.examples) ? details.examples : [];
+
+      const hasDescription = description.length >= 15;
+      const hasInputOutput = inputFormat.length > 0 && outputFormat.length > 0;
+      const hasConstraints = constraints.length > 0;
+      const hasExamples = examples.length > 0;
+
+      return hasDescription || hasInputOutput || hasConstraints || hasExamples;
+    }
+
     // ============================================================
     // MESSAGE HANDLING
     // ============================================================
@@ -411,7 +749,12 @@
           log('Message received:', request.action);
 
           if (request.action === 'extractSubmission') {
-            this.handleExtractSubmissionMessage(sendResponse);
+            this.handleExtractSubmissionMessage(request, sendResponse);
+            return true;
+          }
+
+          if (request.action === 'extractProblemDetails') {
+            this.handleExtractProblemDetailsMessage(sendResponse);
             return true;
           }
 
@@ -441,25 +784,119 @@
       );
     }
 
-    async handleExtractSubmissionMessage(sendResponse) {
+    async handleExtractSubmissionMessage(request, sendResponse) {
       try {
-        if (this.extractionComplete && this.extractionResult) {
-          sendResponse({ success: true, data: this.extractionResult });
+        const pageType = this.detectPageType();
+        if (pageType !== 'submission') {
+          sendResponse({
+            success: false,
+            nonRetriable: true,
+            error: 'Not on Toph submission page',
+          });
           return;
         }
 
-        const submission = await this.extractSubmission();
-        this.extractionResult = submission;
-        this.extractionComplete = true;
+        const requiresSourceCode = request?.requireSourceCode === true;
+
+        let submission = this.extractionResult;
+        const hasCachedSource =
+          typeof submission?.sourceCode === 'string' &&
+          submission.sourceCode.trim().length > 0;
+
+        if (!submission || (requiresSourceCode && !hasCachedSource)) {
+          const attempts = requiresSourceCode ? 4 : 1;
+          let bestSubmission = submission;
+
+          for (let attempt = 0; attempt < attempts; attempt++) {
+            const extracted = await this.extractSubmission();
+            if (extracted) {
+              const extractedSourceLength =
+                typeof extracted.sourceCode === 'string'
+                  ? extracted.sourceCode.trim().length
+                  : 0;
+              const bestSourceLength =
+                typeof bestSubmission?.sourceCode === 'string'
+                  ? bestSubmission.sourceCode.trim().length
+                  : 0;
+
+              if (!bestSubmission || extractedSourceLength > bestSourceLength) {
+                bestSubmission = extracted;
+              }
+
+              if (!requiresSourceCode || extractedSourceLength > 0) {
+                break;
+              }
+            }
+
+            if (attempt < attempts - 1) {
+              await sleep(700 + attempt * 400);
+            }
+          }
+
+          submission = bestSubmission;
+          this.extractionResult = submission;
+          this.extractionComplete = true;
+        }
+
+        if (
+          requiresSourceCode &&
+          submission &&
+          !(
+            typeof submission.sourceCode === 'string' &&
+            submission.sourceCode.trim()
+          )
+        ) {
+          sendResponse({
+            success: false,
+            pending: true,
+            data: submission,
+            error: 'Toph source code not ready yet',
+          });
+          return;
+        }
 
         sendResponse({
-          success: !!submission?.sourceCode,
-          data: submission,
+          success: !!submission,
+          data: submission || null,
           error: submission ? null : 'No submission found',
         });
       } catch (error) {
         logError('Extract submission error:', error);
         sendResponse({ success: false, error: error.message });
+      }
+    }
+
+    async handleExtractProblemDetailsMessage(sendResponse) {
+      try {
+        const pageType = this.detectPageType();
+        if (pageType !== 'problem') {
+          sendResponse({
+            success: false,
+            pending: true,
+            error: 'Not on Toph problem page yet',
+          });
+          return;
+        }
+
+        await waitForElement('body', 4000).catch(() => null);
+        await sleep(350);
+
+        const details = this.extractProblemDetails();
+        if (!this.hasMeaningfulProblemDetails(details)) {
+          sendResponse({
+            success: false,
+            pending: true,
+            error: 'Toph problem details not ready yet',
+          });
+          return;
+        }
+
+        sendResponse({ success: true, data: details, error: null });
+      } catch (error) {
+        sendResponse({
+          success: false,
+          error: error?.message || 'Failed to extract Toph problem details',
+        });
       }
     }
 
@@ -475,7 +912,13 @@
           browserAPI.storage.sync.get(['autoSync', 'extensionToken'], resolve);
         });
 
-        if (result.autoSync && result.extensionToken && submission.sourceCode) {
+        if (result.autoSync && result.extensionToken) {
+          if (!submission.sourceCode) {
+            logWarn(
+              'Auto-sync continuing without source code. Metadata will be synced first.'
+            );
+          }
+
           log(
             `Auto-syncing ${submission.verdict || 'UNKNOWN'} submission to backend...`
           );

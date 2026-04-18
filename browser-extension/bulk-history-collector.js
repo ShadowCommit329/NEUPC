@@ -67,10 +67,52 @@ async function collectSubmissionHistory(platform, userHandle, maxPages = 50) {
 
     atcoder: async () => {
       try {
-        const response = await fetch(
-          `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${userHandle}&from_second=0`
+        const encodedHandle = encodeURIComponent(
+          String(userHandle || '').trim()
         );
-        const submissions = await response.json();
+        const submissions = [];
+        const seenSubmissionIds = new Set();
+        let fromSecond = 0;
+        const pageSize = 500;
+        const maxBatches = 400;
+
+        for (let batchIndex = 0; batchIndex < maxBatches; batchIndex++) {
+          const response = await fetch(
+            `https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=${encodedHandle}&from_second=${fromSecond}`
+          );
+
+          if (!response.ok) {
+            throw new Error(`AtCoder API HTTP ${response.status}`);
+          }
+
+          const batch = await response.json();
+          if (!Array.isArray(batch) || batch.length === 0) {
+            break;
+          }
+
+          for (const sub of batch) {
+            if (!sub || sub.id == null) continue;
+            const submissionId = String(sub.id);
+            if (seenSubmissionIds.has(submissionId)) continue;
+            seenSubmissionIds.add(submissionId);
+            submissions.push(sub);
+          }
+
+          const lastEpochSecond = Number(batch[batch.length - 1]?.epoch_second);
+          if (!Number.isFinite(lastEpochSecond) || batch.length < pageSize) {
+            break;
+          }
+
+          const nextFromSecond = Math.floor(lastEpochSecond) + 1;
+          if (
+            !Number.isFinite(nextFromSecond) ||
+            nextFromSecond <= fromSecond
+          ) {
+            break;
+          }
+
+          fromSecond = nextFromSecond;
+        }
 
         const allSubmissions = submissions.map((sub) => ({
           platform: 'atcoder',

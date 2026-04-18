@@ -163,7 +163,8 @@
           if (memMatch) {
             memoryUsed = parseInt(memMatch[1]);
             if (memMatch[2].toUpperCase().includes('M')) memoryUsed *= 1024;
-    autoSyncIfEnabled(submission) {
+    }
+    const autoSyncIfEnabled = (submission) => {
       const browserAPI =
         typeof chrome !== 'undefined'
           ? chrome
@@ -215,7 +216,7 @@
           language,
           executionTime,
           memoryUsed,
-          submittedAt: new Date().toISOString(),
+          submittedAt: null,
           sourceCode,
         };
       } catch (error) {
@@ -247,7 +248,7 @@
       if (pageType === 'submission') {
         const submission = await this.extractSubmission();
         if (submission) {
-          log\('Extracted:', submission\);
+          log('Extracted:', submission);
               
               // Auto-sync if enabled and submission is AC
               this.storeSubmission && this.autoSyncIfEnabled && this.autoSyncIfEnabled(submission);

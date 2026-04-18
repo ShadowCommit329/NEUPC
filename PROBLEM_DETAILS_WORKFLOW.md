@@ -8,7 +8,7 @@ This document describes the complete end-to-end workflow for extracting, storing
 
 ## 🔄 Complete Data Flow
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                    1. BROWSER EXTENSION                          │
 │                      (Data Extraction)                           │
@@ -424,7 +424,8 @@ For each page:
    ```
 
 4. **Send batch to API**:
-   ```javascript
+
+  ```javascript
    await importSubmissionsToBackend(newSubmissions, platform);
    ```
 
@@ -475,7 +476,8 @@ When background script sends `'extractProblemDetails'` message:
    ```
 
 3. **Return structured data**:
-   ```javascript
+
+  ```javascript
    return {
      success: true,
      data: {
@@ -583,7 +585,8 @@ When user opens their problems page:
    ```
 
 2. **Transform and return**:
-   ```javascript
+
+  ```javascript
    const problems = userSolves.map((us) => ({
      problem_id: us.problems.external_id,
      problem_name: us.problems.name,

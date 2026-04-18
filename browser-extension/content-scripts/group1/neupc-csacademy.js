@@ -215,7 +215,7 @@
           language,
           executionTime,
           memoryUsed: null,
-          submittedAt: new Date().toISOString(),
+          submittedAt: null,
           sourceCode,
           contestId: contestId || null,
         };
@@ -318,6 +318,7 @@
       } else {
         log('Browser storage API not available');
       }
+    }
     autoSyncIfEnabled(submission) {
       const browserAPI =
         typeof chrome !== 'undefined'

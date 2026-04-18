@@ -715,7 +715,7 @@ export function sanitizeSubmission(submission) {
     sourceCode: submission.sourceCode?.toString() || null,
     executionTime: parseNumber(submission.executionTime),
     memoryUsed: parseNumber(submission.memoryUsed),
-    submittedAt: parseDate(submission.submittedAt) || new Date().toISOString(),
+    submittedAt: parseDate(submission.submittedAt) || null,
     contestId: submission.contestId?.toString() || '',
     difficultyRating: parseNumber(submission.difficultyRating),
     tags: Array.isArray(submission.tags) ? submission.tags : [],

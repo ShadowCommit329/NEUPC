@@ -242,9 +242,9 @@ function GettingStartedCard() {
           Welcome to Problem Solving!
         </h3>
         <p className="mx-auto mb-6 max-w-lg text-sm text-gray-400 sm:mb-8 sm:text-base">
-          Connect your{' '}
-          <span className="font-semibold text-blue-400">Codeforces</span> handle
-          to start tracking your competitive programming progress.
+          Connect your platform handles to start tracking your competitive
+          programming progress across Codeforces, AtCoder, LeetCode, SPOJ, and
+          more.
         </p>
         {/* Steps - Vertical on mobile, horizontal on tablet+ */}
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
@@ -417,7 +417,6 @@ export default function ProblemSolvingClient({ userId }) {
     sync,
     syncPlatform,
     syncContestHistory: _syncContestHistory,
-    cleanupLeetCodeData,
     refetch,
   } = useProblemSolving();
   const {
@@ -462,15 +461,7 @@ export default function ProblemSolvingClient({ userId }) {
 
   // Silent background sync - no modal, just toast notifications
   const handleBackgroundSync = useCallback(
-    async (platform = null) => {
-      if (platform === 'leetcode') {
-        showToast(
-          'LeetCode sync is extension-only. Use browser extension to extract data.',
-          'info'
-        );
-        return;
-      }
-
+    async (platform = null, manualHtml = null) => {
       // Show starting toast
       const syncLabel = platform
         ? `Syncing ${platform}...`
@@ -480,7 +471,7 @@ export default function ProblemSolvingClient({ userId }) {
       try {
         let result;
         if (platform) {
-          result = await syncPlatform(platform, false);
+          result = await syncPlatform(platform, false, manualHtml);
         } else {
           result = await sync(true);
         }
@@ -591,9 +582,9 @@ export default function ProblemSolvingClient({ userId }) {
   );
 
   const handleSyncPlatform = useCallback(
-    (platform) => {
+    (platform, manualHtml = null) => {
       if (!platform) return;
-      handleBackgroundSync(platform);
+      handleBackgroundSync(platform, manualHtml);
     },
     [handleBackgroundSync]
   );
@@ -627,15 +618,6 @@ export default function ProblemSolvingClient({ userId }) {
     },
     [disconnect, refetch, runWithToast]
   );
-
-  const handleCleanupLeetCode = useCallback(async () => {
-    await runWithToast(
-      () => cleanupLeetCodeData(),
-      'Previous LeetCode data removed. Use browser extension to extract fresh history.',
-      'Failed to clean LeetCode data'
-    );
-    refetch();
-  }, [cleanupLeetCodeData, refetch, runWithToast]);
 
   // Handle tag click from Topic Mastery - switch to Problems tab with tag filter
   const handleTagClick = useCallback((tag) => {
@@ -724,6 +706,35 @@ export default function ProblemSolvingClient({ userId }) {
   // Memoized check for connected accounts
   const hasConnectedAccounts = useMemo(() => handles.length > 0, [handles]);
 
+  // Show dashboard sections when historical/synced data exists even if
+  // handles are currently disconnected or missing.
+  const hasProblemSolvingData = useMemo(() => {
+    const totalSolved = Number(statistics?.total_solved || 0);
+    const totalSubmissions = Number(statistics?.total_submissions || 0);
+
+    const hasActivity = Array.isArray(dailyActivity)
+      ? dailyActivity.some((day) => Number(day?.problems_solved || 0) > 0)
+      : false;
+
+    return (
+      totalSolved > 0 ||
+      totalSubmissions > 0 ||
+      (Array.isArray(recentSubmissions) && recentSubmissions.length > 0) ||
+      (Array.isArray(ratingHistory) && ratingHistory.length > 0) ||
+      (Array.isArray(contestHistory) && contestHistory.length > 0) ||
+      (Array.isArray(badges) && badges.length > 0) ||
+      hasActivity
+    );
+  }, [
+    badges,
+    contestHistory,
+    dailyActivity,
+    ratingHistory,
+    recentSubmissions,
+    statistics?.total_solved,
+    statistics?.total_submissions,
+  ]);
+
   if (loading) {
     return <LoadingState />;
   }
@@ -758,7 +769,6 @@ export default function ProblemSolvingClient({ userId }) {
               onConnect={handleConnect}
               onDisconnect={handleDisconnect}
               onSyncPlatform={handleSyncPlatform}
-              onCleanupLeetCode={handleCleanupLeetCode}
               isConnecting={handleLoading}
               isSyncing={syncing || !!syncingPlatform}
               syncingPlatform={syncingPlatform}
@@ -770,10 +780,12 @@ export default function ProblemSolvingClient({ userId }) {
             <ExtensionGuide />
 
             {/* Getting Started Card for New Users */}
-            {!hasConnectedAccounts && <GettingStartedCard />}
+            {!hasConnectedAccounts && !hasProblemSolvingData && (
+              <GettingStartedCard />
+            )}
 
             {/* Content Grid for Connected Users */}
-            {hasConnectedAccounts && (
+            {(hasConnectedAccounts || hasProblemSolvingData) && (
               <>
                 {/* Stats Overview - with Difficulty Distribution and Badges */}
                 <StatsOverview

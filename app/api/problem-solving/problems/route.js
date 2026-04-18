@@ -941,8 +941,11 @@ export async function GET(request) {
         return {
           id: sol.id,
           submission_uuid: sol.submission_id,
-          submission_id: submission?.external_submission_id || null,
-          source_code: sol.source_code,
+          submission_id:
+            submission?.external_submission_id || sol.submission_id || null,
+          source_code: sol.source_code || submission?.source_code || null,
+          submission: submission || null,
+          submissions: submission || null,
           language: sol.languages?.code || sol.languages?.name || null,
           verdict: sol.verdict || null,
           is_primary: !!sol.is_primary,

@@ -4,7 +4,8 @@
  * @access member
  *
  * Allows members to connect their online judge handles (Codeforces,
- * AtCoder, LeetCode), track daily problem solving activity, view
+ * AtCoder, LeetCode, SPOJ, and others), track daily problem solving
+ * activity, view
  * statistics, and see leaderboard rankings.
  *
  * Features:

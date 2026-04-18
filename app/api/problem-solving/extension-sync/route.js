@@ -57,6 +57,8 @@ const SUBMISSION_COOLDOWN_MS = 1000;
 
 const MIN_REASONABLE_SUBMISSION_MS = Date.parse('2005-01-01T00:00:00.000Z');
 const MAX_SUBMISSION_FUTURE_DRIFT_MS = 24 * 60 * 60 * 1000;
+const ACCEPTED_SOURCE_PLACEHOLDER =
+  '// Source code unavailable from extension capture. Run full import to attach source code.';
 
 function logExtensionSyncTest(event, payload = {}) {
   console.warn(`[EXTENSION-SYNC][TEST] ${event}`, payload);
@@ -109,6 +111,16 @@ function normalizeLeetCodeProblemSlug(value) {
   slug = slug.split(/[/?#]/)[0].trim();
 
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? slug : null;
+}
+
+function normalizeVJudgeSubmissionId(value) {
+  if (value === null || value === undefined) return null;
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  const normalized = raw.replace(/^vj_/i, '');
+  return normalized ? `vj_${normalized}` : null;
 }
 
 function isSyntheticLeetCodeSubmissionId(value) {
@@ -284,6 +296,22 @@ export async function POST(request) {
       tutorialSolutions,
     } = body;
 
+    const normalizedVerdict = normalizeVerdict(verdict);
+    const hasSolutionCode =
+      typeof solutionCode === 'string' && solutionCode.trim().length > 0;
+    const normalizedLanguage =
+      typeof language === 'string' && language.trim().length > 0
+        ? language.trim()
+        : null;
+    const requiresAcceptedSourceFallback =
+      isAcceptedVerdict(normalizedVerdict) && !hasSolutionCode;
+    const effectiveSolutionCode = hasSolutionCode
+      ? solutionCode
+      : requiresAcceptedSourceFallback
+        ? ACCEPTED_SOURCE_PLACEHOLDER
+        : null;
+    const effectiveLanguage = normalizedLanguage || 'Unknown';
+
     const normalizedProblemDescription =
       problemDescription ??
       body.problem_description ??
@@ -308,10 +336,11 @@ export async function POST(request) {
       platform: platform || null,
       problemId: problemId || null,
       submissionId: submissionId || null,
-      verdict: verdict || null,
-      language: language || null,
-      codeLength:
-        typeof solutionCode === 'string' ? solutionCode.length : 0,
+      verdict: normalizedVerdict || null,
+      language: effectiveLanguage || null,
+      hasSolutionCode,
+      codeLength: hasSolutionCode ? solutionCode.length : 0,
+      usedSourcePlaceholder: requiresAcceptedSourceFallback,
       tagsCount: Array.isArray(tags) ? tags.length : 0,
       examplesCount: Array.isArray(examples) ? examples.length : 0,
       hasTutorial:
@@ -321,18 +350,17 @@ export async function POST(request) {
     });
 
     // Validate required fields
-    if (!platform || !problemId || !problemName || !solutionCode || !language) {
+    if (!platform || !problemId || !problemName) {
       logExtensionSyncTest('validation_failed_missing_required', {
         hasPlatform: !!platform,
         hasProblemId: !!problemId,
         hasProblemName: !!problemName,
-        hasSolutionCode: !!solutionCode,
-        hasLanguage: !!language,
+        hasSolutionCode,
+        hasLanguage: !!normalizedLanguage,
       });
       return NextResponse.json(
         {
-          error:
-            'Missing required fields: platform, problemId, problemName, solutionCode, language',
+          error: 'Missing required fields: platform, problemId, problemName',
         },
         { status: 400 }
       );
@@ -421,11 +449,12 @@ export async function POST(request) {
         contestId,
         difficultyRating,
         tags,
-        solutionCode,
-        language,
+        solutionCode: effectiveSolutionCode,
+        language: effectiveLanguage,
+        sourceCodeCaptured: hasSolutionCode,
         submissionId,
         submissionTime,
-        verdict,
+        verdict: normalizedVerdict,
         executionTime,
         memoryUsage,
         inputFormat,
@@ -455,11 +484,11 @@ export async function POST(request) {
         contestId,
         difficultyRating,
         tags,
-        solutionCode,
-        language,
+        solutionCode: effectiveSolutionCode,
+        language: effectiveLanguage,
         submissionId,
         submissionTime,
-        verdict,
+        verdict: normalizedVerdict,
         executionTime,
         memoryUsage,
         inputFormat,
@@ -497,6 +526,7 @@ async function handleV2Sync(userId, data) {
     tags,
     solutionCode,
     language,
+    sourceCodeCaptured = true,
     submissionId,
     submissionTime,
     verdict,
@@ -514,13 +544,20 @@ async function handleV2Sync(userId, data) {
     tutorialSolutions,
   } = data;
 
+  const normalizedPlatform = String(platform || '')
+    .trim()
+    .toLowerCase();
   const normalizedProblemId =
-    platform === 'leetcode'
+    normalizedPlatform === 'leetcode'
       ? normalizeLeetCodeProblemSlug(problemId)
       : String(problemId || '').trim();
-  const normalizedSubmissionId = submissionId
+  const normalizedSubmissionIdRaw = submissionId
     ? String(submissionId).trim()
     : null;
+  const normalizedSubmissionId =
+    normalizedPlatform === 'vjudge'
+      ? normalizeVJudgeSubmissionId(normalizedSubmissionIdRaw)
+      : normalizedSubmissionIdRaw;
   const normalizedSubmittedAt = normalizeSubmissionTimestamp(submissionTime);
 
   logExtensionSyncTest('v2_input_normalized', {
@@ -531,6 +568,7 @@ async function handleV2Sync(userId, data) {
     submittedAt: normalizedSubmittedAt,
     verdict: normalizeVerdict(verdict),
     codeLength: typeof solutionCode === 'string' ? solutionCode.length : 0,
+    sourceCodeCaptured,
     tagsCount: Array.isArray(tags) ? tags.length : 0,
     examplesCount: Array.isArray(examples) ? examples.length : 0,
   });
@@ -542,7 +580,7 @@ async function handleV2Sync(userId, data) {
     );
   }
 
-  if (platform === 'leetcode') {
+  if (normalizedPlatform === 'leetcode') {
     if (!normalizedSubmissionId) {
       return NextResponse.json(
         {
@@ -577,10 +615,32 @@ async function handleV2Sync(userId, data) {
     }
   }
 
+  if (normalizedPlatform === 'cses') {
+    if (!normalizedSubmissionId || !/^\d+$/.test(normalizedSubmissionId)) {
+      return NextResponse.json(
+        {
+          error:
+            'CSES submissions require a numeric submissionId from the status/result page.',
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!normalizedSubmittedAt) {
+      return NextResponse.json(
+        {
+          error:
+            'CSES submissions require a valid submissionTime from the CSES status/result page.',
+        },
+        { status: 400 }
+      );
+    }
+  }
+
   // Get platform_id
-  const platformId = await getPlatformId(platform);
+  const platformId = await getPlatformId(normalizedPlatform);
   if (!platformId) {
-    throw new Error(`Unknown platform: ${platform}`);
+    throw new Error(`Unknown platform: ${normalizedPlatform}`);
   }
 
   // Apply rate limit
@@ -613,7 +673,10 @@ async function handleV2Sync(userId, data) {
     }
   }
 
-  const submittedAt = normalizedSubmittedAt || new Date().toISOString();
+  const submittedAt =
+    normalizedPlatform === 'cses'
+      ? normalizedSubmittedAt
+      : normalizedSubmittedAt || new Date().toISOString();
   const normalizedVerdict = normalizeVerdict(verdict);
 
   // Step 1: Upsert problem data (normalized schema)
@@ -725,7 +788,7 @@ async function handleV2Sync(userId, data) {
   let submission = null;
   if (normalizedSubmissionId) {
     try {
-      submission = await recordSubmissionV2(userId, platform, {
+      submission = await recordSubmissionV2(userId, normalizedPlatform, {
         external_submission_id: normalizedSubmissionId,
         external_problem_id: normalizedProblemId,
         problem_name: problemName,
@@ -751,7 +814,7 @@ async function handleV2Sync(userId, data) {
     let unsolvedAttemptRecorded = false;
     let unsolvedAttemptStorageAvailable = true;
 
-    if (solutionCode && submission?.id) {
+    if (sourceCodeCaptured && solutionCode && submission?.id) {
       try {
         const { data: existingSolveForProblem } = await supabaseAdmin
           .from(V2_TABLES.USER_SOLVES)
@@ -916,16 +979,31 @@ async function handleV2Sync(userId, data) {
           )
         : existingSolve.best_memory_kb;
 
+    const submittedAtMs = Date.parse(submittedAt);
+    const existingFirstSolvedAtMs = existingSolve.first_solved_at
+      ? Date.parse(existingSolve.first_solved_at)
+      : Number.NaN;
+    const shouldUpdateFirstSolvedAt =
+      Number.isFinite(submittedAtMs) &&
+      (!Number.isFinite(existingFirstSolvedAtMs) ||
+        submittedAtMs < existingFirstSolvedAtMs);
+
+    const solveUpdatePayload = {
+      solve_count: (existingSolve.solve_count || 0) + 1,
+      best_time_ms:
+        bestTimeMs === Number.POSITIVE_INFINITY ? null : bestTimeMs,
+      best_memory_kb:
+        bestMemoryKb === Number.POSITIVE_INFINITY ? null : bestMemoryKb,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (shouldUpdateFirstSolvedAt) {
+      solveUpdatePayload.first_solved_at = submittedAt;
+    }
+
     const { data: updatedSolve, error: updateError } = await supabaseAdmin
       .from(V2_TABLES.USER_SOLVES)
-      .update({
-        solve_count: (existingSolve.solve_count || 0) + 1,
-        best_time_ms:
-          bestTimeMs === Number.POSITIVE_INFINITY ? null : bestTimeMs,
-        best_memory_kb:
-          bestMemoryKb === Number.POSITIVE_INFINITY ? null : bestMemoryKb,
-        updated_at: new Date().toISOString(),
-      })
+      .update(solveUpdatePayload)
       .eq('id', existingSolve.id)
       .select()
       .single();
@@ -1199,25 +1277,33 @@ async function handleV2Sync(userId, data) {
     );
   }
 
-  // Step 6: Trigger AI analysis (non-blocking)
-  try {
-    const { analyzeSolution } = await import('@/app/_lib/solution-analyzer');
+  const shouldRunAnalysis =
+    sourceCodeCaptured &&
+    typeof solutionCode === 'string' &&
+    solutionCode.trim().length > 0 &&
+    solutionCode !== ACCEPTED_SOURCE_PLACEHOLDER;
 
-    analyzeSolution(newSolution.id, {
-      problem_name: problemName,
-      problem_description: problemDescription,
-      source_code: solutionCode,
-      language,
-      platform,
-      tags,
-    }).catch((analysisError) => {
-      console.warn('[EXTENSION-SYNC] Analysis failed:', analysisError.message);
-    });
-  } catch (analyzerError) {
-    console.warn(
-      '[EXTENSION-SYNC] Analyzer unavailable:',
-      analyzerError.message
-    );
+  // Step 6: Trigger AI analysis (non-blocking)
+  if (shouldRunAnalysis) {
+    try {
+      const { analyzeSolution } = await import('@/app/_lib/solution-analyzer');
+
+      analyzeSolution(newSolution.id, {
+        problem_name: problemName,
+        problem_description: problemDescription,
+        source_code: solutionCode,
+        language,
+        platform,
+        tags,
+      }).catch((analysisError) => {
+        console.warn('[EXTENSION-SYNC] Analysis failed:', analysisError.message);
+      });
+    } catch (analyzerError) {
+      console.warn(
+        '[EXTENSION-SYNC] Analyzer unavailable:',
+        analyzerError.message
+      );
+    }
   }
 
   revalidatePath('/account/member/problem-solving');
@@ -1228,9 +1314,14 @@ async function handleV2Sync(userId, data) {
     problemId: problem.external_id,
     submissionId: normalizedSubmissionId || submissionId || null,
     verdict: normalizedVerdict,
+    sourceCodeCaptured,
     solutionId: newSolution.id,
     versionNumber: newSolution.version_number,
   });
+
+  const successMessage = sourceCodeCaptured
+    ? `Solution v${nextVersionNumber} added for ${problem.name}. AI analysis pending.`
+    : `Accepted submission synced for ${problem.name}. Source code was unavailable; run full import to attach code.`;
 
   return NextResponse.json({
     success: true,
@@ -1251,9 +1342,9 @@ async function handleV2Sync(userId, data) {
         id: newSolution.id,
         versionNumber: nextVersionNumber,
         isPrimary,
-        aiAnalysisStatus: 'pending',
+        aiAnalysisStatus: shouldRunAnalysis ? 'pending' : 'skipped_no_source',
       },
-      message: `Solution v${nextVersionNumber} added for ${problem.name}. AI analysis pending.`,
+      message: successMessage,
     },
   });
 }
@@ -1287,13 +1378,20 @@ async function handleLegacySync(userId, data) {
     tutorialSolutions,
   } = data;
 
+  const normalizedPlatform = String(platform || '')
+    .trim()
+    .toLowerCase();
   const normalizedProblemId =
-    platform === 'leetcode'
+    normalizedPlatform === 'leetcode'
       ? normalizeLeetCodeProblemSlug(problemId)
       : String(problemId || '').trim();
-  const normalizedSubmissionId = submissionId
+  const normalizedSubmissionIdRaw = submissionId
     ? String(submissionId).trim()
     : null;
+  const normalizedSubmissionId =
+    normalizedPlatform === 'vjudge'
+      ? normalizeVJudgeSubmissionId(normalizedSubmissionIdRaw)
+      : normalizedSubmissionIdRaw;
   const normalizedSubmittedAt = normalizeSubmissionTimestamp(submissionTime);
 
   logExtensionSyncTest('legacy_input_normalized', {
@@ -1313,7 +1411,7 @@ async function handleLegacySync(userId, data) {
     );
   }
 
-  if (platform === 'leetcode') {
+  if (normalizedPlatform === 'leetcode') {
     if (!normalizedSubmissionId) {
       return NextResponse.json(
         {
@@ -1348,7 +1446,32 @@ async function handleLegacySync(userId, data) {
     }
   }
 
-  const submittedAt = normalizedSubmittedAt || new Date().toISOString();
+  if (normalizedPlatform === 'cses') {
+    if (!normalizedSubmissionId || !/^\d+$/.test(normalizedSubmissionId)) {
+      return NextResponse.json(
+        {
+          error:
+            'CSES submissions require a numeric submissionId from the status/result page.',
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!normalizedSubmittedAt) {
+      return NextResponse.json(
+        {
+          error:
+            'CSES submissions require a valid submissionTime from the CSES status/result page.',
+        },
+        { status: 400 }
+      );
+    }
+  }
+
+  const submittedAt =
+    normalizedPlatform === 'cses'
+      ? normalizedSubmittedAt
+      : normalizedSubmittedAt || new Date().toISOString();
 
   // Apply rate limit
   const { data: lastSolution } = await supabaseAdmin
@@ -1547,12 +1670,27 @@ async function handleLegacySync(userId, data) {
   let userProblemSolve = null;
 
   if (existingSolve) {
+    const submittedAtMs = Date.parse(submittedAt);
+    const existingFirstSolvedAtMs = existingSolve.first_solved_at
+      ? Date.parse(existingSolve.first_solved_at)
+      : Number.NaN;
+    const shouldUpdateFirstSolvedAt =
+      Number.isFinite(submittedAtMs) &&
+      (!Number.isFinite(existingFirstSolvedAtMs) ||
+        submittedAtMs < existingFirstSolvedAtMs);
+
+    const solveUpdatePayload = {
+      solve_count: existingSolve.solve_count + 1,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (shouldUpdateFirstSolvedAt) {
+      solveUpdatePayload.first_solved_at = submittedAt;
+    }
+
     const { data: updatedSolve, error: updateError } = await supabaseAdmin
       .from('user_problem_solves')
-      .update({
-        solve_count: existingSolve.solve_count + 1,
-        updated_at: new Date().toISOString(),
-      })
+      .update(solveUpdatePayload)
       .eq('id', existingSolve.id)
       .select()
       .single();

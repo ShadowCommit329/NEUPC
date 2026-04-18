@@ -112,7 +112,7 @@ function withCompatibilityFields(solution, { versionNumber } = {}) {
   if (!solution) return solution;
 
   const language = solution.languages?.code || solution.languages?.name || null;
-  const sourceCode = solution.source_code || solution.sourceCode || solution.code || null;
+  const sourceCode = extractSolutionCode(solution);
   const analysis = Array.isArray(solution.solution_analysis)
     ? solution.solution_analysis[0] || null
     : solution.solution_analysis || null;
@@ -132,6 +132,106 @@ function withCompatibilityFields(solution, { versionNumber } = {}) {
     space_complexity: analysis?.space_complexity || null,
     version_number: versionNumber ?? null,
   };
+}
+
+function normalizeLinkedSubmission(solution) {
+  if (!solution) return null;
+
+  if (Array.isArray(solution.submissions)) {
+    return solution.submissions[0] || null;
+  }
+
+  return solution.submissions || solution.submission || null;
+}
+
+function extractSolutionCode(solution) {
+  if (!solution) return null;
+
+  const linkedSubmission = normalizeLinkedSubmission(solution);
+
+  return (
+    solution.source_code ||
+    solution.sourceCode ||
+    solution.code ||
+    solution.submission?.source_code ||
+    solution.submissions?.source_code ||
+    linkedSubmission?.source_code ||
+    null
+  );
+}
+
+function normalizeSolutionRecord(solution) {
+  if (!solution) return solution;
+
+  const linkedSubmission = normalizeLinkedSubmission(solution);
+
+  return {
+    ...solution,
+    submission: linkedSubmission,
+    submissions: linkedSubmission,
+    external_submission_id: linkedSubmission?.external_submission_id || null,
+    source_code: extractSolutionCode({
+      ...solution,
+      submission: linkedSubmission,
+      submissions: linkedSubmission,
+    }),
+  };
+}
+
+function hasNonEmptySourceCode(solution) {
+  const sourceCode = extractSolutionCode(solution);
+  return typeof sourceCode === 'string' && sourceCode.trim().length > 0;
+}
+
+async function loadUnsolvedAttemptSolutions({
+  userId,
+  platformId,
+  problemUuid,
+  externalProblemId,
+}) {
+  let query = supabaseAdmin
+    .from(V2_TABLES.UNSOLVED_ATTEMPTS)
+    .select('*, languages(code, name), submissions(*)')
+    .eq('user_id', userId)
+    .eq('platform_id', platformId);
+
+  if (problemUuid) {
+    query = query.eq('problem_id', problemUuid);
+  } else if (externalProblemId) {
+    query = query.eq('external_problem_id', externalProblemId);
+  } else {
+    return [];
+  }
+
+  const { data, error } = await query
+    .order('submitted_at', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.warn(
+      '[solutions] Failed to load unsolved attempt source fallback:',
+      error.message
+    );
+    return [];
+  }
+
+  const attempts = data || [];
+
+  return attempts.map((attempt, idx) => {
+    const normalized = normalizeSolutionRecord({
+      ...attempt,
+      // Keep unresolved attempts distinguishable in UI metadata.
+      solution_type: 'unsolved_attempt',
+      is_primary: false,
+      created_at: attempt.submitted_at || attempt.created_at,
+      updated_at:
+        attempt.updated_at || attempt.submitted_at || attempt.created_at,
+    });
+
+    return withCompatibilityFields(normalized, {
+      versionNumber: attempts.length - idx,
+    });
+  });
 }
 
 export async function POST(request) {
@@ -409,6 +509,7 @@ export async function GET(request) {
         .select(
           `
           *,
+          submissions(*),
           languages(code, name),
           solution_analysis(*),
           user_solves!inner(
@@ -435,7 +536,7 @@ export async function GET(request) {
       // Transform to include platform at top level for compatibility
       const transformedData = data
         ? withCompatibilityFields({
-            ...data,
+            ...normalizeSolutionRecord(data),
             user_solves: data.user_solves
               ? {
                   ...data.user_solves,
@@ -480,10 +581,22 @@ export async function GET(request) {
         .maybeSingle();
 
       if (!problem) {
+        const attemptFallback = await loadUnsolvedAttemptSolutions({
+          userId,
+          platformId,
+          problemUuid: null,
+          externalProblemId: problemId,
+        });
+
+        const preferredAttemptFallback =
+          attemptFallback.find(hasNonEmptySourceCode) ||
+          attemptFallback[0] ||
+          null;
+
         return NextResponse.json({
           success: true,
-          solutions: [],
-          solution: null,
+          solutions: attemptFallback,
+          solution: preferredAttemptFallback,
         });
       }
 
@@ -496,17 +609,31 @@ export async function GET(request) {
         .maybeSingle();
 
       if (!userSolve) {
+        const attemptFallback = await loadUnsolvedAttemptSolutions({
+          userId,
+          platformId,
+          problemUuid: problem.id,
+          externalProblemId: problemId,
+        });
+
+        const preferredAttemptFallback =
+          attemptFallback.find(hasNonEmptySourceCode) ||
+          attemptFallback[0] ||
+          null;
+
         return NextResponse.json({
           success: true,
-          solutions: [],
-          solution: null,
+          solutions: attemptFallback,
+          solution: preferredAttemptFallback,
         });
       }
 
       // Fetch all solutions for this solve
       const { data, error } = await supabaseAdmin
         .from(V2_TABLES.SOLUTIONS)
-        .select('*, languages(code, name), solution_analysis(*)')
+        .select(
+          '*, submissions(*), languages(code, name), solution_analysis(*)'
+        )
         .eq('user_solve_id', userSolve.id)
         .order('created_at', { ascending: false });
 
@@ -515,26 +642,33 @@ export async function GET(request) {
       }
 
       const list = (data || []).map((sol, idx) =>
-        withCompatibilityFields(sol, {
+        withCompatibilityFields(normalizeSolutionRecord(sol), {
           versionNumber: (data?.length || 0) - idx,
         })
       );
 
+      let combinedSolutions = list;
+      if (!combinedSolutions.some(hasNonEmptySourceCode)) {
+        const attemptFallback = await loadUnsolvedAttemptSolutions({
+          userId,
+          platformId,
+          problemUuid: problem.id,
+          externalProblemId: problemId,
+        });
+
+        if (attemptFallback.length > 0) {
+          combinedSolutions = [...combinedSolutions, ...attemptFallback];
+        }
+      }
+
       const preferredSolution =
-        list.find((sol) => {
-          const code =
-            sol?.source_code ||
-            sol?.sourceCode ||
-            sol?.code ||
-            sol?.submission?.source_code ||
-            sol?.submissions?.source_code ||
-            '';
-          return typeof code === 'string' && code.trim().length > 0;
-        }) || list[0] || null;
+        combinedSolutions.find(hasNonEmptySourceCode) ||
+        combinedSolutions[0] ||
+        null;
 
       return NextResponse.json({
         success: true,
-        solutions: list,
+        solutions: combinedSolutions,
         solution: preferredSolution,
       });
     }

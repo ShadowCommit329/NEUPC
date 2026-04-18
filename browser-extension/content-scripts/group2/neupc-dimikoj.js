@@ -166,7 +166,7 @@
           language,
           executionTime,
           memoryUsed,
-          submittedAt: new Date().toISOString(),
+          submittedAt: null,
           sourceCode,
         };
 

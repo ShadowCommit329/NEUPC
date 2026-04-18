@@ -16,15 +16,13 @@ Developer documentation for the NEUPC Platform.
 
 ## Architecture
 
-| Document                                               | Description                                |
-| ------------------------------------------------------ | ------------------------------------------ |
-| [Overview](architecture/index.md)                      | Folder structure, core patterns, data flow |
-| [Project Structure](architecture/project-structure.md) | Detailed file tree walkthrough             |
-| [Components](architecture/components.md)               | All React components by category           |
-| [Homepage Root Page](architecture/homepage-root-page.md) | Professional route-level documentation for `/` (ER + DFD + sequence) |
-| [Server Actions](architecture/server-actions.md)       | All server action files                    |
-| [Data Service](architecture/data-service.md)           | All data-service.js functions              |
-| [API Routes](architecture/api-routes.md)               | REST API endpoints                         |
+- [Overview](architecture/index.md): Folder structure, core patterns, data flow
+- [Project Structure](architecture/project-structure.md): Detailed file tree walkthrough
+- [Components](architecture/components.md): All React components by category
+- [Homepage Root Page](architecture/homepage-root-page.md): Professional route-level documentation for `/` (ER + DFD + sequence)
+- [Server Actions](architecture/server-actions.md): All server action files
+- [Data Service](architecture/data-service.md): All data-service.js functions
+- [API Routes](architecture/api-routes.md): REST API endpoints
 
 ---
 

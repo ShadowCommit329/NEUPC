@@ -279,6 +279,148 @@ function isMissingUnsolvedAttemptsTableError(error) {
   );
 }
 
+async function purgePlatformDataForUser({ userId, platformId }) {
+  if (!userId || !platformId) {
+    throw new Error('userId and platformId are required for platform cleanup');
+  }
+
+  const { data: existingSubmissions, error: existingSubmissionsError } =
+    await supabaseAdmin
+      .from(V2_TABLES.SUBMISSIONS)
+      .select('id')
+      .eq('user_id', userId)
+      .eq('platform_id', platformId);
+
+  if (existingSubmissionsError) throw existingSubmissionsError;
+  const submissionIds = (existingSubmissions || []).map((row) => row.id);
+
+  const { data: existingSolves, error: existingSolvesError } =
+    await supabaseAdmin
+      .from(V2_TABLES.USER_SOLVES)
+      .select('id, problems!inner(platform_id)')
+      .eq('user_id', userId)
+      .eq('problems.platform_id', platformId);
+
+  if (existingSolvesError) throw existingSolvesError;
+  const solveIds = (existingSolves || []).map((row) => row.id);
+
+  let existingAttempts = [];
+  let unsolvedAttemptStorageAvailable = true;
+
+  const { data: existingAttemptsData, error: existingAttemptsError } =
+    await supabaseAdmin
+      .from(V2_TABLES.UNSOLVED_ATTEMPTS)
+      .select('id, external_problem_id')
+      .eq('user_id', userId)
+      .eq('platform_id', platformId);
+
+  if (existingAttemptsError) {
+    if (isMissingUnsolvedAttemptsTableError(existingAttemptsError)) {
+      unsolvedAttemptStorageAvailable = false;
+      console.warn(
+        '[CLEANUP] unsolved_attempts table not available; apply latest migrations to enable unsolved attempt cleanup.'
+      );
+    } else {
+      throw existingAttemptsError;
+    }
+  } else {
+    existingAttempts = existingAttemptsData || [];
+  }
+
+  const attemptIds = (existingAttempts || []).map((row) => row.id);
+
+  const deleteByIds = async (table, ids) => {
+    if (!ids || ids.length === 0) return 0;
+    const CHUNK_SIZE = 500;
+    let deleted = 0;
+
+    for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+      const chunk = ids.slice(i, i + CHUNK_SIZE);
+      const { error } = await supabaseAdmin
+        .from(table)
+        .delete()
+        .in('id', chunk);
+      if (error) throw error;
+      deleted += chunk.length;
+    }
+
+    return deleted;
+  };
+
+  const collectSolutionIdsByColumn = async (column, ids) => {
+    if (!ids || ids.length === 0) return [];
+
+    const CHUNK_SIZE = 500;
+    const collected = [];
+
+    for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+      const chunk = ids.slice(i, i + CHUNK_SIZE);
+      const { data, error } = await supabaseAdmin
+        .from(V2_TABLES.SOLUTIONS)
+        .select('id')
+        .in(column, chunk);
+
+      if (error) throw error;
+      if (data?.length) {
+        for (const row of data) {
+          if (row?.id) collected.push(row.id);
+        }
+      }
+    }
+
+    return collected;
+  };
+
+  const relatedSolutionIdsSet = new Set([
+    ...(await collectSolutionIdsByColumn('submission_id', submissionIds)),
+    ...(await collectSolutionIdsByColumn('user_solve_id', solveIds)),
+  ]);
+
+  const deletedSolutionCount = await deleteByIds(V2_TABLES.SOLUTIONS, [
+    ...relatedSolutionIdsSet,
+  ]);
+  const deletedSubmissionCount = await deleteByIds(
+    V2_TABLES.SUBMISSIONS,
+    submissionIds
+  );
+  const deletedSolveCount = await deleteByIds(V2_TABLES.USER_SOLVES, solveIds);
+  const deletedAttemptCount = unsolvedAttemptStorageAvailable
+    ? await deleteByIds(V2_TABLES.UNSOLVED_ATTEMPTS, attemptIds)
+    : 0;
+
+  let deletedPlatformStats = false;
+  const { error: platformStatsDeleteError } = await supabaseAdmin
+    .from(V2_TABLES.USER_PLATFORM_STATS)
+    .delete()
+    .eq('user_id', userId)
+    .eq('platform_id', platformId);
+
+  if (platformStatsDeleteError) throw platformStatsDeleteError;
+  deletedPlatformStats = true;
+
+  // Refresh aggregate stats and leaderboard after cleanup.
+  const aggregator = new ProblemSolvingAggregator();
+  await aggregator.updateUserStatistics(userId, true);
+  await rebuildLeaderboard();
+
+  const totalDeleted =
+    deletedSolutionCount +
+    deletedSubmissionCount +
+    deletedSolveCount +
+    deletedAttemptCount +
+    (deletedPlatformStats ? 1 : 0);
+
+  return {
+    deletedSolutions: deletedSolutionCount,
+    deletedSubmissions: deletedSubmissionCount,
+    deletedSolves: deletedSolveCount,
+    deletedAttempts: deletedAttemptCount,
+    deletedPlatformStats,
+    unsolvedAttemptStorageAvailable,
+    totalDeleted,
+  };
+}
+
 const PLATFORM_CANONICAL_ALIASES = {
   codeforces: 'codeforces',
   atcoder: 'atcoder',
@@ -2119,6 +2261,14 @@ export async function disconnectHandleAction(platform) {
       return { success: false, error: `Unknown platform: ${platform}` };
     }
 
+    let cleanupData = null;
+    if (platform === 'spoj') {
+      cleanupData = await purgePlatformDataForUser({
+        userId: user.id,
+        platformId,
+      });
+    }
+
     const { error: deleteError } = await supabaseAdmin
       .from(V2_TABLES.USER_HANDLES)
       .delete()
@@ -2136,6 +2286,15 @@ export async function disconnectHandleAction(platform) {
 
     // Revalidate to show updated handle disconnection
     revalidatePath('/account/member/problem-solving', 'page');
+
+    if (cleanupData) {
+      return {
+        success: true,
+        message:
+          'Disconnected SPOJ handle and removed previous SPOJ track data',
+        data: cleanupData,
+      };
+    }
 
     return { success: true, message: `Disconnected ${platform} handle` };
   } catch (error) {
@@ -2182,141 +2341,23 @@ export async function cleanupLeetCodeDataAction() {
       };
     }
 
-    const { data: existingSubmissions, error: existingSubmissionsError } =
-      await supabaseAdmin
-        .from(V2_TABLES.SUBMISSIONS)
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('platform_id', platformId);
-
-    if (existingSubmissionsError) throw existingSubmissionsError;
-    const submissionIds = (existingSubmissions || []).map((row) => row.id);
-
-    const { data: existingSolves, error: existingSolvesError } =
-      await supabaseAdmin
-        .from(V2_TABLES.USER_SOLVES)
-        .select('id, problems!inner(platform_id)')
-        .eq('user_id', user.id)
-        .eq('problems.platform_id', platformId);
-
-    if (existingSolvesError) throw existingSolvesError;
-    const solveIds = (existingSolves || []).map((row) => row.id);
-
-    let existingAttempts = [];
-    let unsolvedAttemptStorageAvailable = true;
-
-    const { data: existingAttemptsData, error: existingAttemptsError } =
-      await supabaseAdmin
-        .from(V2_TABLES.UNSOLVED_ATTEMPTS)
-        .select('id, external_problem_id')
-        .eq('user_id', user.id)
-        .eq('platform_id', platformId);
-
-    if (existingAttemptsError) {
-      if (isMissingUnsolvedAttemptsTableError(existingAttemptsError)) {
-        unsolvedAttemptStorageAvailable = false;
-        console.warn(
-          '[CLEANUP] unsolved_attempts table not available; apply latest migrations to enable unsolved attempt cleanup.'
-        );
-      } else {
-        throw existingAttemptsError;
-      }
-    } else {
-      existingAttempts = existingAttemptsData || [];
-    }
-
-    const attemptIds = (existingAttempts || []).map((row) => row.id);
-
-    const deleteByIds = async (table, ids) => {
-      if (!ids || ids.length === 0) return 0;
-      const CHUNK_SIZE = 500;
-      let deleted = 0;
-
-      for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
-        const chunk = ids.slice(i, i + CHUNK_SIZE);
-        const { error } = await supabaseAdmin
-          .from(table)
-          .delete()
-          .in('id', chunk);
-        if (error) throw error;
-        deleted += chunk.length;
-      }
-
-      return deleted;
-    };
-
-    const collectSolutionIdsByColumn = async (column, ids) => {
-      if (!ids || ids.length === 0) return [];
-
-      const CHUNK_SIZE = 500;
-      const collected = [];
-
-      for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
-        const chunk = ids.slice(i, i + CHUNK_SIZE);
-        const { data, error } = await supabaseAdmin
-          .from(V2_TABLES.SOLUTIONS)
-          .select('id')
-          .in(column, chunk);
-
-        if (error) throw error;
-        if (data?.length) {
-          for (const row of data) {
-            if (row?.id) collected.push(row.id);
-          }
-        }
-      }
-
-      return collected;
-    };
-
-    const relatedSolutionIdsSet = new Set([
-      ...(await collectSolutionIdsByColumn('submission_id', submissionIds)),
-      ...(await collectSolutionIdsByColumn('user_solve_id', solveIds)),
-    ]);
-
-    const deletedSolutionCount = await deleteByIds(V2_TABLES.SOLUTIONS, [
-      ...relatedSolutionIdsSet,
-    ]);
-    const deletedSubmissionCount = await deleteByIds(
-      V2_TABLES.SUBMISSIONS,
-      submissionIds
-    );
-    const deletedSolveCount = await deleteByIds(
-      V2_TABLES.USER_SOLVES,
-      solveIds
-    );
-    const deletedAttemptCount = unsolvedAttemptStorageAvailable
-      ? await deleteByIds(V2_TABLES.UNSOLVED_ATTEMPTS, attemptIds)
-      : 0;
-
-    // Refresh aggregate stats and leaderboard after cleanup.
-    const aggregator = new ProblemSolvingAggregator();
-    await aggregator.updateUserStatistics(user.id, true);
-    await rebuildLeaderboard();
+    const cleanupData = await purgePlatformDataForUser({
+      userId: user.id,
+      platformId,
+    });
 
     revalidatePath('/account/member/problem-solving', 'page');
     revalidatePath('/api/problem-solving/problems', 'page');
     revalidatePath('/api/problem-solving/stats', 'page');
-
-    const totalDeleted =
-      deletedSolutionCount +
-      deletedSubmissionCount +
-      deletedSolveCount +
-      deletedAttemptCount;
 
     return {
       success: true,
       data: {
         handle: connectedHandle,
         cleanupMode: 'full_purge',
-        deletedSolutions: deletedSolutionCount,
-        deletedSubmissions: deletedSubmissionCount,
-        deletedSolves: deletedSolveCount,
-        deletedAttempts: deletedAttemptCount,
-        unsolvedAttemptStorageAvailable,
-        totalDeleted,
+        ...cleanupData,
         message:
-          totalDeleted > 0
+          cleanupData.totalDeleted > 0
             ? 'Removed previous LeetCode data. Use the browser extension to extract fresh history.'
             : 'No previous LeetCode data found. Use the browser extension to extract data.',
       },
@@ -2403,13 +2444,7 @@ export async function syncPlatformAction(
       return { success: false, error: 'Invalid platform' };
     }
 
-    if (platform === 'leetcode') {
-      return {
-        success: false,
-        error:
-          'LeetCode platform sync is extension-only. Use the browser extension to extract data.',
-      };
-    }
+    const isLeetCode = platform === 'leetcode';
 
     // Check if V2 schema is available
     const useV2 = await isV2SchemaAvailable();
@@ -2452,8 +2487,24 @@ export async function syncPlatformAction(
       manualHtml
     );
 
+    // Check for errors - syncPlatformSubmissions may return 'error' (string) or 'errors' (array)
     if (submissionsResult.error) {
       return { success: false, error: submissionsResult.error };
+    }
+
+    // For SPOJ: if Cloudflare blocked the sync and no manual HTML was provided,
+    // return a clear error instead of silently succeeding with 0 submissions
+    if (
+      platform === 'spoj' &&
+      !manualHtml &&
+      submissionsResult.extensionRequired &&
+      (submissionsResult.synced || 0) === 0
+    ) {
+      return {
+        success: false,
+        error:
+          'SPOJ is protected by Cloudflare and cannot be synced automatically. Use the "Manual Import" button on the SPOJ card — visit your SPOJ profile, Select All (Ctrl+A), Copy (Ctrl+C), then paste it in.',
+      };
     }
 
     const submissionsSynced = submissionsResult.synced || 0;
@@ -2538,7 +2589,12 @@ export async function syncPlatformAction(
     revalidatePath('/api/problem-solving/problems', 'page');
     revalidatePath('/api/problem-solving/stats', 'page');
 
-    const message = `Synced ${submissionsSynced} submissions, ${ratingHistorySynced} rating entries, ${contestHistorySynced} contest entries from ${platform}`;
+    let message = `Synced ${submissionsSynced} submissions, ${ratingHistorySynced} rating entries, ${contestHistorySynced} contest entries from ${platform}`;
+    if (isLeetCode) {
+      message +=
+        ' For full LeetCode submission history, use the browser extension extractor.';
+    }
+
     return {
       success: true,
       data: {
@@ -2546,6 +2602,7 @@ export async function syncPlatformAction(
         platform,
         ratingHistorySynced,
         contestHistorySynced,
+        extensionRequired: submissionsResult.extensionRequired || false,
         message,
       },
     };

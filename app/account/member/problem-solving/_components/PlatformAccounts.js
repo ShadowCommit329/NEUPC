@@ -38,6 +38,8 @@ import {
   ChevronDown,
   ChevronUp,
   Sparkles,
+  ClipboardPaste,
+  FileText,
 } from 'lucide-react';
 
 // ============================================
@@ -649,7 +651,6 @@ export default function PlatformAccounts({
   onConnect,
   onDisconnect,
   onSyncPlatform,
-  onCleanupLeetCode,
   isConnecting = false,
   isSyncing = false,
   syncingPlatform = null,
@@ -798,17 +799,9 @@ export default function PlatformAccounts({
                     PLATFORMS[handle.platform] ||
                     getDefaultConfig(handle.platform)
                   }
-                  onSync={
-                    handle.platform === 'leetcode'
-                      ? undefined
-                      : () => onSyncPlatform?.(handle.platform)
-                  }
+                  onSync={() => onSyncPlatform?.(handle.platform)}
+                  onSyncWithHtml={(manualHtml) => onSyncPlatform?.(handle.platform, manualHtml)}
                   onDisconnect={() => onDisconnect?.(handle.platform)}
-                  onCleanupLeetCode={
-                    handle.platform === 'leetcode'
-                      ? () => onCleanupLeetCode?.()
-                      : undefined
-                  }
                   isSyncing={syncingPlatform === handle.platform}
                   isAnySyncing={isSyncing}
                 />
@@ -1185,14 +1178,16 @@ function PlatformCard({
   stats,
   config,
   onSync,
+  onSyncWithHtml,
   onDisconnect,
-  onCleanupLeetCode,
   isSyncing,
   isAnySyncing,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const isLeetCode = handle?.platform === 'leetcode';
-  const isExtensionOnly = isLeetCode;
+  const [showManualImport, setShowManualImport] = useState(false);
+  const [manualHtmlInput, setManualHtmlInput] = useState('');
+  const canSync = typeof onSync === 'function';
+  const isSpoj = handle.platform === 'spoj';
 
   // Build available stats - prioritize sync data, then handle data
   const availableStats = useMemo(() => {
@@ -1320,12 +1315,7 @@ function PlatformCard({
                       <ExternalLink className="h-4 w-4" />
                       View Profile
                     </a>
-                    {isExtensionOnly ? (
-                      <div className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-amber-300/90">
-                        <Link2 className="h-4 w-4" />
-                        Use browser extension to extract
-                      </div>
-                    ) : (
+                    {canSync && (
                       <button
                         onClick={() => {
                           onSync?.();
@@ -1342,17 +1332,16 @@ function PlatformCard({
                         {isSyncing ? 'Syncing...' : 'Sync Data'}
                       </button>
                     )}
-                    {handle.platform === 'leetcode' && onCleanupLeetCode && (
+                    {isSpoj && (
                       <button
                         onClick={() => {
-                          onCleanupLeetCode?.();
+                          setShowManualImport(!showManualImport);
                           setMenuOpen(false);
                         }}
-                        disabled={isSyncing || isAnySyncing}
-                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-amber-300 transition-colors hover:bg-amber-500/10 hover:text-amber-200 disabled:opacity-50"
+                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 transition-colors hover:bg-gray-700 hover:text-white"
                       >
-                        <AlertCircle className="h-4 w-4" />
-                        Remove Previous Data
+                        <ClipboardPaste className="h-4 w-4" />
+                        Manual Import
                       </button>
                     )}
                     <div className="mx-3 my-1 h-px bg-gray-700" />
@@ -1377,19 +1366,13 @@ function PlatformCard({
         {availableStats.length > 0 && (
           <div className="mt-auto flex flex-wrap items-center gap-1.5 border-t border-white/5 pt-3">
             {/* Sync status indicator */}
-            {isExtensionOnly && (
-              <div className="flex shrink-0 items-center gap-1 rounded-md border border-amber-500/20 bg-amber-500/10 px-2 py-1">
-                <Link2 className="h-3 w-3 shrink-0 text-amber-300" />
-                <span className="text-[10px] text-amber-300">Extension</span>
-              </div>
-            )}
-            {!isExtensionOnly && syncStatus === 'completed' && (
+            {syncStatus === 'completed' && (
               <div className="flex shrink-0 items-center gap-1 rounded-md border border-green-500/20 bg-green-500/10 px-2 py-1">
                 <CheckCircle2 className="h-3 w-3 shrink-0 text-green-400" />
                 <span className="text-[10px] text-green-400">Synced</span>
               </div>
             )}
-            {!isExtensionOnly && syncStatus === 'failed' && (
+            {syncStatus === 'failed' && (
               <div
                 className="flex shrink-0 items-center gap-1 rounded-md border border-red-500/20 bg-red-500/10 px-2 py-1"
                 title={stats?.error_message || 'Sync failed'}
@@ -1421,33 +1404,95 @@ function PlatformCard({
         {/* Empty state - show sync status or prompt to sync */}
         {availableStats.length === 0 && (
           <div className="mt-auto border-t border-white/5 pt-3">
-            {isExtensionOnly ? (
-              <div className="flex items-center gap-1.5">
-                <Link2 className="h-3.5 w-3.5 text-amber-300" />
-                <span className="text-[11px] text-amber-300">
-                  Use browser extension to extract
-                </span>
-              </div>
-            ) : syncStatus === 'failed' ? (
+            {syncStatus === 'failed' ? (
               <div className="flex items-center gap-1.5">
                 <AlertCircle className="h-3.5 w-3.5 text-red-400" />
                 <span className="text-[11px] text-red-400">
                   {stats?.error_message ? 'Sync failed' : 'Sync error'}
                 </span>
               </div>
-            ) : syncStatus === 'in_progress' ? (
+            ) : syncStatus === 'in_progress' || isSyncing ? (
               <div className="flex items-center gap-1.5">
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-400" />
                 <span className="text-[11px] text-blue-400">Syncing...</span>
               </div>
-            ) : (
+            ) : canSync ? (
               <span className="text-[11px] text-gray-500">
                 Click menu → Sync Data
+              </span>
+            ) : (
+              <span className="text-[11px] text-gray-500">
+                No stats available yet
               </span>
             )}
           </div>
         )}
       </div>
+
+      {/* SPOJ Manual Import Panel */}
+      <AnimatePresence>
+        {isSpoj && showManualImport && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden border-t border-white/5"
+          >
+            <div className="space-y-3 p-4">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-amber-400" />
+                <span className="text-xs font-semibold text-amber-400">
+                  Manual Import (Cloudflare bypass)
+                </span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-gray-500">
+                SPOJ blocks automated syncing. Visit your{' '}
+                <a
+                  href={config.profileUrl(handle.handle)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-amber-400 underline hover:text-amber-300"
+                >
+                  SPOJ profile
+                </a>
+                , select all (Ctrl+A), copy (Ctrl+C), then paste below.
+              </p>
+              <textarea
+                value={manualHtmlInput}
+                onChange={(e) => setManualHtmlInput(e.target.value)}
+                placeholder="Paste your SPOJ profile page content here..."
+                rows={4}
+                className="w-full resize-none rounded-lg border border-gray-700 bg-gray-800/50 px-3 py-2 text-xs text-white placeholder-gray-500 transition-all focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 focus:outline-none"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowManualImport(false);
+                    setManualHtmlInput('');
+                  }}
+                  className="flex-1 rounded-lg border border-gray-700 px-3 py-2 text-xs font-medium text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (manualHtmlInput.trim() && onSyncWithHtml) {
+                      onSyncWithHtml(manualHtmlInput.trim());
+                      setShowManualImport(false);
+                      setManualHtmlInput('');
+                    }
+                  }}
+                  disabled={!manualHtmlInput.trim() || isSyncing}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-amber-500/20 px-3 py-2 text-xs font-semibold text-amber-400 transition-all hover:bg-amber-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <ClipboardPaste className="h-3.5 w-3.5" />
+                  Import
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Sync Progress Bar */}
       {isSyncing && (

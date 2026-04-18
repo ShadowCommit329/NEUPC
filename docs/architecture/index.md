@@ -12,7 +12,7 @@ How the codebase is structured and the key patterns it follows.
 
 ## Folder Structure
 
-```
+```text
 neupc/
 ├── app/
 │   ├── layout.js / page.js           # Root layout + homepage
@@ -113,7 +113,7 @@ export const supabaseAdmin = createClient(url, serviceRoleKey);
 
 ### 5. Role guard at every layer
 
-```
+```text
 proxy.js (middleware)
   └─ blocks unauthenticated /account/* requests
 
@@ -128,7 +128,7 @@ React `cache()` in `auth-guard.js` deduplicates the DB lookup when both `layout.
 
 ### 6. Caching strategy
 
-```
+```text
 Public pages        → unstable_cache in public-actions.js (ISR-style)
 Protected pages     → no cache (always fresh, user-specific data)
 DB deduplication    → React cache() in auth-guard.js
@@ -138,7 +138,7 @@ DB deduplication    → React cache() in auth-guard.js
 
 ## Data Flow
 
-```
+```text
 Browser request
       │
       ▼
@@ -173,7 +173,7 @@ Server Action (*-actions.js)
 ## Key Config Files
 
 | File | Purpose |
-|---|---|
+| ---- | ------- |
 | `proxy.js` | NextAuth middleware — named `proxy.js` deliberately (not `middleware.js`), works via `matcher` export |
 | `next.config.mjs` | `poweredByHeader: false`, security headers, Supabase Storage image domain whitelist |
 | `tailwind.config.mjs` | Custom color tokens, fonts (Inter, Space Grotesk, JetBrains Mono), 8 animations |

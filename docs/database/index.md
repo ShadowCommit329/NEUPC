@@ -8,7 +8,7 @@ PostgreSQL database managed via Supabase with 45+ tables and Row Level Security 
 
 All database schema and migrations are managed in the [`/supabase`](/supabase) directory:
 
-```
+```text
 supabase/
 ├── config.toml          # Local Supabase configuration
 ├── migrations/          # SQL migration files (source of truth)
@@ -235,7 +235,7 @@ RLS is enabled on every table. The general policy pattern:
 
 ## Key Relationships
 
-```
+```text
 users ──────────────── user_roles ── roles ── role_permissions ── permissions
   │
   ├── member_profiles
