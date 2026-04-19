@@ -471,7 +471,8 @@ export default function ProblemSolvingClient({ userId }) {
       try {
         let result;
         if (platform) {
-          result = await syncPlatform(platform, false, manualHtml);
+          // Platform sync should include historical submissions, not just incremental updates.
+          result = await syncPlatform(platform, true, manualHtml);
         } else {
           result = await sync(true);
         }
@@ -517,7 +518,7 @@ export default function ProblemSolvingClient({ userId }) {
         let result;
         if (platform) {
           // Platform-specific sync
-          result = await syncPlatform(platform, false);
+          result = await syncPlatform(platform, true);
         } else {
           // Full sync
           result = await sync(true);

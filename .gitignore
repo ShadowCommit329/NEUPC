@@ -90,3 +90,34 @@ next-env.d.ts
 .env.scraper
 scripts/*-progress.json
 scripts/codeforces-scrape-progress.json
+
+# Sensitive database files
+supabase/remote_data.sql
+supabase/seed.sql
+supabase/migrations/
+*.sql.bak
+cloud_*.sql
+remote_*.sql
+
+# Debug / one-off scripts (root level)
+fix-*.js
+test-*.js
+verify-*.js
+add-*.js
+analyze-*.js
+remove-*.js
+spool-test.js
+proxy.js
+err.txt
+
+# Temporary dev notes
+QUICK_IMPORT_FIX_SUMMARY.md
+README-BEECROWD-TEST.md
+SPOJ_*.md
+
+# Server logs
+*.log
+next-server.log
+
+# CLAUDE.md (AI instructions, keep local only)
+CLAUDE.md

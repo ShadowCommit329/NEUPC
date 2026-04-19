@@ -15,14 +15,73 @@
 
 import { NextResponse } from 'next/server';
 import { auth } from '@/app/_lib/auth';
+import { getCachedUserByEmail } from '@/app/_lib/data-service';
+import { verifyExtensionToken } from '@/app/_lib/extension-auth';
 import { ClistService } from '@/app/_lib/problem-solving-services';
+import { supabaseAdmin } from '@/app/_lib/supabase';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers':
+    'Content-Type, Authorization, X-Extension-Token',
+  'Access-Control-Max-Age': '86400',
+};
+
+function jsonWithCors(payload, init = {}) {
+  return NextResponse.json(payload, {
+    ...init,
+    headers: {
+      ...corsHeaders,
+      ...(init.headers || {}),
+    },
+  });
+}
+
+async function resolveAuthenticatedUserId(request) {
+  const authHeader = request.headers.get('authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7).trim();
+
+    let userId = verifyExtensionToken(token);
+    if (!userId && token.startsWith('neupc_') && token.length >= 70) {
+      const { data: tokenUser, error } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('extension_token', token)
+        .maybeSingle();
+
+      if (!error && tokenUser?.id) {
+        userId = tokenUser.id;
+      }
+    }
+
+    if (userId) {
+      return userId;
+    }
+  }
+
+  const session = await auth();
+  if (!session?.user?.email) {
+    return null;
+  }
+
+  const dbUser = await getCachedUserByEmail(session.user.email);
+  return dbUser?.id || null;
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
 
 export async function GET(request) {
   try {
-    // Require authentication
-    const session = await auth();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const userId = await resolveAuthenticatedUserId(request);
+    if (!userId) {
+      return jsonWithCors({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -31,7 +90,7 @@ export async function GET(request) {
     const type = searchParams.get('type') || 'all';
 
     if (!platform || !handle) {
-      return NextResponse.json(
+      return jsonWithCors(
         { error: 'Missing required parameters: platform and handle' },
         { status: 400 }
       );
@@ -40,7 +99,7 @@ export async function GET(request) {
     const clistService = new ClistService();
 
     if (!clistService.isConfigured()) {
-      return NextResponse.json(
+      return jsonWithCors(
         {
           error: 'CLIST API not configured',
           message:
@@ -53,7 +112,7 @@ export async function GET(request) {
     // Check if platform is supported
     const clistHost = clistService.getClistHost(platform);
     if (!clistHost) {
-      return NextResponse.json(
+      return jsonWithCors(
         { error: `Platform '${platform}' is not supported by CLIST` },
         { status: 400 }
       );
@@ -82,7 +141,7 @@ export async function GET(request) {
     }
 
     if (!data || (Array.isArray(data) && data.length === 0)) {
-      return NextResponse.json(
+      return jsonWithCors(
         {
           error: 'No data found',
           message: `Could not find data for ${handle} on ${platform}`,
@@ -91,7 +150,7 @@ export async function GET(request) {
       );
     }
 
-    return NextResponse.json({
+    return jsonWithCors({
       success: true,
       platform,
       handle,
@@ -100,7 +159,7 @@ export async function GET(request) {
     });
   } catch (error) {
     console.error('CLIST API error:', error);
-    return NextResponse.json(
+    return jsonWithCors(
       { error: error.message || 'Failed to fetch CLIST data' },
       { status: 500 }
     );
@@ -119,17 +178,16 @@ export async function GET(request) {
  */
 export async function POST(request) {
   try {
-    // Require authentication
-    const session = await auth();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const userId = await resolveAuthenticatedUserId(request);
+    if (!userId) {
+      return jsonWithCors({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
     const { handles, type = 'all' } = body;
 
     if (!handles || !Array.isArray(handles) || handles.length === 0) {
-      return NextResponse.json(
+      return jsonWithCors(
         { error: 'Missing required parameter: handles (array)' },
         { status: 400 }
       );
@@ -138,7 +196,7 @@ export async function POST(request) {
     const clistService = new ClistService();
 
     if (!clistService.isConfigured()) {
-      return NextResponse.json(
+      return jsonWithCors(
         {
           error: 'CLIST API not configured',
           message:
@@ -166,7 +224,7 @@ export async function POST(request) {
         break;
     }
 
-    return NextResponse.json({
+    return jsonWithCors({
       success: true,
       type,
       handles: handles.length,
@@ -174,7 +232,7 @@ export async function POST(request) {
     });
   } catch (error) {
     console.error('CLIST API error:', error);
-    return NextResponse.json(
+    return jsonWithCors(
       { error: error.message || 'Failed to fetch CLIST data' },
       { status: 500 }
     );

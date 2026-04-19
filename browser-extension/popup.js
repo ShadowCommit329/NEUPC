@@ -194,7 +194,11 @@ function normalizeConnectedHandlesMap(rawHandles) {
 function detectPlatformFromUrl(url) {
   try {
     const normalizedUrl = String(url || '').toLowerCase();
-    if (/facebook\.com\/codingcompetitions\/hacker-cup/.test(normalizedUrl)) {
+    if (
+      /facebook\.com\/codingcompetitions\/(?:hacker-cup|profile)/.test(
+        normalizedUrl
+      )
+    ) {
       return 'facebookhackercup';
     }
 
@@ -575,7 +579,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (isQuickMode) {
       modeDescription.textContent =
-        'Quick: Imports submission metadata only (fast).';
+        'Quick: Imports submission metadata only and syncs all submissions (new + existing).';
       verdictFilterSelect.value = 'all';
       verdictFilterSelect.disabled = true;
       verdictFilterSelect.title = 'Quick mode always imports all verdicts.';
@@ -1024,7 +1028,7 @@ document.addEventListener('DOMContentLoaded', () => {
           fetchCodes: !isQuickMode,
           onlyAC: isQuickMode ? false : verdictFilter === 'ac',
           verdictFilter,
-          syncEverything: !isQuickMode,
+          syncEverything: true,
         },
       },
       (response) => {

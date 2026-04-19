@@ -1,149 +1,213 @@
-# Features
+# Feature Modules
 
-Every feature module, the user roles that access it, and the server actions that power it.
+Every feature in NEUPC, the roles that access it, and the server actions that power it.
 
 ---
 
-## Public Site
+## Public Website
 
-Seventeen server-rendered public pages, all with ISR caching via `public-actions.js`.
+All public pages are server-rendered with ISR caching via `public-actions.js`. No authentication required.
 
-| Route | Description |
-|---|---|
-| `/` | Homepage — featured events, trending blogs, achievements, club stats |
-| `/events` + `/events/[slug]` | Published events list and detail |
-| `/blogs` + `/blogs/[slug]` | Blog posts with Giscus comments |
-| `/achievements` | All-time results — filter by year, category |
-| `/committee` | Current committee positions |
-| `/gallery` | Photo albums — filter by event, category |
-| `/roadmaps` + `/roadmaps/[slug]` | Learning path roadmaps |
-| `/join` | Join request form → email notification |
-| `/contact` | Contact form → Nodemailer email |
-| `/about` `/developers` `/privacy` `/terms` | Static pages |
+| Route | Description | Data source |
+|---|---|---|
+| `/` | Homepage — featured events, blogs, achievements, club stats | `public-actions.js` |
+| `/events` + `/events/[slug]` | Published events list and detail with registration | `public-actions.js` |
+| `/blogs` + `/blogs/[slug]` | Blog posts with Giscus comments and syntax highlighting | `public-actions.js` |
+| `/achievements` | Club awards — filter by year, category | `public-actions.js` |
+| `/committee` | Current committee positions and members | `public-actions.js` |
+| `/gallery` | Photo albums — filter by event, category | `public-actions.js` |
+| `/roadmaps` + `/roadmaps/[slug]` | Learning path roadmaps | `public-actions.js` |
+| `/join` | Membership application form | `guest-actions.js` |
+| `/contact` | Contact form with email notification | `contact-actions.js` |
 
 ---
 
 ## Blog & Content Management
 
-**Access:** Executive (create/manage own), Admin (all posts)
+**Roles:** Executive (own posts), Admin (all posts)
 
-**Editor:** TipTap v3 — 12 extensions including StarterKit, TextAlign, Highlight, Color, Link, Image, CodeBlockLowlight (syntax highlighting via lowlight), CharacterCount, Typography, Placeholder.
+**Editor:** TipTap v3 with StarterKit, TextAlign, Highlight, Color, Link, Image, CodeBlockLowlight, CharacterCount, Typography, Placeholder.
 
-**Capabilities:**
-
-- Title, slug (auto-generated, editable), excerpt, thumbnail upload to Supabase Storage
-- Category assignment, status toggle (`draft` → `published`), featured toggle
-- View count tracking, like toggle
-- Ctrl+S to save, sort by newest/oldest/views/alpha, grid/table view
-- Comment moderation — approve, reject, delete, bulk actions
+| Feature | Description |
+|---|---|
+| Create / edit posts | Title, slug (auto-generated), excerpt, thumbnail, category, tags |
+| Rich text editor | Full WYSIWYG with syntax highlighting, tables, images, code blocks |
+| Status control | Draft → Published toggle |
+| Featured toggle | Pins post to homepage featured section |
+| View / like tracking | Automatic view count, user like toggle |
+| Comment moderation | Approve, reject, delete, bulk actions |
 
 **Server actions:** `blog-actions.js`, `executive-actions.js`
 
 ---
 
-## Event Management
+## Events
 
-**Access:** Executive (create/manage), Member (register/cancel), Advisor (view), Admin (all)
+**Roles:** Executive (create/manage), Admin (all), Member/Guest (register)
 
-**Capabilities:**
+| Feature | Description |
+|---|---|
+| Create / edit events | Title, slug, category, date range, venue, capacity, registration deadline |
+| Registration | Member registration with attendance tracking |
+| Organizer assignment | Multiple organizers per event |
+| Gallery linkage | Link gallery items to events |
+| Status control | Draft → Published → Completed |
 
-- Full event lifecycle: `draft` → `published` → `archived`
-- Registration with capacity enforcement, cancellation
-- Attendance marking per registrant
-- Organizer assignment, event-linked gallery items
-- Featured events surfaced on homepage
-
-**Server actions:** `event-actions.js`, `member-events-actions.js`, `executive-actions.js`
-
----
-
-## Contest Tracking
-
-**Access:** Member (join/leave), Executive (manage), Admin
-
-**Capabilities:**
-
-- Link contests to platforms (Codeforces, LeetCode, AtCoder, etc.)
-- Members join and leave; participant list with standings per contest
-- Filter by platform, upcoming vs past, official vs unofficial
-
-**Server actions:** `member-contests-actions.js`, `executive-actions.js`
+**Server actions:** `event-actions.js`, `member-events-actions.js`
 
 ---
 
-## Discussion Forum
+## Problem Solving Tracker
 
-**Access:** Member (full), Admin (moderate)
+**Roles:** Member (own data), Admin (all users)
 
-**Capabilities:**
+The core feature of the platform. Tracks submissions across 41+ competitive programming platforms.
 
-- Thread categories (admin-managed)
-- Create threads with rich text, tags, category
-- Nested replies with parent reference
-- Mark thread solved, mark reply as accepted solution
-- Upvote/downvote threads and replies (toggle, idempotent)
-- Pin and lock threads (admin/executive)
-- View count per thread, pagination
+| Feature | Description |
+|---|---|
+| Platform handles | Connect handles for 41+ platforms with verification |
+| Auto-sync | Browser extension captures submissions in real time |
+| Manual sync | "Sync All Platforms" button triggers full platform sync |
+| Submission history | All submissions with verdict, language, runtime, memory |
+| Rating history | Rating changes over time per platform |
+| Contest history | Contest participation with rank, score, problem breakdown |
+| Leaderboard | Club-wide ranking by solved count, rating, activity |
+| AI analysis | Per-solution AI analysis (complexity, approach, improvements) |
+| Problem tags | Tag-based filtering and browsing |
+| Daily activity | Heatmap of daily problem-solving activity |
+| Statistics | Total solved, acceptance rate, platform distribution |
 
-**Server actions:** `member-discussions-actions.js`
+**Supported platforms:** Codeforces, AtCoder, LeetCode, Toph, CSES, CodeChef, TopCoder, HackerRank, Kattis, LightOJ, UVA, SPOJ, VJudge, CS Academy, E-Olymp, USACO, DMOJ, HackerEarth, Beecrowd, BAPSOJ, DimiKOJ, LOJ, COJ, Timus, ACMP, Codewars, Exercism, Project Euler, Google Code Jam, Facebook Hacker Cup, LeetCode CN, Luogu, ACWing, POJ, HDU, ZOJ, BZOJ, 51NOD, AIZU, Yosupo Judge, Library Checker
+
+**Server actions:** `problem-solving-actions.js`, `problem-solving-services.js`  
+**API routes:** `app/api/problem-solving/` (32+ endpoints)
 
 ---
 
-## Mentorship Program
+## Browser Extension
 
-**Access:** Mentor (manage tasks/sessions), Member (submit tasks), Advisor (view), Admin
+Chrome and Firefox extension that auto-syncs submissions from 41+ platforms to NEUPC.
 
-**Capabilities:**
+| Feature | Description |
+|---|---|
+| Auto-detect | Detects submission pages automatically |
+| Real-time sync | Sends submission data to NEUPC immediately after judging |
+| Bulk import | Import full submission history from supported platforms |
+| Token auth | Secure token-based authentication tied to user account |
+| Local caching | Prevents duplicate submissions with local deduplication |
 
-- Mentor assigned to one or more mentees
-- Status: `active` / `completed` / `paused`
-- Session logs — date, topic, duration, notes, outcome
-- Weekly tasks — assign, submit (URL + code + notes), review (accept/reject + feedback)
-- Bulk task submission status updates
-- Private mentor notes per mentee
-- Progress tracking via `member_progress` table
-- Recommendation writing
+See [Browser Extension README](../../browser-extension/README.md) for installation and platform list.
+
+---
+
+## Real-Time Chat
+
+**Roles:** All authenticated users
+
+| Feature | Description |
+|---|---|
+| Direct messages | One-on-one conversations |
+| Support chat | Member-to-executive/admin support channel |
+| Group conversations | Multi-participant conversations |
+| File attachments | File sharing within conversations |
+| Read receipts | Per-user read tracking |
+| Message editing | Edit and delete sent messages |
+
+Powered by **Supabase Realtime** — live updates without polling.
+
+**Server actions:** `chat-actions.js`
+
+---
+
+## Mentorship
+
+**Roles:** Mentor (manage mentees), Member (view own mentorship)
+
+| Feature | Description |
+|---|---|
+| Assignments | Admin/Advisor assigns mentors to members |
+| Session logs | Mentors log sessions — date, topic, duration, notes, outcome |
+| Weekly tasks | Mentors assign tasks with deadlines and point values |
+| Task submissions | Members submit task solutions with URL, code, notes |
+| Feedback | Mentors review and score submissions |
+| Private notes | Mentor-only notes per mentee |
+| Recommendations | Mentors write recommendations for mentees |
 
 **Server actions:** `mentor-actions.js`, `member-tasks-actions.js`
 
 ---
 
-## Chat System
+## Discussion Forum
 
-**Access:** All authenticated users  
-**Location:** Floating panel (bottom-right corner of all `/account/*` pages)
+**Roles:** All authenticated users
 
-**Architecture:** Supabase Realtime subscriptions for live delivery. Server Actions handle all writes via `supabaseAdmin`.
+| Feature | Description |
+|---|---|
+| Thread creation | Create threads in categorized forums |
+| Nested replies | Multi-level reply threads |
+| Voting | Upvote/downvote threads and replies |
+| Solution marking | Mark a reply as the accepted solution |
+| Pin / lock | Executive and Admin can pin or lock threads |
+| Categories | Configurable discussion categories |
 
-**Conversation types:**
-
-- **Direct (1:1)** — any user to any other user
-- **Support** — guest/member raises a ticket; executive/admin claims it from the support inbox
-
-**Capabilities:**
-
-- Send text messages, file attachments
-- Edit and delete own messages
-- Unread badge across conversations, mark-as-read
-- User search to start new conversations
-- Close conversations
-
-**Components:** `ChatPanel`, `ChatPanelHeader`, `ConversationItem`, `MessageThread`, `MessageBubble`, `MessageComposer`, `NewChatPicker`, `EmptyState`
-
-**Server actions:** `chat-actions.js` (15 functions)
+**Server actions:** `discussion-actions.js`
 
 ---
 
-## Achievement System
+## Certificates
 
-**Access:** Admin (manage), Advisor (review), Member (view personal)
+**Roles:** Executive (issue), Member (view own)
 
-**Capabilities:**
+| Feature | Description |
+|---|---|
+| Issue certificates | Linked to specific events with unique certificate numbers |
+| Verification | Public certificate verification by certificate number |
+| PDF generation | Downloadable certificate files |
 
-- Achievements with year, category, position, platform
-- Link multiple members to a single achievement record
-- Filter by year and category
-- Most-earned achievements view, member achievement portfolio
+**Server actions:** `event-actions.js`, `executive-actions.js`
+
+---
+
+## Resources
+
+**Roles:** Mentor/Executive (create), All authenticated (browse, upvote)
+
+| Feature | Description |
+|---|---|
+| Resource library | Links with title, description, URL, category, difficulty, free/paid |
+| Upvoting | Community upvotes surface the best resources |
+| Featured toggle | Admin/Mentor can feature resources |
+| Filtering | Filter by category, difficulty, free/paid, platform |
+
+**Server actions:** `resource-actions.js`, `member-resources-actions.js`
+
+---
+
+## Roadmaps
+
+**Roles:** Executive/Admin (create/edit), All (browse)
+
+| Feature | Description |
+|---|---|
+| Learning paths | Structured roadmaps with rich content |
+| Categories | Organized by topic/skill area |
+| View tracking | Automatic view count |
+| Featured toggle | Surface on homepage |
+
+**Server actions:** `roadmap-actions.js`
+
+---
+
+## Achievements
+
+**Roles:** Executive/Admin (create), All (browse)
+
+| Feature | Description |
+|---|---|
+| Achievement records | Contest name, result, year, category, participants |
+| Team achievements | Support for team and individual achievements |
+| Year/category filter | Filter on public achievement page |
+| Member linking | Link achievements to member profiles |
 
 **Server actions:** `achievement-actions.js`
 
@@ -151,151 +215,88 @@ Seventeen server-rendered public pages, all with ISR caching via `public-actions
 
 ## Gallery
 
-**Access:** Public (view), Executive (manage), Admin
+**Roles:** Executive (upload), All (browse)
 
-**Capabilities:**
+| Feature | Description |
+|---|---|
+| Photo uploads | Images with caption, category, event linkage |
+| Featured toggle | Featured items on homepage |
+| Event filtering | Filter by associated event |
+| Display order | Manual ordering control |
 
-- Image URL, title, description, event link, category, featured flag
-- Bulk upload (multiple items in one action)
-- Filter by event and category
-- Featured items shown on homepage
-
-**Server actions:** `gallery-actions.js`, `executive-actions.js`
-
----
-
-## Resource Library
-
-**Access:** Public (browse), Member (upvote), Mentor (create/delete), Admin
-
-**Fields:** title, URL, category, difficulty (beginner/intermediate/advanced), free flag, featured flag, upvote count.
-
-**Capabilities:**
-
-- Filter by category, difficulty, free vs paid
-- Upvoting — idempotent per member
-- Mentor creates resources for assigned mentees
-
-**Server actions:** `resource-actions.js`, `mentor-actions.js`, `member-resources-actions.js`
+**Server actions:** `gallery-actions.js`
 
 ---
 
-## Roadmaps
+## Bootcamps
 
-**Access:** Public  
-Slug-based learning path pages, category filter, view count tracking, published/draft status.
+**Roles:** Admin (create/manage), Member (enroll/view)
 
----
+| Feature | Description |
+|---|---|
+| Bootcamp programs | Structured learning programs with modules |
+| Enrollment | Members enroll in bootcamps |
+| Progress tracking | Track completion per module |
 
-## Notifications
-
-**Access:** All authenticated users
-
-System notifications triggered by: application approved, task reviewed, message received, event registered, etc.
-
-**Capabilities:** Paginated list, mark single read, mark all read, delete.
-
-**Server actions:** `notification-actions.js`
+**Server actions:** `bootcamp-actions.js`
 
 ---
 
-## Certificate System
+## Notices
 
-**Access:** Executive (issue), Member (view)
+**Roles:** Executive/Admin (create), All authenticated (view)
 
-**Capabilities:**
+| Feature | Description |
+|---|---|
+| Club notices | Pinnable announcements with expiry dates |
+| Priority levels | Normal, urgent, critical |
+| View tracking | Automatic view count |
 
-- Issue per-member per-event certificates with unique certificate numbers
-- Bulk issue to all event attendees
-- Public verification endpoint by certificate number
-
-**Server actions:** `executive-actions.js` (`execCreateCertificateAction`, `execBulkCreateCertificatesAction`)
+**Server actions:** `notice-actions.js`
 
 ---
 
 ## Budget Management
 
-**Access:** Advisor (review/approve), Admin
+**Roles:** Executive (create entries), Advisor/Admin (approve)
 
-**Capabilities:**
-
-- Budget entries linked to events — income and expense types
-- Budget summary with running totals
-- Advisor approval per entry
-
-**Server actions:** `advisor-actions.js` (`approveBudgetEntryAction`)
-
----
-
-## Notice Board
-
-**Access:** Executive (create), All authenticated users (view)
-
-**Capabilities:**
-
-- Types: announcement, event, urgent, general
-- Pin notices to surface at the top
-- View count tracking, expiry date
-- Notices filtered pinned-first in dashboards
-
-**Server actions:** `notice-actions.js`, `executive-actions.js`
-
----
-
-## Admin — Applications
-
-Membership applications from `/join` form. Actions: approve, reject with reason, reset, delete, bulk approve/reject/delete.
-
-**Server actions:** `application-actions.js`
-
----
-
-## Admin — Contact Submissions
-
-Inbox for the public `/contact` form. Mark as read, update status (new / in-progress / resolved / closed), bulk status update, bulk delete.
-
-**Server actions:** `contact-actions.js`
-
----
-
-## Admin — User Management
-
-Full user CRUD. Actions: suspend, activate, ban, lock, delete, change role, approve/reject membership.
-
-**Server actions:** `user-actions.js`
-
----
-
-## Admin — Role & Permission Matrix
-
-Toggle individual permissions per role, assign/remove roles from users.
-
-**Server actions:** `role-actions.js`
-
----
-
-## Admin — Data Export
-
-10 domains exportable as CSV or JSON: users, join requests, blogs, events, achievements, gallery, contacts, notices, activity logs, resources.
-
-**Server actions:** `export-actions.js`
-
----
-
-## Admin — Settings
-
-Key-value site settings stored in the `settings` table, grouped by category. Reset per category.
-
-**Server actions:** `settings-actions.js`
-
----
-
-## SEO
-
-| File | Purpose |
+| Feature | Description |
 |---|---|
-| `app/_lib/seo.js` | `SITE_URL`, `SITE_NAME`, OG image defaults, `BASE_KEYWORDS` |
-| `app/robots.js` | Dynamic robots.txt |
-| `app/sitemap.js` | Dynamic sitemap including blog + event slugs |
-| `app/opengraph-image.js` | Edge-rendered OG image |
-| Per-page `metadata` / `generateMetadata()` | Title, description, OG tags per route |
+| Income/expense tracking | Per-event budget entries |
+| Approval workflow | Advisor approval for expenses |
+| Reports | Budget summary by event |
+
+**Server actions:** `executive-actions.js`
+
+---
+
+## Admin Back-Office
+
+**Role:** Admin only
+
+| Section | Description |
+|---|---|
+| Users | View, activate, deactivate, manage roles |
+| Applications | Review and approve/reject join requests |
+| Roles | Manage role definitions and permissions |
+| Security | Security event log, suspicious activity |
+| Settings | Site-wide key-value settings |
+| System Logs | Full audit trail of all actions |
+| Export | Export users, events, blogs, contacts, activity logs as CSV |
+| Analytics | Traffic, engagement, member stats |
+| Problem Solving Extraction | Admin-level sync and data tools |
+| All content modules | Full access to blogs, events, gallery, committee, roadmaps, resources, bootcamps, achievements, notices, discussions |
+
+**Server actions:** `admin-actions.js`, `export-actions.js`, `role-actions.js`, `settings-actions.js`
+
+---
+
+## Analytics & Logging
+
+| Feature | Description | Where |
+|---|---|---|
+| Page view tracking | Tracks views on public pages | `analytics-service.js` |
+| Event tracking | Custom analytics events | `analytics-service.js` |
+| Activity log | Full audit trail of user actions | `helpers.js → activity_logs` |
+| Security events | Auth failures, suspicious activity | `security-service.js` |
+| System logs | Internal system events | `system-logs-service.js` |

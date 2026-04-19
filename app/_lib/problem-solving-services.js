@@ -303,6 +303,9 @@ class ClistRateLimiter {
 
 // Singleton instance for global rate limiting across all ClistService instances
 const clistRateLimiter = new ClistRateLimiter();
+const CLIST_NETWORK_COOLDOWN_MS = 5 * 60 * 1000;
+let clistNetworkUnavailableUntil = 0;
+let clistLastCooldownWarnAt = 0;
 
 // ============================================
 // ERROR TYPES AND HELPERS
@@ -4433,9 +4436,35 @@ export class SPOJService {
       if (!/^[A-Z0-9_]{2,20}$/i.test(id)) return;
       // Filter out common false positives from page chrome
       const NOISE = new Set([
-        'AC', 'WA', 'RE', 'TLE', 'MLE', 'CE', 'PE', 'OK', 'SPOJ', 'HTML',
-        'CSS', 'PDF', 'FAQ', 'API', 'RSS', 'URL', 'YES', 'NO', 'OR', 'AND',
-        'IF', 'ID', 'BY', 'TO', 'OF', 'IN', 'ON', 'AT', 'UP',
+        'AC',
+        'WA',
+        'RE',
+        'TLE',
+        'MLE',
+        'CE',
+        'PE',
+        'OK',
+        'SPOJ',
+        'HTML',
+        'CSS',
+        'PDF',
+        'FAQ',
+        'API',
+        'RSS',
+        'URL',
+        'YES',
+        'NO',
+        'OR',
+        'AND',
+        'IF',
+        'ID',
+        'BY',
+        'TO',
+        'OF',
+        'IN',
+        'ON',
+        'AT',
+        'UP',
       ]);
       if (NOISE.has(id.toUpperCase())) return;
 
@@ -6079,7 +6108,8 @@ export class ProblemSolvingAggregator {
                     synced: 0,
                     handle: handle.handle,
                     success: false,
-                    error: 'Could not parse any solved problems from the pasted content. Make sure you copied from your SPOJ profile page.',
+                    error:
+                      'Could not parse any solved problems from the pasted content. Make sure you copied from your SPOJ profile page.',
                   };
                 }
               } else {
@@ -6101,6 +6131,27 @@ export class ProblemSolvingAggregator {
                     '[SPOJ] No reliable server-side submissions due to Cloudflare. Use browser extension import.'
                   );
                 }
+              }
+              break;
+            case 'facebookhackercup':
+              // Try CLIST contest statistics first; fall back to extension guidance if empty.
+              try {
+                submissions = await this.getSubmissionsFromClist(
+                  handle.platform,
+                  handle.handle,
+                  fromTimestamp
+                );
+              } catch (fbhcError) {
+                console.warn(`[FBHC] CLIST sync failed: ${fbhcError.message}`);
+                submissions = [];
+              }
+
+              if (!submissions || submissions.length === 0) {
+                extensionRequired = true;
+                submissions = [];
+                console.warn(
+                  '[FBHC] No submissions from CLIST. Use browser extension import.'
+                );
               }
               break;
             case 'vjudge':
@@ -6455,7 +6506,8 @@ export class ProblemSolvingAggregator {
                 synced: 0,
                 handle: handle.handle,
                 success: false,
-                error: 'Could not parse any solved problems from the pasted content. Make sure you copied from your SPOJ profile page.',
+                error:
+                  'Could not parse any solved problems from the pasted content. Make sure you copied from your SPOJ profile page.',
               };
             }
           } else {
@@ -6477,6 +6529,27 @@ export class ProblemSolvingAggregator {
                 '[SPOJ] No reliable server-side submissions due to Cloudflare. Use browser extension import.'
               );
             }
+          }
+          break;
+        case 'facebookhackercup':
+          // Try CLIST contest statistics first; fall back to extension guidance if empty.
+          try {
+            submissions = await this.getSubmissionsFromClist(
+              platform,
+              handle.handle,
+              fromTimestamp
+            );
+          } catch (fbhcError) {
+            console.warn(`[FBHC] CLIST sync failed: ${fbhcError.message}`);
+            submissions = [];
+          }
+
+          if (!submissions || submissions.length === 0) {
+            extensionRequired = true;
+            submissions = [];
+            console.warn(
+              '[FBHC] No submissions from CLIST. Use browser extension import.'
+            );
           }
           break;
         case 'vjudge':
@@ -6829,6 +6902,113 @@ export class ProblemSolvingAggregator {
             .select();
 
           if (error) {
+            // Schema fallback: some local databases may not yet have the expected
+            // composite unique constraint for ON CONFLICT.
+            if (error.code === '42P10') {
+              console.warn(
+                `[${platform}] Missing ON CONFLICT constraint (${conflictColumn}); falling back to manual dedupe + insert for batch ${i + 1}/${batches.length}`
+              );
+
+              try {
+                let rowsToInsert = batch;
+
+                if (useV2) {
+                  const candidateIds = [
+                    ...new Set(
+                      batch
+                        .map((row) => row.external_submission_id)
+                        .filter(Boolean)
+                    ),
+                  ];
+
+                  if (candidateIds.length > 0) {
+                    const { data: existingRows, error: existingError } =
+                      await supabaseAdmin
+                        .from(submissionsTable)
+                        .select('external_submission_id')
+                        .eq('user_id', userId)
+                        .eq('platform_id', platformId)
+                        .in('external_submission_id', candidateIds);
+
+                    if (existingError) {
+                      throw existingError;
+                    }
+
+                    const existingSet = new Set(
+                      (existingRows || [])
+                        .map((row) => row.external_submission_id)
+                        .filter(Boolean)
+                    );
+
+                    rowsToInsert = batch.filter(
+                      (row) => !existingSet.has(row.external_submission_id)
+                    );
+                  }
+                } else {
+                  const candidateIds = [
+                    ...new Set(
+                      batch.map((row) => row.submission_id).filter(Boolean)
+                    ),
+                  ];
+
+                  if (candidateIds.length > 0) {
+                    const { data: existingRows, error: existingError } =
+                      await supabaseAdmin
+                        .from(submissionsTable)
+                        .select('submission_id')
+                        .eq('user_id', userId)
+                        .eq('platform', platform)
+                        .in('submission_id', candidateIds);
+
+                    if (existingError) {
+                      throw existingError;
+                    }
+
+                    const existingSet = new Set(
+                      (existingRows || [])
+                        .map((row) => row.submission_id)
+                        .filter(Boolean)
+                    );
+
+                    rowsToInsert = batch.filter(
+                      (row) => !existingSet.has(row.submission_id)
+                    );
+                  }
+                }
+
+                if (rowsToInsert.length === 0) {
+                  successfulBatches.push(i);
+                  continue;
+                }
+
+                const { data: insertedRows, error: insertError } =
+                  await supabaseAdmin
+                    .from(submissionsTable)
+                    .insert(rowsToInsert)
+                    .select();
+
+                if (insertError) {
+                  throw insertError;
+                }
+
+                const insertedCount =
+                  insertedRows?.length || rowsToInsert.length;
+                totalInserted += insertedCount;
+                successfulBatches.push(i);
+                continue;
+              } catch (fallbackError) {
+                console.error(
+                  `[${platform}] Fallback insert failed for batch ${i + 1}/${batches.length}: ${fallbackError.message}`
+                );
+                errors.push({
+                  type: 'batch_insert_fallback',
+                  batch: i + 1,
+                  message: fallbackError.message,
+                });
+                continue;
+              }
+            }
+
             const errorMsg = `Batch ${i + 1}/${batches.length} failed: ${error.message}`;
             console.error(`[${platform}] ${errorMsg}`);
             errors.push({
@@ -8280,6 +8460,20 @@ export class ClistService {
       return null;
     }
 
+    const now = Date.now();
+    if (clistNetworkUnavailableUntil > now) {
+      if (now - clistLastCooldownWarnAt > 15000) {
+        const remainingMs = clistNetworkUnavailableUntil - now;
+        console.warn(
+          `[CLIST] Skipping ${endpoint} call due to recent network outage (${Math.ceil(
+            remainingMs / 1000
+          )}s cooldown remaining)`
+        );
+        clistLastCooldownWarnAt = now;
+      }
+      return null;
+    }
+
     const cacheKey = `clist_${endpoint}_${JSON.stringify(params)}`;
     const cached = await this.getCache(cacheKey);
     if (cached) {
@@ -8298,6 +8492,7 @@ export class ClistService {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           const queueStatus = clistRateLimiter.getQueueStatus();
+          const isAccountLookup = endpoint === 'account';
           const response = await fetchWithTimeout(
             url,
             {
@@ -8306,9 +8501,9 @@ export class ClistService {
                 Accept: 'application/json',
               },
             },
-            30000, // 30s timeout
-            3, // Allow inner fetchWithTimeout to retry 3 times on ETIMEDOUT/ECONNRESET
-            2000 // 2s delay between network retries
+            isAccountLookup ? 10000 : 30000, // Account lookup should fail fast on network issues
+            isAccountLookup ? 1 : 3, // Avoid long blocks for account discovery
+            isAccountLookup ? 1000 : 2000 // 2s delay between network retries
           );
 
           if (response.ok) {
@@ -8347,6 +8542,23 @@ export class ClistService {
           }
         } catch (error) {
           lastError = error;
+          const message = String(error?.message || '');
+          const isNetworkFailure =
+            /\[NetworkError\]|network connection failed|enotfound|econnreset|econnrefused|etimedout|request timeout/i.test(
+              message
+            );
+
+          if (isNetworkFailure) {
+            clistNetworkUnavailableUntil =
+              Date.now() + CLIST_NETWORK_COOLDOWN_MS;
+            clistLastCooldownWarnAt = 0;
+            console.warn(
+              `[CLIST] Network outage detected; entering cooldown for ${Math.round(
+                CLIST_NETWORK_COOLDOWN_MS / 1000
+              )}s`
+            );
+          }
+
           if (error.message.includes('Rate limit') && attempt < maxRetries) {
             // Already handled above, continue to next attempt
             continue;
@@ -8379,11 +8591,37 @@ export class ClistService {
   }
 
   /**
+   * Get ordered CLIST resource host candidates for a platform.
+   * FBHC can appear under multiple resource slugs depending on CLIST ingestion.
+   */
+  getClistHosts(platform) {
+    const primary = this.getClistHost(platform);
+    if (!primary) return [];
+
+    if (platform !== 'facebookhackercup') {
+      return [primary];
+    }
+
+    return Array.from(
+      new Set([
+        primary,
+        'facebook.com/codingcompetitions/hacker-cup',
+        'facebook.com/codingcompetitions',
+        'www.facebook.com/codingcompetitions/hacker-cup',
+        'www.facebook.com/codingcompetitions',
+      ])
+    );
+  }
+
+  /**
    * Find account ID on clist for a given handle and platform
    * Returns the account object with id, handle, rating, etc.
    * Tries multiple search methods to handle variations
    */
   async findAccount(platform, handle, userId = null) {
+    const isFbhc = platform === 'facebookhackercup';
+    const accountLookupRetries = isFbhc ? 1 : 2;
+
     // If userId provided, check cache first
     if (userId) {
       try {
@@ -8403,10 +8641,14 @@ export class ClistService {
 
           if (userHandle?.clist_account_id) {
             // Fetch the account details using the cached ID
-            const data = await this.fetchApi('account', {
-              id: userHandle.clist_account_id,
-              limit: 1,
-            });
+            const data = await this.fetchApi(
+              'account',
+              {
+                id: userHandle.clist_account_id,
+                limit: 1,
+              },
+              accountLookupRetries
+            );
             if (data?.objects?.length > 0) {
               return data.objects[0];
             }
@@ -8420,66 +8662,33 @@ export class ClistService {
       }
     }
 
-    const host = this.getClistHost(platform);
-    if (!host) {
+    const hosts = this.getClistHosts(platform);
+    if (hosts.length === 0) {
       console.warn(`CLIST: No host mapping for platform ${platform}`);
       return null;
     }
-    // Method 1: Exact handle match
-    let data = await this.fetchApi('account', {
-      resource: host,
-      handle: handle,
-      limit: 1,
-    });
-
-    if (data?.objects?.length > 0) {
-      await this.cacheAccountId(userId, platform, handle, data.objects[0].id);
-      return data.objects[0];
-    }
-
-    // Method 2: Case-insensitive search (some platforms are case-sensitive, CLIST might not be)
-    data = await this.fetchApi('account', {
-      resource: host,
-      handle__icontains: handle,
-      limit: 10, // Get more results to filter
-    });
-
-    if (data?.objects?.length > 0) {
-      // Filter for exact match ignoring case
-      const exactMatch = data.objects.find(
-        (acc) => acc.handle?.toLowerCase() === handle.toLowerCase()
+    for (const host of hosts) {
+      // Method 1: Exact handle match
+      let data = await this.fetchApi(
+        'account',
+        {
+          resource: host,
+          handle: handle,
+          limit: 1,
+        },
+        accountLookupRetries
       );
-      if (exactMatch) {
-        await this.cacheAccountId(userId, platform, handle, exactMatch.id);
-        return exactMatch;
+
+      if (data?.objects?.length > 0) {
+        await this.cacheAccountId(userId, platform, handle, data.objects[0].id);
+        return data.objects[0];
       }
-      // If no exact match, return the first result as a fallback
-      await this.cacheAccountId(userId, platform, handle, data.objects[0].id);
-      return data.objects[0];
+
+      // Method 2 removed: CLIST account API does not support handle__icontains.
+      // Keep lookups deterministic to avoid false-positive account matches.
     }
 
-    // Method 3: Search by resource only and filter client-side
-    // This is useful when handle format differs (e.g., display name vs username)
-    data = await this.fetchApi('account', {
-      resource: host,
-      limit: 100,
-    });
-
-    if (data?.objects?.length > 0) {
-      // Try to find by partial match
-      const partialMatch = data.objects.find((acc) => {
-        const accHandle = acc.handle?.toLowerCase() || '';
-        const searchHandle = handle.toLowerCase();
-        return (
-          accHandle.includes(searchHandle) || searchHandle.includes(accHandle)
-        );
-      });
-
-      if (partialMatch) {
-        await this.cacheAccountId(userId, platform, handle, partialMatch.id);
-        return partialMatch;
-      }
-    }
+    // Method 3 removed: broad unfiltered scans are expensive and may cause false matches.
 
     console.warn(
       `CLIST: No account found for ${handle} on ${platform} after all search methods`
@@ -8552,11 +8761,18 @@ export class ClistService {
    * @param {string} userId - Optional user ID for caching CLIST account ID
    */
   async getContestStatistics(platform, handle, limit = 10000, userId = null) {
-    const host = this.getClistHost(platform);
-    if (!host) {
+    const hosts = this.getClistHosts(platform);
+    if (hosts.length === 0) {
       console.warn(`CLIST: No host mapping for platform ${platform}`);
       return [];
     }
+
+    const baseStatsParams = {
+      order_by: '-date',
+      with_problems: true,
+      limit: limit,
+    };
+
     // First, get the account to obtain account_id (required by statistics endpoint)
     const account = await this.findAccount(platform, handle, userId);
     if (!account?.id) {
@@ -8568,9 +8784,7 @@ export class ClistService {
 
     const data = await this.fetchApi('statistics', {
       account_id: account.id,
-      order_by: '-date',
-      with_problems: true,
-      limit: limit, // Default 10000 to fetch all contests
+      ...baseStatsParams,
     });
 
     if (!data?.objects) {
@@ -8579,6 +8793,7 @@ export class ClistService {
       );
       return [];
     }
+
     return data.objects.map((stat) => {
       const contestId = stat.contest_id?.toString();
       const contestName =
@@ -8586,37 +8801,43 @@ export class ClistService {
         stat.contest_title ||
         (contestId ? `Contest #${contestId}` : null);
 
-      // Extract total problems from addition field or contest data
+      // Extract total problems from CLIST problems field or contest data
       let totalProblems = null;
-      if (stat.addition?.problems) {
+      if (stat.problems && typeof stat.problems === 'object') {
+        totalProblems = Object.keys(stat.problems).length;
+      } else if (stat.addition?.problems) {
         totalProblems = Object.keys(stat.addition.problems).length;
       } else if (stat.contest?.n_problems) {
         totalProblems = stat.contest.n_problems;
       }
 
-      // Extract problems data from addition field
+      // Extract problems data. CLIST may return it either at top-level `problems`
+      // or under `addition.problems` depending on resource/contest.
       let problems = null;
-      if (
-        stat.addition?.problems &&
-        typeof stat.addition.problems === 'object'
-      ) {
-        problems = Object.entries(stat.addition.problems).map(
-          ([key, value]) => {
-            const isSolved = value?.result?.includes('+') || false;
-            return {
-              label: key,
-              solved: isSolved,
-              // CLIST data is from contest standings, so if solved, it was during contest
-              solvedDuringContest: isSolved,
-              upsolve: false, // CLIST doesn't track upsolves
-              attempted: value?.result ? true : false,
-              result: value?.result,
-              time: value?.time,
-              url: value?.url,
-              name: value?.name || value?.short,
-            };
-          }
-        );
+      const rawProblems =
+        stat.problems && typeof stat.problems === 'object'
+          ? stat.problems
+          : stat.addition?.problems &&
+              typeof stat.addition.problems === 'object'
+            ? stat.addition.problems
+            : null;
+
+      if (rawProblems && typeof rawProblems === 'object') {
+        problems = Object.entries(rawProblems).map(([key, value]) => {
+          const isSolved = value?.result?.includes('+') || false;
+          return {
+            label: key,
+            solved: isSolved,
+            // CLIST data is from contest standings, so if solved, it was during contest
+            solvedDuringContest: isSolved,
+            upsolve: false, // CLIST doesn't track upsolves
+            attempted: value?.result ? true : false,
+            result: value?.result,
+            time: value?.time,
+            url: value?.url,
+            name: value?.name || value?.short,
+          };
+        });
       }
 
       // If we have totalProblems but problems array is smaller, add unattempted placeholders

@@ -5,10 +5,8 @@ import crypto from 'crypto';
  * Format: base64(userId:hash(userId))
  */
 export function generateExtensionToken(userId) {
-  const secret =
-    process.env.NEXTAUTH_SECRET ||
-    process.env.NEUPC_EXTENSION_TOKEN ||
-    'fallback-secret-123';
+  const secret = process.env.NEXTAUTH_SECRET || process.env.NEUPC_EXTENSION_TOKEN;
+  if (!secret) throw new Error('NEXTAUTH_SECRET must be set to generate extension tokens');
   const hash = crypto.createHmac('sha256', secret).update(userId).digest('hex');
   const tokenString = `${userId}:${hash}`;
   return Buffer.from(tokenString).toString('base64');
@@ -28,10 +26,8 @@ export function verifyExtensionToken(token) {
     const [userId, hash] = decoded.split(':');
     if (!userId || !hash) return null;
 
-    const secret =
-      process.env.NEXTAUTH_SECRET ||
-      process.env.NEUPC_EXTENSION_TOKEN ||
-      'fallback-secret-123';
+    const secret = process.env.NEXTAUTH_SECRET || process.env.NEUPC_EXTENSION_TOKEN;
+    if (!secret) return null;
     const expectedHash = crypto
       .createHmac('sha256', secret)
       .update(userId)

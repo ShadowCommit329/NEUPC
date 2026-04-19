@@ -7,3 +7,16 @@ snippets
 .env.keys
 .env.local
 .env.*.local
+
+# Migrations (already applied to remote, no need to track)
+migrations/
+
+# Sensitive / generated data files
+remote_data.sql
+seed.sql
+*_remote_schema.sql
+
+# SQL data backups
+*.backup.sql
+*_data.sql
+*_dump.sql

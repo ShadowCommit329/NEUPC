@@ -2507,6 +2507,19 @@ export async function syncPlatformAction(
       };
     }
 
+    // Facebook Hacker Cup currently depends on browser-extension extraction.
+    if (
+      platform === 'facebookhackercup' &&
+      submissionsResult.extensionRequired &&
+      (submissionsResult.synced || 0) === 0
+    ) {
+      return {
+        success: false,
+        error:
+          'Facebook Hacker Cup sync tried CLIST first, but CLIST could not map your connected handle to an account. CLIST usually stores FBHC account handles as numeric IDs (not username aliases). Update your connected FBHC handle to the CLIST account handle if available, or use browser extension import from your Hacker Cup profile/competition history page, then refresh this dashboard.',
+      };
+    }
+
     const submissionsSynced = submissionsResult.synced || 0;
 
     // STEP 2: Sync rating history via CLIST with fallback

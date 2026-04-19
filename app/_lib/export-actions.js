@@ -6,6 +6,7 @@
 'use server';
 
 import { supabaseAdmin } from './supabase';
+import { requireActionAuth } from './action-guard';
 
 // ─── Shared date filter helper ─────────────────────────────────────────────
 
@@ -27,6 +28,9 @@ export async function exportUsersAction({
   status,
   limit = 1000,
 }) {
+  const auth = await requireActionAuth('admin');
+  if (auth.error) return { data: null, error: auth.error };
+
   let q = supabaseAdmin
     .from('users')
     .select(
@@ -51,6 +55,9 @@ export async function exportJoinRequestsAction({
   status,
   limit = 1000,
 }) {
+  const auth = await requireActionAuth('admin');
+  if (auth.error) return { data: null, error: auth.error };
+
   let q = supabaseAdmin
     .from('join_requests')
     .select(
@@ -75,6 +82,9 @@ export async function exportBlogsAction({
   status,
   limit = 1000,
 }) {
+  const auth = await requireActionAuth('admin');
+  if (auth.error) return { data: null, error: auth.error };
+
   let q = supabaseAdmin
     .from('blog_posts')
     .select(
@@ -105,6 +115,9 @@ export async function exportEventsAction({
   status,
   limit = 1000,
 }) {
+  const auth = await requireActionAuth('admin');
+  if (auth.error) return { data: null, error: auth.error };
+
   let q = supabaseAdmin
     .from('events')
     .select(
@@ -135,6 +148,9 @@ export async function exportAchievementsAction({
   category,
   limit = 1000,
 }) {
+  const auth = await requireActionAuth('admin');
+  if (auth.error) return { data: null, error: auth.error };
+
   let q = supabaseAdmin
     .from('achievements')
     .select(
@@ -164,6 +180,9 @@ export async function exportGalleryAction({
   category,
   limit = 1000,
 }) {
+  const auth = await requireActionAuth('admin');
+  if (auth.error) return { data: null, error: auth.error };
+
   let q = supabaseAdmin
     .from('gallery_items')
     .select(
@@ -194,6 +213,9 @@ export async function exportContactsAction({
   status,
   limit = 1000,
 }) {
+  const auth = await requireActionAuth('admin');
+  if (auth.error) return { data: null, error: auth.error };
+
   let q = supabaseAdmin
     .from('contact_submissions')
     .select(
@@ -218,6 +240,9 @@ export async function exportNoticesAction({
   notice_type,
   limit = 1000,
 }) {
+  const auth = await requireActionAuth('admin');
+  if (auth.error) return { data: null, error: auth.error };
+
   let q = supabaseAdmin
     .from('notices')
     .select(
@@ -249,6 +274,9 @@ export async function exportActivityLogsAction({
   action,
   limit = 1000,
 }) {
+  const auth = await requireActionAuth('admin');
+  if (auth.error) return { data: null, error: auth.error };
+
   let q = supabaseAdmin
     .from('activity_logs')
     .select(
@@ -279,6 +307,9 @@ export async function exportResourcesAction({
   category,
   limit = 1000,
 }) {
+  const auth = await requireActionAuth('admin');
+  if (auth.error) return { data: null, error: auth.error };
+
   let q = supabaseAdmin
     .from('resources')
     .select(

@@ -189,6 +189,140 @@ function normalizeLeetCodeProblemSlug(value) {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? slug : null;
 }
 
+function clampExternalProblemId(value) {
+  if (value === null || value === undefined) return null;
+
+  const normalized = String(value).trim();
+  if (!normalized) return null;
+
+  return normalized.length > 50 ? normalized.slice(0, 50) : normalized;
+}
+
+function safeDecodePathSegment(value) {
+  const text = String(value || '').trim();
+  if (!text) return null;
+
+  try {
+    return decodeURIComponent(text);
+  } catch {
+    return text;
+  }
+}
+
+function extractProblemIdFromUrl(rawUrl, platformCode = '') {
+  const value = String(rawUrl || '').trim();
+  if (!value) return null;
+
+  let parsed;
+  try {
+    parsed = new URL(value, 'https://example.com');
+  } catch {
+    return null;
+  }
+
+  const pathname = String(parsed.pathname || '');
+  const normalizedPlatform = String(platformCode || '')
+    .trim()
+    .toLowerCase();
+
+  if (normalizedPlatform === 'facebookhackercup') {
+    const fbhcMatch = pathname.match(/\/(?:problems?|tasks?)\/([^/?#]+)/i);
+    if (fbhcMatch?.[1]) {
+      return safeDecodePathSegment(fbhcMatch[1]);
+    }
+  }
+
+  if (normalizedPlatform === 'leetcode') {
+    const lcMatch = pathname.match(/\/problems\/([^/?#]+)/i);
+    if (lcMatch?.[1]) {
+      return safeDecodePathSegment(lcMatch[1]);
+    }
+  }
+
+  const genericPathMatch = pathname.match(/\/(?:problems?|tasks?)\/([^/?#]+)/i);
+  if (genericPathMatch?.[1]) {
+    return safeDecodePathSegment(genericPathMatch[1]);
+  }
+
+  const queryCandidate =
+    parsed.searchParams.get('problem_id') ||
+    parsed.searchParams.get('problemId') ||
+    parsed.searchParams.get('problem') ||
+    parsed.searchParams.get('task') ||
+    null;
+
+  return queryCandidate ? safeDecodePathSegment(queryCandidate) : null;
+}
+
+function buildUnknownProblemId(submissionId, platformCode = 'unknown') {
+  const normalizedPlatform = String(platformCode || 'unknown')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '')
+    .slice(0, 12);
+  const normalizedSubmissionId = String(submissionId || '')
+    .trim()
+    .replace(/[^A-Za-z0-9_-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 30);
+
+  const fallback = `unknown_${normalizedPlatform || 'platform'}_${normalizedSubmissionId || 'submission'}`;
+  return clampExternalProblemId(fallback);
+}
+
+function resolveSubmissionProblemId(rawSubmission, platformCode, submissionId) {
+  const directProblemId = clampExternalProblemId(
+    rawSubmission?.problem_id ??
+      rawSubmission?.problemId ??
+      rawSubmission?.external_problem_id ??
+      rawSubmission?.externalProblemId
+  );
+  if (directProblemId) {
+    return directProblemId;
+  }
+
+  const fromProblemUrl = clampExternalProblemId(
+    extractProblemIdFromUrl(
+      rawSubmission?.problem_url ?? rawSubmission?.problemUrl,
+      platformCode
+    )
+  );
+  if (fromProblemUrl) {
+    return fromProblemUrl;
+  }
+
+  const rawContestId = String(
+    rawSubmission?.contest_id ?? rawSubmission?.contestId ?? ''
+  )
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 12);
+
+  const rawProblemName = String(
+    rawSubmission?.problem_name ?? rawSubmission?.problemName ?? ''
+  )
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 24);
+
+  const fromName = clampExternalProblemId(
+    [rawContestId, rawProblemName].filter(Boolean).join('_')
+  );
+  if (fromName) {
+    return fromName;
+  }
+
+  return buildUnknownProblemId(submissionId, platformCode);
+}
+
+function isUnknownProblemPlaceholder(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .startsWith('unknown_');
+}
+
 function normalizeVJudgeSubmissionId(value) {
   if (value === null || value === undefined) return null;
 
@@ -610,6 +744,7 @@ export async function POST(request) {
     const submissionsReceived = incomingSubmissions.length;
     let rejectedLeetCodeSubmissions = 0;
     let rejectedCsesSubmissions = 0;
+    let recoveredProblemIds = 0;
 
     let submissions = incomingSubmissions
       .map((rawSubmission) => {
@@ -633,6 +768,27 @@ export async function POST(request) {
 
         if (normalizedSubmissionId) {
           normalizedSubmission.submission_id = normalizedSubmissionId;
+        }
+
+        const resolvedProblemId = resolveSubmissionProblemId(
+          rawSubmission,
+          normalizedPlatform,
+          normalizedSubmissionId
+        );
+
+        if (resolvedProblemId) {
+          normalizedSubmission.problem_id = resolvedProblemId;
+
+          const rawProblemId = clampExternalProblemId(
+            rawSubmission.problem_id ??
+              rawSubmission.problemId ??
+              rawSubmission.external_problem_id ??
+              rawSubmission.externalProblemId
+          );
+
+          if (!rawProblemId) {
+            recoveredProblemIds++;
+          }
         }
 
         if (normalizedPlatform === 'vjudge') {
@@ -659,7 +815,12 @@ export async function POST(request) {
 
         if (normalizedPlatform === 'leetcode') {
           const normalizedProblemId = normalizeLeetCodeProblemSlug(
-            rawSubmission.problem_id
+            rawSubmission.problem_id ??
+              rawSubmission.problemId ??
+              extractProblemIdFromUrl(
+                rawSubmission.problem_url ?? rawSubmission.problemUrl,
+                normalizedPlatform
+              )
           );
 
           if (
@@ -717,6 +878,7 @@ export async function POST(request) {
       submissionsRejected: submissionsReceived - submissions.length,
       rejectedLeetCodeSubmissions,
       rejectedCsesSubmissions,
+      recoveredProblemIds,
     });
 
     if (submissions.length === 0) {
@@ -725,6 +887,7 @@ export async function POST(request) {
         submissionsReceived,
         rejectedLeetCodeSubmissions,
         rejectedCsesSubmissions,
+        recoveredProblemIds,
       });
       return NextResponse.json(
         {
@@ -736,6 +899,7 @@ export async function POST(request) {
             submissionsRejected: submissionsReceived,
             rejectedLeetCodeSubmissions,
             rejectedCsesSubmissions,
+            recoveredProblemIds,
           },
         },
         { status: 400, headers: corsHeaders }
@@ -1064,7 +1228,9 @@ export async function POST(request) {
               user_id: userId,
               platform_id: platformId,
               external_submission_id: subId,
-              external_problem_id: sub.problem_id || null,
+              external_problem_id:
+                clampExternalProblemId(sub.problem_id) ||
+                buildUnknownProblemId(subId, normalizedPlatform),
               problem_name: sub.problem_name || sub.problem_id || null,
               verdict: normalizedVerdict,
               language_id: languageMap.get(sub.language) || null,
@@ -1123,7 +1289,10 @@ export async function POST(request) {
         for (const sub of newSubmissions) {
           const { error } = await supabaseAdmin
             .from(submissionsTable)
-            .upsert(sub, { onConflict: upsertConflict, ignoreDuplicates: true });
+            .upsert(sub, {
+              onConflict: upsertConflict,
+              ignoreDuplicates: true,
+            });
           if (!error) submissionsCreated++;
         }
       } else {
@@ -1215,7 +1384,14 @@ export async function POST(request) {
     // ============================================================
     // Get unique problem IDs
     const problemIds = [
-      ...new Set(submissions.map((s) => s.problem_id).filter(Boolean)),
+      ...new Set(
+        submissions
+          .map((s) => s.problem_id)
+          .filter(
+            (problemId) =>
+              Boolean(problemId) && !isUnknownProblemPlaceholder(problemId)
+          )
+      ),
     ];
 
     // Get existing problems
@@ -1561,7 +1737,8 @@ export async function POST(request) {
             .map((problemId) => ({
               problem_id: problemId,
               id: problemToSolveId.get(problemId),
-              first_solved_at: problemToSolveFirstSolvedAt.get(problemId) || null,
+              first_solved_at:
+                problemToSolveFirstSolvedAt.get(problemId) || null,
             }))
             .filter((s) => s.id);
         } else {
@@ -1603,7 +1780,8 @@ export async function POST(request) {
           if (Number.isNaN(submittedDate.getTime())) continue;
 
           const submittedAt = submittedDate.toISOString();
-          const existingEarliest = earliestAcSolvedAtByProblemId.get(dbProblemId);
+          const existingEarliest =
+            earliestAcSolvedAtByProblemId.get(dbProblemId);
 
           if (!existingEarliest || submittedAt < existingEarliest) {
             earliestAcSolvedAtByProblemId.set(dbProblemId, submittedAt);
@@ -1626,7 +1804,10 @@ export async function POST(request) {
               : null;
 
           if (!existingIso || candidate < existingIso) {
-            solveTimestampUpdates.push({ id: solve.id, first_solved_at: candidate });
+            solveTimestampUpdates.push({
+              id: solve.id,
+              first_solved_at: candidate,
+            });
           }
         }
 
@@ -1678,9 +1859,11 @@ export async function POST(request) {
             solve_count: 1,
           });
 
-          const solvedSubmission = earliestAcSubmissionByProblemId.get(dbProblemId);
+          const solvedSubmission =
+            earliestAcSubmissionByProblemId.get(dbProblemId);
           const representativeSubmission =
-            solvedSubmission || representativeAcSubmissionByProblemId.get(dbProblemId);
+            solvedSubmission ||
+            representativeAcSubmissionByProblemId.get(dbProblemId);
           if (representativeSubmission) {
             newlySolvedSubmissions.push({
               ...representativeSubmission,
@@ -2496,6 +2679,7 @@ export async function POST(request) {
       submissionsRejected: submissionsReceived - submissions.length,
       submissionsCreated,
       submissionsUpdated,
+      recoveredProblemIds,
       problemsCreated,
       solvesCreated,
       solutionsCreated,
@@ -2516,6 +2700,7 @@ export async function POST(request) {
           submissionsRejected: submissionsReceived - submissions.length,
           rejectedLeetCodeSubmissions,
           rejectedCsesSubmissions,
+          recoveredProblemIds,
           submissionsCreated,
           submissionsUpdated,
           problemsCreated,

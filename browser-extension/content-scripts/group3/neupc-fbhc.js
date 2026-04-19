@@ -135,6 +135,109 @@
     }
   }
 
+  function decodeUriComponentSafe(value) {
+    const text = String(value || '').trim();
+    if (!text) return '';
+
+    try {
+      return decodeURIComponent(text);
+    } catch {
+      return text;
+    }
+  }
+
+  function resolveFacebookLinkShim(rawValue) {
+    const absolute = toAbsoluteUrl(rawValue);
+    if (!absolute) {
+      return null;
+    }
+
+    try {
+      const parsed = new URL(absolute);
+      const isFacebookHost =
+        /facebook\.com$/i.test(parsed.hostname) ||
+        /\.facebook\.com$/i.test(parsed.hostname);
+
+      if (!isFacebookHost || !/\/l\.php$/i.test(parsed.pathname)) {
+        return absolute;
+      }
+
+      const candidates = [
+        parsed.searchParams.get('u'),
+        parsed.searchParams.get('href'),
+        parsed.searchParams.get('url'),
+        parsed.searchParams.get('target'),
+      ];
+
+      for (const candidate of candidates) {
+        const decoded = decodeUriComponentSafe(decodeEntities(candidate));
+        const nestedAbsolute = toAbsoluteUrl(decoded);
+        if (nestedAbsolute) {
+          return nestedAbsolute;
+        }
+      }
+    } catch {
+      return absolute;
+    }
+
+    return absolute;
+  }
+
+  function normalizeCompetitionCrawlerUrl(rawValue) {
+    const resolved = resolveFacebookLinkShim(rawValue);
+    if (!resolved) {
+      return null;
+    }
+
+    try {
+      const parsed = new URL(resolved);
+      const isFacebookHost =
+        /facebook\.com$/i.test(parsed.hostname) ||
+        /\.facebook\.com$/i.test(parsed.hostname);
+      if (!isFacebookHost) {
+        return null;
+      }
+
+      const pathname = String(parsed.pathname || '').replace(/\/+$/, '') || '/';
+      if (
+        !/\/codingcompetitions\/(?:hacker-cup|profile)(?:\/|$)/i.test(pathname)
+      ) {
+        return null;
+      }
+
+      const allowedSearchKeys = new Set([
+        'view',
+        'tab',
+        'section',
+        'problem',
+        'task',
+        'problem_id',
+        'submission_id',
+        'submissionId',
+        'result_id',
+        'resultId',
+        'id',
+      ]);
+      const normalizedSearch = new URLSearchParams();
+
+      parsed.searchParams.forEach((value, key) => {
+        if (allowedSearchKeys.has(key)) {
+          normalizedSearch.append(key, value);
+        }
+      });
+
+      parsed.pathname = pathname;
+      parsed.search = normalizedSearch.toString()
+        ? `?${normalizedSearch.toString()}`
+        : '';
+      parsed.hash = '';
+
+      return parsed.toString();
+    } catch {
+      return null;
+    }
+  }
+
   function formatSlug(slug) {
     const text = String(slug || '')
       .replace(/[-_]+/g, ' ')
@@ -435,6 +538,16 @@
         return 'unknown';
       }
 
+      if (!path.includes('/codingcompetitions/')) {
+        return 'unknown';
+      }
+
+      // Facebook Coding Competitions profile can expose contest history links
+      // that we crawl when submissions pages are unavailable.
+      if (/\/codingcompetitions\/profile(?:\/|$)/i.test(path)) {
+        return 'contest';
+      }
+
       if (!path.includes('/codingcompetitions/hacker-cup')) {
         return 'unknown';
       }
@@ -443,9 +556,9 @@
       if (
         /\/submission\/\d{3,}(?:\/|$)/i.test(path) ||
         /\/submissions\/\d{3,}(?:\/|$)/i.test(path) ||
-        /(?:[?&]submission_id=\d{3,}|[?&]submissionId=\d{3,}|[?&]id=\d{3,})/i.test(
-          search
-        )
+        /(?:[?&]submission_id=\d{3,}|[?&]submissionId=\d{3,})/i.test(search) ||
+        (/\/submission(?:s)?(?:\/|$)/i.test(path) &&
+          /[?&]id=\d{3,}/i.test(search))
       ) {
         return 'submission';
       }
@@ -504,15 +617,27 @@
       const raw = String(value || '').trim();
       if (!raw) return null;
 
-      const fromPath = raw.match(/\/submissions?\/(\d{4,})/i)?.[1];
+      const fromPath = raw.match(/\/submissions?\/(\d{3,})/i)?.[1];
       if (fromPath) return fromPath;
 
-      const fromQuery = raw.match(/[?&](?:submission_id|submissionId)=(\d{4,})/i)?.[1];
+      const fromResultsPath = raw.match(/\/results?\/(\d{3,})/i)?.[1];
+      if (fromResultsPath) return fromResultsPath;
+
+      const fromMySubmissionsPath = raw.match(
+        /\/my-submissions\/(\d{3,})/i
+      )?.[1];
+      if (fromMySubmissionsPath) return fromMySubmissionsPath;
+
+      const fromQuery = raw.match(
+        /[?&](?:submission_id|submissionId|result_id|resultId)=(\d{3,})/i
+      )?.[1];
       if (fromQuery) return fromQuery;
 
       // Some pages expose single-submission views via query id.
-      if (/\/submission(?:s)?(?:\/|$)/i.test(raw)) {
-        const genericId = raw.match(/[?&]id=(\d{4,})/i)?.[1];
+      if (
+        /\/(?:submission(?:s)?|results?|my-submissions)(?:\/|$|\?)/i.test(raw)
+      ) {
+        const genericId = raw.match(/[?&]id=(\d{3,})/i)?.[1];
         if (genericId) return genericId;
       }
 
@@ -626,6 +751,7 @@
       );
 
       const rawHeading = firstNonEmpty(
+        extractText('[class*="xngnso2"]', contextNode),
         extractText('h1', contextNode),
         extractText('h2', contextNode),
         extractText('[class*="problem"][class*="title"]', contextNode),
@@ -634,12 +760,32 @@
       );
 
       let problemName = rawHeading;
-      if (problemName && /^[A-Z]\s*[:.)-]\s+/.test(problemName)) {
-        problemName = problemName.replace(/^[A-Z]\s*[:.)-]\s+/, '').trim();
+      // Strip "Problem A1: " or "A1: " prefix from FB Hacker Cup problem titles
+      if (
+        problemName &&
+        /^problem\s+[A-Z][0-9]*\s*[:.)-]\s+/i.test(problemName)
+      ) {
+        problemName = problemName
+          .replace(/^problem\s+[A-Z][0-9]*\s*[:.)-]\s+/i, '')
+          .trim();
+      } else if (problemName && /^[A-Z][0-9]*\s*[:.)-]\s+/.test(problemName)) {
+        problemName = problemName
+          .replace(/^[A-Z][0-9]*\s*[:.)-]\s+/, '')
+          .trim();
       }
+
+      const currentProblemPathMatch = String(
+        window.location.pathname || ''
+      ).match(
+        /(\/codingcompetitions\/hacker-cup\/[^?#]*?\/(?:problems?|tasks?)\/[^/?#]+)/i
+      );
+      const contextProblemUrl = currentProblemPathMatch?.[1]
+        ? toAbsoluteUrl(currentProblemPathMatch[1])
+        : null;
 
       const problemUrl =
         toAbsoluteUrl(problemHref) ||
+        contextProblemUrl ||
         (problemId
           ? toAbsoluteUrl(
               `/codingcompetitions/hacker-cup/problems/${encodeURIComponent(problemId)}`
@@ -660,6 +806,8 @@
         safeQuery('[class*="status"]', container),
         safeQuery('[class*="result"]', container),
         safeQuery('[aria-label*="result" i]', container),
+        // Facebook Hacker Cup uses ._3-9a for the verdict badge text
+        safeQuery('._3-9a', container),
       ].filter(Boolean);
 
       for (const node of verdictNodes) {
@@ -879,12 +1027,27 @@
       const submissionLink =
         safeQuery('a[href*="/submission/"]', row) ||
         safeQuery('a[href*="/submissions/"]', row) ||
+        safeQuery('a[href*="/my-submissions/"]', row) ||
+        safeQuery('a[href*="/my-submissions?"]', row) ||
+        safeQuery('a[href*="/results/"]', row) ||
+        safeQuery('a[href*="/results?"]', row) ||
         safeQuery('a[href*="submission"]', row);
       const submissionHref =
         submissionLink?.getAttribute('href') || submissionLink?.href || '';
 
+      const datasetIdCandidate = firstNonEmpty(
+        row?.getAttribute?.('data-submission-id'),
+        row?.getAttribute?.('data-submissionid'),
+        row?.getAttribute?.('data-result-id'),
+        row?.getAttribute?.('data-resultid'),
+        row?.getAttribute?.('data-id'),
+        row?.id,
+        row?.getAttribute?.('id')
+      );
+
       const submissionId =
         this.getSubmissionIdFromValue(submissionHref) ||
+        this.getSubmissionIdFromValue(datasetIdCandidate) ||
         this.getSubmissionIdFromValue(rowText);
       if (!submissionId) {
         return null;
@@ -980,8 +1143,9 @@
 
       const containers = [];
       const seen = new Set();
-      safeQueryAll('a[href*="/submissions/"], a[href*="/submission/"]').forEach(
-        (anchor) => {
+      safeQueryAll(
+        'a[href*="/submissions/"], a[href*="/submissions?"], a[href*="/my-submissions/"], a[href*="/my-submissions?"], a[href*="/submission/"], a[href*="/submission?"], a[href*="/results/"], a[href*="/results?"], a[href*="submission_id="], a[href*="submissionId="], a[href*="result_id="], a[href*="resultId="]'
+      ).forEach((anchor) => {
         const container =
           anchor.closest(
             'tr, li, article, [role="row"], [class*="submission"], [class*="row"]'
@@ -990,10 +1154,156 @@
         if (seen.has(container)) return;
         seen.add(container);
         containers.push(container);
-        }
-      );
+      });
 
       return containers;
+    }
+
+    extractSubmissionsFromVirtualizedGrid(options = {}) {
+      const expectedHandle = normalizeWhitespace(
+        options.expectedHandle || ''
+      ).toLowerCase();
+      const shouldFilterByHandle = options.filterByHandle === true;
+
+      const anchors = safeQueryAll(
+        'a[href*="codingproblems/download/submission"][href*="submission_id="]'
+      );
+      if (anchors.length === 0) {
+        return [];
+      }
+
+      const rowCellsByTop = new Map();
+      safeQueryAll('div[style*="top:"][style*="left:"]').forEach((node) => {
+        const topValue = Number.parseFloat(String(node?.style?.top || ''));
+        if (!Number.isFinite(topValue)) {
+          return;
+        }
+
+        const key = Math.round(topValue);
+        if (!rowCellsByTop.has(key)) {
+          rowCellsByTop.set(key, []);
+        }
+        rowCellsByTop.get(key).push(node);
+      });
+
+      const submissions = [];
+      const seen = new Set();
+
+      anchors.forEach((anchor) => {
+        const href =
+          String(anchor.getAttribute('href') || '').trim() ||
+          String(anchor.href || '').trim();
+        const submissionId = this.getSubmissionIdFromValue(href);
+        if (!submissionId || seen.has(submissionId)) {
+          return;
+        }
+
+        const cell =
+          anchor.closest('div[style*="top:"][style*="left:"]') ||
+          anchor.parentElement ||
+          anchor;
+        const topValue = Number.parseFloat(String(cell?.style?.top || ''));
+        const topKey = Number.isFinite(topValue) ? Math.round(topValue) : null;
+        const rowCells =
+          topKey !== null ? rowCellsByTop.get(topKey) || [cell] : [cell];
+        const rowText = normalizeWhitespace(
+          rowCells.map((node) => extractText(node)).join(' ')
+        );
+
+        let parsed = this.extractSubmissionFromListRow(cell);
+        if (!parsed || !parsed.submissionId) {
+          const context = this.parseContestContext();
+          const problemMeta = this.extractProblemMeta(document);
+
+          const verdictText = firstNonEmpty(
+            rowText.match(
+              /(accepted|correct|wrong answer|failed|time limit exceeded|memory limit exceeded|runtime error|compilation error|pending|partial(?:ly)?)/i
+            )?.[1],
+            this.extractVerdictText(cell, rowText),
+            'UNKNOWN'
+          );
+
+          const submittedAt =
+            parseTimestampToIso(
+              rowText.match(
+                /(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday),\s+[a-z]+\s+\d{1,2},\s+\d{4},\s+\d{1,2}:\d{2}\s*(?:am|pm)?(?:\s*\(gmt[^\)]*\))?/i
+              )?.[0] ||
+                rowText.match(
+                  /(\d{4}[-./]\d{1,2}[-./]\d{1,2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)/
+                )?.[1] ||
+                rowText.match(
+                  /(\d{1,2}[./-]\d{1,2}[./-]\d{2,4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)/
+                )?.[1]
+            ) || null;
+
+          const submissionUrl =
+            toAbsoluteUrl(href) ||
+            `https://www.facebook.com/codingcompetitions/hacker-cup/submissions/${submissionId}`;
+
+          parsed = {
+            platform: this.platform,
+            handle: null,
+            problemId: problemMeta.problemId,
+            problemName: firstNonEmpty(
+              problemMeta.problemName,
+              problemMeta.problemId
+            ),
+            problemUrl: problemMeta.problemUrl,
+            submissionId: String(submissionId),
+            submissionUrl,
+            verdict: normalizeVerdict(verdictText || 'UNKNOWN'),
+            language: 'Unknown',
+            executionTime: null,
+            memoryUsed: null,
+            submittedAt,
+            sourceCode: null,
+            contestId: context.contestId,
+            roundName: firstNonEmpty(
+              context.roundName,
+              context.roundSlug,
+              null
+            ),
+            problem_id: problemMeta.problemId,
+            problem_name: firstNonEmpty(
+              problemMeta.problemName,
+              problemMeta.problemId
+            ),
+            problem_url: problemMeta.problemUrl,
+            submission_id: String(submissionId),
+            submission_url: submissionUrl,
+            source_code: null,
+            execution_time_ms: null,
+            memory_kb: null,
+            submitted_at: submittedAt,
+            contest_id: context.contestId,
+          };
+        }
+
+        if (shouldFilterByHandle && expectedHandle) {
+          const rowHandle = normalizeWhitespace(
+            parsed.handle || ''
+          ).toLowerCase();
+          if (rowHandle && rowHandle !== expectedHandle) {
+            return;
+          }
+        }
+
+        seen.add(submissionId);
+        submissions.push(parsed);
+      });
+
+      submissions.sort((a, b) => {
+        const aId = Number.parseInt(String(a?.submissionId || ''), 10);
+        const bId = Number.parseInt(String(b?.submissionId || ''), 10);
+        if (Number.isFinite(aId) && Number.isFinite(bId)) {
+          return bId - aId;
+        }
+        return String(b?.submissionId || '').localeCompare(
+          String(a?.submissionId || '')
+        );
+      });
+
+      return submissions;
     }
 
     findSubmissionsLandingUrl() {
@@ -1019,7 +1329,7 @@
       const preferred = candidates.find(({ absolute, text }) => {
         return (
           /facebook\.com\/codingcompetitions\/hacker-cup/i.test(absolute) &&
-          /\/(?:my-)?submissions?(?:\/|$)|\/results?(?:\/|$)|\/submissions-list(?:\/|$)/i.test(
+          /\/my-submissions(?:\/|$|[?#])|\/submissions?(?:\/|$|[?#])|\/results?(?:\/|$|[?#])|\/submissions-list(?:\/|$|[?#])|(?:[?&](?:view|tab|section)=(?:submissions?|results?|scoreboard))/i.test(
             absolute
           ) &&
           /submission|result|score/i.test(text)
@@ -1033,17 +1343,878 @@
       const fallback = candidates.find(({ absolute }) => {
         return (
           /facebook\.com\/codingcompetitions\/hacker-cup/i.test(absolute) &&
-          /\/(?:my-)?submissions?(?:\/|$)|\/results?(?:\/|$)|\/submissions-list(?:\/|$)/i.test(
+          /\/my-submissions(?:\/|$|[?#])|\/submissions?(?:\/|$|[?#])|\/results?(?:\/|$|[?#])|\/submissions-list(?:\/|$|[?#])|(?:[?&](?:view|tab|section)=(?:submissions?|results?|scoreboard))/i.test(
             absolute
           )
         );
       });
 
-      return fallback?.absolute || null;
+      if (fallback) {
+        return fallback.absolute;
+      }
+
+      // Fallback synthesis when the page has no explicit links yet.
+      try {
+        const parsed = new URL(currentUrl);
+        const contestBaseMatch = parsed.pathname.match(
+          /\/codingcompetitions\/hacker-cup(?:\/\d{4}(?:\/[^/?#]+)?)?/i
+        );
+        const contestBasePath =
+          contestBaseMatch?.[0] || '/codingcompetitions/hacker-cup';
+        const normalizedBase = contestBasePath.replace(/\/+$/, '');
+        const problemBaseMatch = parsed.pathname.match(
+          /(\/codingcompetitions\/hacker-cup\/[^?#]*?\/(?:problems?|tasks?)\/[^/?#]+)/i
+        );
+        const problemBasePath = problemBaseMatch?.[1]
+          ? problemBaseMatch[1].replace(/\/+$/, '')
+          : null;
+
+        const synthesizedPaths = [
+          ...(problemBasePath ? [`${problemBasePath}/my-submissions`] : []),
+          `${normalizedBase}/submissions`,
+          `${normalizedBase}/results`,
+        ];
+
+        for (const path of synthesizedPaths) {
+          const absolute = toAbsoluteUrl(path);
+          if (absolute && absolute !== currentUrl) {
+            return absolute;
+          }
+        }
+      } catch {
+        // Ignore malformed URL state.
+      }
+
+      return null;
+    }
+
+    hasPageUnavailableState() {
+      const text = normalizeWhitespace(
+        extractText(document.body)
+      ).toLowerCase();
+      if (!text) return false;
+
+      const hasErrorPhrase =
+        /content isn't available|this page isn't available|page isn't available|this content isn't available right now|link you followed may be broken|may have been removed/i.test(
+          text
+        );
+      if (!hasErrorPhrase) return false;
+
+      // Facebook sprinkles "content isn't available" phrases in chrome/boundaries
+      // (dismissed dialogs, blocked thumbnails, etc.) even on fully-rendered pages.
+      // Only treat the page as truly unavailable when there is no Hacker Cup
+      // content, no coding-competition links, and no submission/problem DOM markers.
+      const hasHackerCupContent =
+        /hacker\s*cup|coding\s*competitions|round\s*\d|practice\s*round|my competition history/i.test(
+          text
+        );
+      const hasHackerCupAnchors = Boolean(
+        safeQuery(
+          'a[href*="/codingcompetitions/hacker-cup"], a[href*="/codingcompetitions/profile"]'
+        )
+      );
+      const hasProblemOrSubmissionMarkers = Boolean(
+        safeQuery(
+          'a[href*="/problems/"], a[href*="/submissions/"], a[href*="/my-submissions/"], a[href*="/results/"], ._3-9a, [class*="xngnso2"]'
+        )
+      );
+
+      if (
+        hasHackerCupContent ||
+        hasHackerCupAnchors ||
+        hasProblemOrSubmissionMarkers
+      ) {
+        return false;
+      }
+
+      return true;
+    }
+
+    toSyntheticToken(value, fallback = 'item') {
+      const raw = String(value || '')
+        .trim()
+        .toLowerCase();
+      const token = raw.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+      return token || fallback;
+    }
+
+    inferProblemAttemptStatus(container, problemLink) {
+      const hostNode = container || problemLink || document.body;
+      const indicatorNodes = safeQueryAll(
+        '[class*="status"], [class*="result"], [class*="score"], [class*="badge"], [class*="verdict"], [aria-label*="status" i], [aria-label*="result" i], [title*="accepted" i], [title*="wrong" i], [title*="submitted" i], [title*="pending" i], ._3-9a',
+        hostNode
+      ).slice(0, 20);
+
+      const statusChunks = [];
+      const pushChunk = (value) => {
+        const text = normalizeWhitespace(value).toLowerCase();
+        if (!text) return;
+        statusChunks.push(text);
+      };
+
+      pushChunk(extractText(hostNode));
+      pushChunk(hostNode?.getAttribute?.('aria-label'));
+      pushChunk(hostNode?.getAttribute?.('title'));
+      pushChunk(hostNode?.className);
+      pushChunk(problemLink?.getAttribute?.('aria-label'));
+      pushChunk(problemLink?.getAttribute?.('title'));
+      pushChunk(problemLink?.className);
+
+      indicatorNodes.forEach((node) => {
+        pushChunk(extractText(node));
+        pushChunk(node?.getAttribute?.('aria-label'));
+        pushChunk(node?.getAttribute?.('title'));
+        pushChunk(node?.className);
+      });
+
+      const signal = statusChunks.join(' ');
+
+      const hasStatusClassSignal =
+        /status|result|score|badge|verdict|solved|attempt|success|wrong|pending|partial|full|zero/.test(
+          `${String(hostNode?.className || '').toLowerCase()} ${String(problemLink?.className || '').toLowerCase()}`
+        );
+
+      if (indicatorNodes.length === 0 && !hasStatusClassSignal) {
+        return null;
+      }
+
+      const isSolved =
+        /accepted|correct|solved|passed|complete(?:d)?|success|full(?:\s+score)?|\bac\b|checkmark|✓|✔/.test(
+          signal
+        ) && !/not\s+solved|unsolved|failed|wrong\s+answer/.test(signal);
+
+      const isPending =
+        /pending|queue|judg|running|in\s*progress|processing/.test(signal) &&
+        !isSolved;
+
+      const isTried =
+        isSolved ||
+        isPending ||
+        /attempt(?:ed)?|tried|submitted|wrong|failed|incorrect|partial|zero(?:\s+score)?|\bwa\b/.test(
+          signal
+        );
+
+      if (!isTried) {
+        return null;
+      }
+
+      if (isSolved) {
+        return { statusType: 'solved', verdict: 'AC' };
+      }
+
+      if (isPending) {
+        return { statusType: 'pending', verdict: 'PENDING' };
+      }
+
+      return { statusType: 'tried', verdict: 'WA' };
+    }
+
+    extractContestLinksForCrawl() {
+      const links = [];
+      const seen = new Set();
+
+      const isProfilePage = /\/codingcompetitions\/profile(?:\/|$)/i.test(
+        String(window.location.pathname || '')
+      );
+
+      const isTargetRoundOrProblemPath = (pathname) => {
+        const path = String(pathname || '').toLowerCase();
+        if (!path.includes('/codingcompetitions/hacker-cup/')) {
+          return false;
+        }
+
+        // Keep traversal narrow on profile pages:
+        // year/round pages and problem/task pages only.
+        return /\/codingcompetitions\/hacker-cup\/\d{4}\/[^/?#]+(?:\/|$)/i.test(
+          pathname
+        );
+      };
+
+      const addLink = (candidateUrl) => {
+        const value = normalizeCompetitionCrawlerUrl(candidateUrl);
+        if (!value || seen.has(value)) {
+          return;
+        }
+
+        if (isProfilePage) {
+          try {
+            const parsed = new URL(value);
+            const pathname = String(parsed.pathname || '');
+            if (!isTargetRoundOrProblemPath(pathname)) {
+              return;
+            }
+          } catch {
+            return;
+          }
+        }
+
+        if (seen.has(value)) {
+          return;
+        }
+        seen.add(value);
+        links.push(value);
+      };
+
+      const currentAbsolute = normalizeCompetitionCrawlerUrl(
+        window.location.href
+      );
+      if (currentAbsolute) {
+        try {
+          const parsedCurrent = new URL(currentAbsolute);
+          const currentPathname = String(parsedCurrent.pathname || '');
+          const currentPath = currentPathname.toLowerCase();
+
+          if (
+            /facebook\.com$/i.test(parsedCurrent.hostname) ||
+            /\.facebook\.com$/i.test(parsedCurrent.hostname)
+          ) {
+            if (currentPath.includes('/codingcompetitions/hacker-cup')) {
+              addLink(parsedCurrent.toString().split('#')[0]);
+
+              const problemBaseMatch = currentPathname.match(
+                /(\/codingcompetitions\/hacker-cup\/[^?#]*?\/(?:problems?|tasks?)\/[^/?#]+)/i
+              );
+              const problemBasePath = problemBaseMatch?.[1]
+                ? problemBaseMatch[1].replace(/\/+$/, '')
+                : null;
+              if (problemBasePath) {
+                const mySubmissionsUrl = toAbsoluteUrl(
+                  `${problemBasePath}/my-submissions`
+                );
+                if (mySubmissionsUrl) {
+                  addLink(mySubmissionsUrl.split('#')[0]);
+                }
+              }
+            }
+          }
+        } catch {
+          // Ignore malformed current URL.
+        }
+      }
+
+      safeQueryAll('a[href]').forEach((anchor) => {
+        const rawHref = String(anchor.getAttribute('href') || '').trim();
+        if (
+          !rawHref ||
+          rawHref.startsWith('#') ||
+          /^javascript:/i.test(rawHref)
+        ) {
+          return;
+        }
+
+        const absolute = normalizeCompetitionCrawlerUrl(rawHref);
+        if (!absolute) {
+          return;
+        }
+
+        let parsed;
+        try {
+          parsed = new URL(absolute);
+        } catch {
+          return;
+        }
+
+        const full = parsed.toString().split('#')[0];
+        const pathname = String(parsed.pathname || '');
+        const path = pathname.toLowerCase();
+        const search = String(parsed.search || '').toLowerCase();
+        if (
+          !/facebook\.com$/i.test(parsed.hostname) &&
+          !/\.facebook\.com$/i.test(parsed.hostname)
+        ) {
+          return;
+        }
+        if (!path.includes('/codingcompetitions/hacker-cup')) {
+          return;
+        }
+
+        if (/\/certificate(?:\/|$|\?)/i.test(pathname)) {
+          return;
+        }
+
+        const isProblemPage = /\/(?:problems?|tasks?)\/[^/?#]+(?:\/|$)/i.test(
+          pathname
+        );
+        const isMySubmissionsPage =
+          /\/(?:problems?|tasks?)\/[^/?#]+\/my-submissions(?:\/|$|\?)/i.test(
+            pathname
+          );
+        const isSubmissionDetailPage =
+          /\/(?:submission|submissions|result|results)\/\d{3,}(?:\/|$|\?)/i.test(
+            pathname
+          ) ||
+          /[?&](?:submission_id|submissionId|result_id|resultId|id)=\d{3,}/i.test(
+            search
+          );
+
+        if (isSubmissionDetailPage) {
+          return;
+        }
+
+        const isContestPage =
+          /\/codingcompetitions\/hacker-cup(?:\/\d{4}(?:\/[^/?#]+)?)?(?:\/|$)/i.test(
+            pathname
+          );
+
+        if (!isContestPage && !isProblemPage && !isMySubmissionsPage) {
+          return;
+        }
+
+        if (isProfilePage) {
+          const contextNode =
+            anchor.closest(
+              'tr, li, article, section, [role="row"], [role="listitem"], div'
+            ) ||
+            anchor.parentElement ||
+            anchor;
+          const contextText = normalizeWhitespace(
+            extractText(contextNode)
+          ).toLowerCase();
+
+          const scoreMatch = contextText.match(
+            /\b(\d{1,3})\s*\/\s*(\d{1,3})\b/
+          );
+          if (scoreMatch) {
+            const solved = Number.parseInt(scoreMatch[1], 10);
+            const total = Number.parseInt(scoreMatch[2], 10);
+            if (
+              Number.isFinite(total) &&
+              total > 0 &&
+              (!Number.isFinite(solved) || solved <= 0)
+            ) {
+              return;
+            }
+          }
+        }
+
+        addLink(full);
+
+        if (isProblemPage && !isMySubmissionsPage) {
+          const problemBaseMatch = pathname.match(
+            /(\/codingcompetitions\/hacker-cup\/[^?#]*?\/(?:problems?|tasks?)\/[^/?#]+)/i
+          );
+          const problemBasePath = problemBaseMatch?.[1]
+            ? problemBaseMatch[1].replace(/\/+$/, '')
+            : null;
+          if (problemBasePath) {
+            const mySubmissionsUrl = toAbsoluteUrl(
+              `${problemBasePath}/my-submissions`
+            );
+            if (mySubmissionsUrl) {
+              addLink(mySubmissionsUrl.split('#')[0]);
+            }
+          }
+        }
+      });
+
+      safeQueryAll('[href]').forEach((node) => {
+        const tagName = String(node?.tagName || '').toLowerCase();
+        if (tagName === 'a') {
+          return;
+        }
+
+        const rawHref = String(node.getAttribute('href') || '').trim();
+        if (!rawHref || !/codingcompetitions/i.test(rawHref)) {
+          return;
+        }
+
+        addLink(rawHref);
+      });
+
+      safeQueryAll('[data-href], [data-url], [data-lynx-uri]').forEach(
+        (node) => {
+          const candidates = [
+            node.getAttribute('data-href'),
+            node.getAttribute('data-url'),
+            node.getAttribute('data-lynx-uri'),
+          ];
+
+          candidates.forEach((candidate) => {
+            const value = String(candidate || '').trim();
+            if (!value) {
+              return;
+            }
+
+            if (
+              !/codingcompetitions|facebook\.com\/l\.php|codingcompetitions%2F/i.test(
+                value
+              )
+            ) {
+              return;
+            }
+
+            addLink(value);
+          });
+        }
+      );
+
+      if (!isProfilePage) {
+        const html = String(document.documentElement?.innerHTML || '')
+          .replace(/\\\//g, '/')
+          .replace(/\\u002[fF]/g, '/')
+          .replace(/\\x2[fF]/g, '/');
+        const roundUrlRegex =
+          /https?:\/\/(?:www\.|m\.|web\.)?facebook\.com\/codingcompetitions\/hacker-cup\/\d{4}\/[a-z0-9_-]+(?:\/|$|[?#])/gi;
+        let roundUrlMatch;
+        let roundUrlGuards = 0;
+        while (
+          (roundUrlMatch = roundUrlRegex.exec(html)) != null &&
+          roundUrlGuards < 400
+        ) {
+          roundUrlGuards += 1;
+
+          const roundUrl = String(roundUrlMatch[0] || '')
+            .trim()
+            .replace(/[?#].*$/, '')
+            .replace(/\/+$/, '');
+
+          if (!roundUrl) {
+            continue;
+          }
+
+          addLink(roundUrl);
+        }
+
+        const encodedRoundUrlRegex =
+          /https%3A%2F%2F(?:www\.|m\.|web\.)?facebook\.com%2Fcodingcompetitions%2Fhacker-cup%2F\d{4}%2F[a-z0-9_-]+(?:%2F|%3F|%23|$)/gi;
+        let encodedRoundMatch;
+        let encodedRoundGuards = 0;
+        while (
+          (encodedRoundMatch = encodedRoundUrlRegex.exec(html)) != null &&
+          encodedRoundGuards < 400
+        ) {
+          encodedRoundGuards += 1;
+
+          const encodedRoundUrl = String(encodedRoundMatch[0] || '').trim();
+          if (!encodedRoundUrl) {
+            continue;
+          }
+
+          const decodedRoundUrl = decodeUriComponentSafe(encodedRoundUrl)
+            .replace(/[?#].*$/, '')
+            .replace(/\/+$/, '');
+          addLink(decodedRoundUrl);
+        }
+
+        const roundPathRegex =
+          /\/codingcompetitions\/hacker-cup\/\d{4}\/[a-z0-9_-]+(?:\/|$|[?#])/gi;
+        let roundMatch;
+        let roundGuards = 0;
+        while (
+          (roundMatch = roundPathRegex.exec(html)) != null &&
+          roundGuards < 400
+        ) {
+          roundGuards += 1;
+
+          const roundPath = String(roundMatch[0] || '')
+            .trim()
+            .replace(/[?#].*$/, '')
+            .replace(/\/+$/, '');
+
+          if (!roundPath) {
+            continue;
+          }
+
+          if (/\/(?:problems?|tasks?)\//i.test(roundPath)) {
+            continue;
+          }
+
+          const roundUrl = toAbsoluteUrl(roundPath);
+          if (roundUrl) {
+            addLink(roundUrl.split('#')[0]);
+          }
+        }
+
+        const problemPathRegex =
+          /\/codingcompetitions\/hacker-cup\/\d{4}\/[^"'\s<]+\/(?:problems?|tasks?)\/[^"'\s<]+/gi;
+        let match;
+        let guards = 0;
+        while ((match = problemPathRegex.exec(html)) != null && guards < 300) {
+          guards += 1;
+
+          const problemPath = String(match[0] || '').trim();
+          if (!problemPath) {
+            continue;
+          }
+
+          const problemUrl = toAbsoluteUrl(problemPath);
+          if (problemUrl) {
+            addLink(problemUrl.split('#')[0]);
+          }
+
+          const normalizedProblemPath = problemPath.replace(/\/+$/, '');
+          const mySubmissionsUrl = toAbsoluteUrl(
+            `${normalizedProblemPath}/my-submissions`
+          );
+          if (mySubmissionsUrl) {
+            addLink(mySubmissionsUrl.split('#')[0]);
+          }
+        }
+      }
+
+      return links;
+    }
+
+    parseNumericToken(value) {
+      const raw = String(value || '')
+        .trim()
+        .replace(/,/g, '');
+      if (!raw) return null;
+
+      const parsed = Number.parseFloat(raw);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    async primeDynamicContent(pageType = 'contest') {
+      const shouldScroll =
+        pageType === 'contest' ||
+        pageType === 'problem' ||
+        pageType === 'submissions';
+      if (!shouldScroll) {
+        return;
+      }
+
+      const isProfilePage = /\/codingcompetitions\/profile(?:\/|$)/i.test(
+        String(window.location.pathname || '')
+      );
+
+      const clickCompetitionHistoryExpanders = () => {
+        if (!isProfilePage) {
+          return;
+        }
+
+        let clicks = 0;
+        const maxClicks = 8;
+        const candidates = safeQueryAll(
+          'button, [role="button"], [aria-expanded="false"]'
+        );
+
+        candidates.forEach((node) => {
+          if (clicks >= maxClicks) {
+            return;
+          }
+
+          const label = normalizeWhitespace(
+            [
+              extractText(node),
+              node?.getAttribute?.('aria-label') || '',
+              node?.getAttribute?.('title') || '',
+            ].join(' ')
+          ).toLowerCase();
+          if (!label) {
+            return;
+          }
+
+          const isHistoryControl =
+            /competition\s*history|hacker\s*cup|coding\s*competitions|round/.test(
+              label
+            );
+          const isMoreControl =
+            /see\s*more|show\s*more|view\s*more|load\s*more/.test(label);
+
+          if (!isHistoryControl && !isMoreControl) {
+            return;
+          }
+
+          if (isMoreControl && !isHistoryControl) {
+            const contextNode = node.closest('section, article, div, main');
+            const contextText = normalizeWhitespace(
+              extractText(contextNode || document.body)
+            ).toLowerCase();
+            if (
+              !/competition\s*history|hacker\s*cup|coding\s*competitions|round/.test(
+                contextText
+              )
+            ) {
+              return;
+            }
+          }
+
+          try {
+            node.dispatchEvent(
+              new MouseEvent('click', {
+                bubbles: true,
+                cancelable: true,
+                view: window,
+              })
+            );
+            clicks += 1;
+          } catch {
+            // Ignore click failures.
+          }
+        });
+      };
+
+      const getScrollableContainers = () => {
+        return safeQueryAll('div, section, article, main')
+          .filter((node) => {
+            try {
+              const style = window.getComputedStyle(node);
+              const overflowY = String(style?.overflowY || '').toLowerCase();
+              const canScroll =
+                Number(node.scrollHeight || 0) -
+                  Number(node.clientHeight || 0) >
+                80;
+              const isScrollableOverflow =
+                overflowY === 'auto' ||
+                overflowY === 'scroll' ||
+                overflowY === 'overlay';
+              return canScroll && isScrollableOverflow;
+            } catch {
+              return false;
+            }
+          })
+          .slice(0, 8);
+      };
+
+      let previousHeight = 0;
+      let previousSignature = '';
+      for (let i = 0; i < 10; i++) {
+        const currentHeight = Math.max(
+          Number(document.body?.scrollHeight || 0),
+          Number(document.documentElement?.scrollHeight || 0)
+        );
+
+        previousHeight = currentHeight;
+
+        clickCompetitionHistoryExpanders();
+
+        const scrollContainers = getScrollableContainers();
+        scrollContainers.forEach((container) => {
+          try {
+            container.scrollTop = Number(container.scrollHeight || 0);
+          } catch {
+            // Ignore container scroll failures.
+          }
+        });
+
+        try {
+          window.scrollTo(0, currentHeight);
+        } catch {
+          // Ignore scroll failures in restricted contexts.
+        }
+
+        await sleep(420);
+
+        const contestAnchorsCount = safeQueryAll(
+          'a[href*="/codingcompetitions/hacker-cup/"]'
+        ).length;
+        const containersHeightSignature = scrollContainers
+          .map((container) => Number(container.scrollHeight || 0))
+          .join(',');
+        const signature = `${currentHeight}|${contestAnchorsCount}|${containersHeightSignature}`;
+
+        if (
+          i > 2 &&
+          signature === previousSignature &&
+          currentHeight <= previousHeight
+        ) {
+          break;
+        }
+
+        previousSignature = signature;
+      }
+
+      try {
+        window.scrollTo(0, 0);
+      } catch {
+        // Ignore scroll failures in restricted contexts.
+      }
+      await sleep(120);
+    }
+
+    extractProfileContestStatuses() {
+      // The profile page lists rounds the user participated in with aggregate
+      // scores like "19/105" — that doesn't identify specific AC'd problems.
+      // Per-problem verdicts are determined by visiting each problem page
+      // (see extractProblemAttemptStatuses). Round URLs for crawling are
+      // collected via extractContestLinksForCrawl().
+      return [];
+    }
+
+    extractProblemAttemptStatuses(options = {}) {
+      const context = this.parseContestContext();
+      const expectedHandle = normalizeWhitespace(
+        options.expectedHandle || options.handle || ''
+      );
+
+      const rowsByProblem = new Map();
+
+      // If we're already on a problem page, synthesize from current page verdict
+      const currentPageType = this.detectPageType();
+      if (currentPageType === 'problem') {
+        const currentProblemId = this.getProblemFromUrl(window.location.href);
+        if (currentProblemId) {
+          const verdictText = this.extractVerdictText(document);
+          if (verdictText) {
+            const normalized = normalizeVerdict(verdictText);
+            if (normalized !== 'UNKNOWN') {
+              const linkContext = this.parseContestContext();
+              const contestId = firstNonEmpty(
+                linkContext.contestId,
+                'hacker-cup'
+              );
+              const contestToken = this.toSyntheticToken(contestId, 'contest');
+              const problemToken = this.toSyntheticToken(
+                currentProblemId,
+                'problem'
+              );
+              const statusType =
+                normalized === 'AC'
+                  ? 'solved'
+                  : normalized === 'PENDING'
+                    ? 'pending'
+                    : 'tried';
+              const syntheticId = `fbhc_problem_${contestToken}_${problemToken}_${statusType}`;
+              const problemMeta = this.extractProblemMeta(document);
+              rowsByProblem.set(`${contestId}::${currentProblemId}`, {
+                priority:
+                  statusType === 'solved'
+                    ? 3
+                    : statusType === 'pending'
+                      ? 2
+                      : 1,
+                submission: {
+                  platform: this.platform,
+                  handle: expectedHandle || null,
+                  problemId: currentProblemId,
+                  problemName: firstNonEmpty(
+                    problemMeta.problemName,
+                    currentProblemId
+                  ),
+                  problemUrl: toAbsoluteUrl(window.location.pathname),
+                  submissionId: syntheticId,
+                  submissionUrl: null,
+                  verdict: normalized,
+                  language: 'Unknown',
+                  executionTime: null,
+                  memoryUsed: null,
+                  submittedAt: null,
+                  sourceCode: null,
+                  contestId,
+                  roundName: firstNonEmpty(linkContext.roundName, null),
+                  problem_id: currentProblemId,
+                  problem_name: firstNonEmpty(
+                    problemMeta.problemName,
+                    currentProblemId
+                  ),
+                  problem_url: toAbsoluteUrl(window.location.pathname),
+                  submission_id: syntheticId,
+                  submission_url: null,
+                  source_code: null,
+                  execution_time_ms: null,
+                  memory_kb: null,
+                  submitted_at: null,
+                  synthetic_submission: true,
+                  syntheticSubmission: true,
+                  status_type: statusType,
+                  statusType,
+                },
+              });
+            }
+          }
+        }
+      }
+
+      safeQueryAll('a[href*="/problems/"], a[href*="/tasks/"]').forEach(
+        (problemLink) => {
+          const href =
+            String(problemLink.getAttribute('href') || '').trim() ||
+            String(problemLink.href || '').trim();
+          if (!href) return;
+
+          const problemUrl = toAbsoluteUrl(href);
+          if (!problemUrl) return;
+
+          const problemId = this.getProblemFromUrl(problemUrl);
+          if (!problemId) return;
+
+          const row =
+            problemLink.closest(
+              'tr, li, article, [role="row"], [class*="problem"], [class*="task"], [class*="challenge"]'
+            ) ||
+            problemLink.parentElement ||
+            problemLink;
+
+          const inferred = this.inferProblemAttemptStatus(row, problemLink);
+          if (!inferred) return;
+
+          const linkContext = this.parseContestContext(problemUrl);
+          const contestId = firstNonEmpty(
+            linkContext.contestId,
+            context.contestId,
+            'hacker-cup'
+          );
+
+          const problemName = firstNonEmpty(
+            extractText(problemLink),
+            problemId
+          );
+          const contestToken = this.toSyntheticToken(contestId, 'contest');
+          const problemToken = this.toSyntheticToken(problemId, 'problem');
+          const syntheticId = `fbhc_problem_${contestToken}_${problemToken}_${inferred.statusType}`;
+
+          const key = `${contestId}::${problemId}`;
+          const priority =
+            inferred.statusType === 'solved'
+              ? 3
+              : inferred.statusType === 'pending'
+                ? 2
+                : 1;
+
+          const existing = rowsByProblem.get(key);
+          if (existing && existing.priority >= priority) {
+            return;
+          }
+
+          rowsByProblem.set(key, {
+            priority,
+            submission: {
+              platform: this.platform,
+              handle: expectedHandle || null,
+              problemId,
+              problemName,
+              problemUrl,
+              submissionId: syntheticId,
+              submissionUrl: null,
+              verdict: inferred.verdict,
+              language: 'Unknown',
+              executionTime: null,
+              memoryUsed: null,
+              submittedAt: null,
+              sourceCode: null,
+              contestId,
+              roundName: firstNonEmpty(
+                linkContext.roundName,
+                context.roundName,
+                null
+              ),
+              problem_id: problemId,
+              problem_name: problemName,
+              problem_url: problemUrl,
+              submission_id: syntheticId,
+              submission_url: null,
+              source_code: null,
+              execution_time_ms: null,
+              memory_kb: null,
+              submitted_at: null,
+              synthetic_submission: true,
+              syntheticSubmission: true,
+              status_type: inferred.statusType,
+              statusType: inferred.statusType,
+            },
+          });
+        }
+      );
+
+      return Array.from(rowsByProblem.values()).map(
+        (entry) => entry.submission
+      );
     }
 
     extractSubmissionsFromHtmlSnapshot(options = {}) {
-      const html = String(document.documentElement?.innerHTML || '');
+      const htmlRaw = String(document.documentElement?.innerHTML || '');
+      const html = htmlRaw.replace(/\\\//g, '/');
       if (!html) {
         return [];
       }
@@ -1055,18 +2226,28 @@
       ).toLowerCase();
 
       const regex =
-        /\/codingcompetitions\/hacker-cup[^"'\s<]*?\/(?:submission|submissions)\/(\d{4,})/gi;
+        /(\/codingcompetitions\/hacker-cup[^"'\s<]*?\/(?:submission|submissions|result|results|my-submissions)(?:\/(\d{3,}))?(?:\?[^"'\s<]*?(?:submission_id|submissionId|result_id|resultId|id)=(\d{3,}))?)/gi;
       let match;
 
       while ((match = regex.exec(html)) != null && submissions.length < 800) {
-        const submissionId = String(match[1] || '').trim();
-        if (!submissionId || seen.has(submissionId)) {
-          continue;
-        }
-
+        const submissionPath = String(match[1] || '').trim();
         const start = Math.max(0, match.index - 700);
         const end = Math.min(html.length, match.index + 900);
         const chunk = html.slice(start, end);
+
+        const submissionId = String(
+          firstNonEmpty(
+            match[2],
+            match[3],
+            chunk.match(
+              /(?:submission(?:_?id|Id)|result(?:_?id|Id))["':=\s]+(\d{3,})/i
+            )?.[1],
+            ''
+          )
+        ).trim();
+        if (!submissionId || seen.has(submissionId)) {
+          continue;
+        }
 
         const problemId =
           chunk.match(/\/(?:problems?|tasks?)\/([^/?#"'\s<]+)/i)?.[1] || null;
@@ -1087,7 +2268,11 @@
           }
         }
 
-        const submissionUrl = `https://www.facebook.com/codingcompetitions/hacker-cup/submissions/${submissionId}`;
+        const submissionUrl =
+          toAbsoluteUrl(submissionPath) ||
+          (submissionPath
+            ? `https://www.facebook.com${submissionPath}`
+            : `https://www.facebook.com/codingcompetitions/hacker-cup/submissions/${submissionId}`);
         const problemUrl = problemId
           ? toAbsoluteUrl(
               `/codingcompetitions/hacker-cup/problems/${encodeURIComponent(problemId)}`
@@ -1139,9 +2324,35 @@
     extractNextPageUrl() {
       const currentUrl = window.location.href;
 
+      let currentPage = null;
+      let currentPageParam = null;
+      try {
+        const parsedCurrent = new URL(currentUrl);
+        if (parsedCurrent.searchParams.has('page')) {
+          currentPageParam = 'page';
+        } else if (parsedCurrent.searchParams.has('p')) {
+          currentPageParam = 'p';
+        } else if (parsedCurrent.searchParams.has('offset')) {
+          currentPageParam = 'offset';
+        }
+
+        if (currentPageParam) {
+          const rawCurrent = parsedCurrent.searchParams.get(currentPageParam);
+          const parsed = Number.parseInt(String(rawCurrent || ''), 10);
+          if (Number.isFinite(parsed)) {
+            currentPage = parsed;
+          }
+        }
+      } catch {
+        // Ignore malformed current URL.
+      }
+
       let bestUrl = null;
       let bestPage = Number.POSITIVE_INFINITY;
       let fallbackUrl = null;
+
+      let bestPagedUrl = null;
+      let bestPagedPage = Number.POSITIVE_INFINITY;
 
       safeQueryAll('a[href]').forEach((anchor) => {
         const rawHref = String(anchor.getAttribute('href') || '').trim();
@@ -1158,43 +2369,99 @@
           return;
         }
 
+        if (!/facebook\.com\/codingcompetitions\/hacker-cup/i.test(absolute)) {
+          return;
+        }
+
         const text = extractText(anchor).toLowerCase();
         const rel = String(anchor.getAttribute('rel') || '').toLowerCase();
         const title = String(anchor.getAttribute('title') || '').toLowerCase();
+        const ariaLabel = String(
+          anchor.getAttribute('aria-label') || ''
+        ).toLowerCase();
+
+        const labelText = `${text} ${title} ${ariaLabel}`.trim();
 
         const isNextLike =
           rel.includes('next') ||
           /(^|\s)(next|newer|>|>>|›|»)(\s|$)/i.test(text) ||
-          /next/i.test(title);
-
-        if (!isNextLike) {
-          return;
-        }
-
-        if (!fallbackUrl) {
-          fallbackUrl = absolute;
-        }
+          /next/i.test(title) ||
+          /next/i.test(ariaLabel);
 
         try {
           const parsed = new URL(absolute);
-          const page = Number.parseInt(
+          const pageRaw =
             parsed.searchParams.get('page') ||
-              parsed.searchParams.get('p') ||
-              parsed.searchParams.get('offset') ||
-              '',
-            10
-          );
+            parsed.searchParams.get('p') ||
+            parsed.searchParams.get('offset') ||
+            '';
 
-          if (Number.isFinite(page) && page >= 0 && page < bestPage) {
-            bestPage = page;
-            bestUrl = absolute;
+          const page = Number.parseInt(String(pageRaw || ''), 10);
+
+          if (isNextLike) {
+            if (!fallbackUrl) {
+              fallbackUrl = absolute;
+            }
+
+            if (!Number.isFinite(page)) {
+              bestUrl = bestUrl || absolute;
+              return;
+            }
+
+            const shouldTake =
+              currentPage === null
+                ? page >= 2 && page < bestPage
+                : page > currentPage && page < bestPage;
+
+            if (shouldTake) {
+              bestPage = page;
+              bestUrl = absolute;
+            }
+
+            return;
+          }
+
+          if (!Number.isFinite(page)) {
+            return;
+          }
+
+          const shouldTakePaged =
+            currentPage === null
+              ? page >= 2 && page < bestPagedPage
+              : page > currentPage && page < bestPagedPage;
+
+          if (shouldTakePaged) {
+            bestPagedPage = page;
+            bestPagedUrl = absolute;
           }
         } catch {
           // Ignore malformed next-page URLs.
         }
       });
 
-      return bestUrl || fallbackUrl || null;
+      if (bestUrl || fallbackUrl) {
+        return bestUrl || fallbackUrl;
+      }
+
+      if (bestPagedUrl) {
+        return bestPagedUrl;
+      }
+
+      if (currentPage !== null && currentPageParam) {
+        try {
+          const parsedCurrent = new URL(currentUrl);
+          parsedCurrent.searchParams.set(
+            currentPageParam,
+            String(currentPage + 1)
+          );
+          const nextUrl = parsedCurrent.toString();
+          return nextUrl !== currentUrl ? nextUrl : null;
+        } catch {
+          return null;
+        }
+      }
+
+      return null;
     }
 
     hasExplicitNoSubmissionsState() {
@@ -1219,6 +2486,14 @@
       }
 
       if (safeQuery('a[href*="/submissions/"]')) {
+        return true;
+      }
+
+      if (
+        safeQuery(
+          'a[href*="/submissions/"], a[href*="/submissions?"], a[href*="/results/"], a[href*="/results?"], a[href*="submission_id="], a[href*="submissionId="]'
+        )
+      ) {
         return true;
       }
 
@@ -1265,6 +2540,15 @@
       }
 
       if (submissions.length === 0) {
+        const virtualizedSubmissions =
+          this.extractSubmissionsFromVirtualizedGrid({
+            expectedHandle,
+            filterByHandle: shouldFilterByHandle,
+          });
+        if (virtualizedSubmissions.length > 0) {
+          return virtualizedSubmissions;
+        }
+
         return this.extractSubmissionsFromHtmlSnapshot({
           expectedHandle,
           filterByHandle: shouldFilterByHandle,
@@ -1511,6 +2795,16 @@
 
     async handleExtractSubmissionsMessage(request, sendResponse) {
       try {
+        if (this.hasPageUnavailableState()) {
+          sendResponse({
+            success: false,
+            nonRetriable: true,
+            error:
+              'Current Hacker Cup URL is unavailable. Open a valid results/submissions page while signed in.',
+          });
+          return;
+        }
+
         if (!this.isSubmissionsPageReady()) {
           sendResponse({
             success: false,
@@ -1577,6 +2871,126 @@
       }
     }
 
+    async handleExtractProblemStatusesMessage(request, sendResponse) {
+      try {
+        if (this.hasPageUnavailableState()) {
+          sendResponse({
+            success: false,
+            nonRetriable: true,
+            error:
+              'Current Hacker Cup URL is unavailable. Open https://www.facebook.com/codingcompetitions/profile or a Hacker Cup round/problem page while signed in.',
+          });
+          return;
+        }
+
+        await waitForElement('body', 4500).catch(() => null);
+        await sleep(250);
+
+        const pageType = this.detectPageType();
+
+        await this.primeDynamicContent(pageType);
+
+        const directSubmissions =
+          pageType === 'submissions'
+            ? this.extractSubmissionsFromPage({
+                expectedHandle: request?.handle,
+                handle: request?.handle,
+                filterByHandle: false,
+              })
+            : [];
+
+        const statusSubmissions = this.extractProblemAttemptStatuses({
+          expectedHandle: request?.handle,
+          handle: request?.handle,
+        });
+
+        const profileSubmissions = this.extractProfileContestStatuses({
+          expectedHandle: request?.handle,
+          handle: request?.handle,
+        });
+
+        const merged = new Map();
+        const mergedEntries = [
+          ...directSubmissions,
+          ...statusSubmissions,
+          ...profileSubmissions,
+        ];
+
+        mergedEntries.forEach((entry) => {
+          if (!entry || typeof entry !== 'object') {
+            return;
+          }
+
+          const explicitId = firstNonEmpty(
+            entry?.submissionId,
+            entry?.submission_id,
+            null
+          );
+          const fallbackId = `${firstNonEmpty(entry?.contestId, entry?.contest_id, 'contest')}::${firstNonEmpty(entry?.problemId, entry?.problem_id, 'problem')}::${firstNonEmpty(entry?.statusType, entry?.status_type, 'entry')}`;
+          const key = String(firstNonEmpty(explicitId, fallbackId)).trim();
+          if (!key) {
+            return;
+          }
+
+          if (!merged.has(key)) {
+            merged.set(key, entry);
+            return;
+          }
+
+          const existing = merged.get(key);
+          const existingSynthetic =
+            existing?.synthetic_submission === true ||
+            existing?.syntheticSubmission === true;
+          const currentSynthetic =
+            entry?.synthetic_submission === true ||
+            entry?.syntheticSubmission === true;
+
+          if (existingSynthetic && !currentSynthetic) {
+            merged.set(key, entry);
+          }
+        });
+
+        const submissions = Array.from(merged.values());
+        const contestLinks = this.extractContestLinksForCrawl();
+        const isProfilePage = /\/codingcompetitions\/profile(?:\/|$)/i.test(
+          String(window.location.pathname || '')
+        );
+        const actionableContestLinks = contestLinks.filter((link) =>
+          /\/codingcompetitions\/hacker-cup\//i.test(String(link || ''))
+        );
+
+        if (
+          isProfilePage &&
+          submissions.length === 0 &&
+          actionableContestLinks.length === 0
+        ) {
+          sendResponse({
+            success: false,
+            pending: true,
+            error:
+              'Competition History section is still loading. Scroll profile a bit and retrying...',
+          });
+          return;
+        }
+
+        sendResponse({
+          success: true,
+          data: {
+            submissions,
+            contestLinks,
+            currentUrl: window.location.href,
+          },
+          error: null,
+        });
+      } catch (error) {
+        sendResponse({
+          success: false,
+          error:
+            error?.message || 'Failed to extract Hacker Cup problem statuses',
+        });
+      }
+    }
+
     async handleExtractProblemDetailsMessage(sendResponse) {
       try {
         const pageType = this.detectPageType();
@@ -1639,12 +3053,18 @@
             return true;
           }
 
+          if (request?.action === 'extractProblemStatuses') {
+            this.handleExtractProblemStatusesMessage(request, sendResponse);
+            return true;
+          }
+
           if (request?.action === 'ping') {
             sendResponse({
               success: true,
               platform: this.platform,
               pageType: this.detectPageType(),
               initialized: this.initialized,
+              pageUnavailable: this.hasPageUnavailableState(),
             });
             return true;
           }

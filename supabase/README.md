@@ -138,12 +138,7 @@ SUPABASE_SERVICE_ROLE_KEY=<service_role key>
 
 ## Migrations
 
-### Current Migrations
-
-| File                               | Description             |
-| ---------------------------------- | ----------------------- |
-| `20260404192226_remote_schema.sql` | Initial schema setup    |
-| `20260404194136_remote_schema.sql` | Full application schema |
+> Migrations are not tracked in this repository. Schema is applied directly to the Supabase cloud project. Use `npx supabase db pull` to generate a local snapshot if needed.
 
 ### Creating New Migrations
 

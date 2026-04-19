@@ -13,7 +13,6 @@ neupc/
 ├── public/                 # Static assets (images, icons, SVGs)
 ├── scripts/                # Utility scripts
 │
-├── proxy.js                # NextAuth middleware — protects /account/* routes
 ├── next.config.mjs         # Next.js config — security headers, image domains
 ├── tailwind.config.mjs     # Tailwind CSS v4 theme — colors, fonts, animations
 ├── postcss.config.mjs      # PostCSS config — uses @tailwindcss/postcss
@@ -58,7 +57,7 @@ The brain of the application. Contains **58 files** covering:
 | Category        | Key Files                                                                   | Description                                                         |
 | --------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | **Auth**        | `auth.js`, `auth.config.js`, `auth-guard.js`                                | NextAuth config, session callbacks, `requireRole()`/`requireAuth()` |
-| **Data**        | `data-service.js`                                                           | Central data layer — 262 exported functions, ~3,700 lines           |
+| **Data**        | `data-service.js`                                                           | Central data layer — 292 exported functions                         |
 | **Actions**     | `*-actions.js` (30+ files)                                                  | All server actions (`"use server"`) for mutations                   |
 | **Public Data** | `public-actions.js`                                                         | Cached SSR fetchers for public pages (`unstable_cache`)             |
 | **Database**    | `supabase.js`                                                               | Supabase client initialization (anon + service role)                |
@@ -119,7 +118,7 @@ app/
 
 ### Authenticated Area — `app/account/`
 
-All routes under `/account/` are **protected** by middleware (`proxy.js`) and server-side guards (`requireRole()`).
+All routes under `/account/` are **protected** by server-side guards (`requireRole()`) in each layout and page.
 
 ```text
 app/account/
@@ -243,7 +242,7 @@ docs/
 │   ├── project-structure.md     # This file
 │   ├── components.md            # Component catalog
 │   ├── api-routes.md            # API routes reference
-│   ├── data-service.md          # 262 data-service functions
+│   ├── data-service.md          # 292 data-service functions
 │   └── server-actions.md        # 30+ server action files
 ├── auth/
 │   └── authentication.md        # OAuth flow, session, guards

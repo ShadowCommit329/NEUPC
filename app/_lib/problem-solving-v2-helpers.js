@@ -18,6 +18,39 @@ let platformCacheExpiry = 0;
 let platformCacheLoadingPromise = null; // Prevent concurrent loading
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
+const PLATFORM_CODE_ALIASES = {
+  leetcodecn: 'leetcode',
+  'leetcode-cn': 'leetcode',
+  leetcodecom: 'leetcode',
+  hackercup: 'facebookhackercup',
+  'hacker-cup': 'facebookhackercup',
+  'facebook-hacker-cup': 'facebookhackercup',
+  metahackercup: 'facebookhackercup',
+  'meta-hacker-cup': 'facebookhackercup',
+};
+
+function getPlatformCodeCandidates(code) {
+  const normalized = String(code || '')
+    .trim()
+    .toLowerCase();
+  if (!normalized) return [];
+
+  const candidates = new Set([normalized]);
+
+  const aliased = PLATFORM_CODE_ALIASES[normalized];
+  if (aliased) {
+    candidates.add(aliased);
+  }
+
+  Object.entries(PLATFORM_CODE_ALIASES).forEach(([alias, canonical]) => {
+    if (canonical === normalized) {
+      candidates.add(alias);
+    }
+  });
+
+  return Array.from(candidates);
+}
+
 /**
  * Load all active platforms from platforms table into cache
  * @returns {Promise<Object>} Cache with byCode/byId maps
@@ -251,8 +284,16 @@ export async function getPlatformId(code) {
   if (!code) return null;
 
   const cache = await loadPlatformCache();
-  const platform = cache.byCode.get(code.toLowerCase());
-  return platform?.id || null;
+  const candidates = getPlatformCodeCandidates(code);
+
+  for (const candidate of candidates) {
+    const platform = cache.byCode.get(candidate);
+    if (platform?.id != null) {
+      return platform.id;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -277,7 +318,16 @@ export async function getPlatformByCode(code) {
   if (!code) return null;
 
   const cache = await loadPlatformCache();
-  return cache.byCode.get(code.toLowerCase()) || null;
+  const candidates = getPlatformCodeCandidates(code);
+
+  for (const candidate of candidates) {
+    const platform = cache.byCode.get(candidate);
+    if (platform) {
+      return platform;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -311,9 +361,14 @@ export async function getPlatformIds(codes) {
   const result = new Map();
 
   (codes || []).forEach((code) => {
-    const platform = cache.byCode.get(code?.toLowerCase());
-    if (platform) {
-      result.set(code, platform.id);
+    const candidates = getPlatformCodeCandidates(code);
+
+    for (const candidate of candidates) {
+      const platform = cache.byCode.get(candidate);
+      if (platform) {
+        result.set(code, platform.id);
+        break;
+      }
     }
   });
 
@@ -596,7 +651,9 @@ export async function upsertUserHandleV2(
   const isMissingAuthTokenColumn =
     error &&
     (error.code === '42703' ||
-      String(error.message || '').toLowerCase().includes('auth_token'));
+      String(error.message || '')
+        .toLowerCase()
+        .includes('auth_token'));
 
   if (
     isMissingAuthTokenColumn &&
@@ -1051,17 +1108,15 @@ export async function recalcUserStreaks(userId) {
     const days = Array.from(solveDates).sort((a, b) => b.localeCompare(a));
 
     if (days.length === 0) {
-      await supabaseAdmin
-        .from(V2_TABLES.USER_STATS)
-        .upsert(
-          {
-            user_id: userId,
-            current_streak: 0,
-            longest_streak: 0,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id' }
-        );
+      await supabaseAdmin.from(V2_TABLES.USER_STATS).upsert(
+        {
+          user_id: userId,
+          current_streak: 0,
+          longest_streak: 0,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      );
       return;
     }
 

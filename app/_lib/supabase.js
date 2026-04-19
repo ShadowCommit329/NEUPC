@@ -24,26 +24,23 @@
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
-// ── Default Local Supabase Configuration ────────────────────────────────────
-// These are the default values when running `supabase start` locally.
-// Override these in .env.local for your specific setup.
-const LOCAL_SUPABASE_URL = 'http://127.0.0.1:54321';
-
 // ── Environment validation ──────────────────────────────────────────────────
 const isProduction = process.env.NODE_ENV === 'production';
 const isLocalDev = process.env.SUPABASE_LOCAL === 'true';
 
-// Resolve Supabase URL with local fallback for development
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  process.env.SUPABASE_URL ||
-  (!isProduction ? LOCAL_SUPABASE_URL : undefined);
+// Local dev: use local Supabase when SUPABASE_LOCAL=true
+// Otherwise (production / Vercel): use cloud credentials
+const supabaseUrl = isLocalDev
+  ? (process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321')
+  : (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
 
-const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
+const supabaseAnonKey = isLocalDev
+  ? (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_KEY)
+  : (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_KEY);
 
-const supabaseServiceKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+const supabaseServiceKey = isLocalDev
+  ? (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY)
+  : (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY);
 
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
 

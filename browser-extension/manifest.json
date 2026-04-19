@@ -347,6 +347,16 @@
     },
     {
       "matches": [
+        "https://*.facebook.com/codingcompetitions/profile",
+        "https://*.facebook.com/codingcompetitions/profile/*",
+        "https://m.facebook.com/codingcompetitions/profile",
+        "https://m.facebook.com/codingcompetitions/profile/*",
+        "https://web.facebook.com/codingcompetitions/profile",
+        "https://web.facebook.com/codingcompetitions/profile/*",
+        "https://www.facebook.com/codingcompetitions/profile",
+        "https://www.facebook.com/codingcompetitions/profile/*",
+        "https://facebook.com/codingcompetitions/profile",
+        "https://facebook.com/codingcompetitions/profile/*",
         "https://*.facebook.com/codingcompetitions/hacker-cup",
         "https://*.facebook.com/codingcompetitions/hacker-cup/*",
         "https://m.facebook.com/codingcompetitions/hacker-cup",

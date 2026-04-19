@@ -2135,6 +2135,9 @@ async function importSubmissionsToBackend(
     console.log('[NEUPC] Import response:', {
       status: response.status,
       success: result.success,
+      submissionsAccepted: result.data?.submissionsAccepted,
+      submissionsRejected: result.data?.submissionsRejected,
+      recoveredProblemIds: result.data?.recoveredProblemIds,
       submissionsCreated: result.data?.submissionsCreated,
       submissionsUpdated: result.data?.submissionsUpdated,
       error: result.error,
@@ -2143,6 +2146,9 @@ async function importSubmissionsToBackend(
     if (response.ok && result.success) {
       return {
         success: true,
+        submissionsAccepted: result.data?.submissionsAccepted || 0,
+        submissionsRejected: result.data?.submissionsRejected || 0,
+        recoveredProblemIds: result.data?.recoveredProblemIds || 0,
         solvesCreated: result.data?.solvesCreated || 0,
         submissionsCreated: result.data?.submissionsCreated || 0,
         submissionsUpdated: result.data?.submissionsUpdated || 0,
@@ -6726,13 +6732,341 @@ async function fetchUvaSubmissions(handle) {
   return submissions;
 }
 
-async function fetchHackerCupSubmissions(handle) {
-  sendProgress({
-    phase: 'fetching_api',
-    message: 'Fetching Hacker Cup submissions from Facebook pages...',
+function normalizeHackerCupClistToken(value, fallback = 'item') {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  return normalized || fallback;
+}
+
+function parseBooleanLike(value) {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return Number.isFinite(value) && value !== 0;
+  }
+
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  return [
+    '1',
+    'true',
+    'yes',
+    'y',
+    'attempted',
+    'submitted',
+    'solved',
+    'ac',
+  ].includes(normalized);
+}
+
+function isHackerCupClistProblemAttempted(problem = {}) {
+  const explicitAttempt = firstDefinedValue(
+    problem?.attempted,
+    problem?.isAttempted,
+    problem?.is_attempted,
+    problem?.submitted,
+    problem?.tried
+  );
+
+  if (explicitAttempt !== undefined && explicitAttempt !== null) {
+    return parseBooleanLike(explicitAttempt);
+  }
+
+  const resultText = String(
+    firstDefinedValue(problem?.result, problem?.status, '') || ''
+  ).trim();
+  if (resultText) {
+    return true;
+  }
+
+  const solvedFlag = firstDefinedValue(problem?.solved, problem?.accepted);
+  return parseBooleanLike(solvedFlag);
+}
+
+function normalizeHackerCupClistProblemVerdict(problem = {}) {
+  const directVerdict = firstDefinedValue(
+    problem?.verdict,
+    problem?.statusCode,
+    problem?.status_code
+  );
+  if (directVerdict) {
+    const normalizedDirect = normalizeVerdict(directVerdict);
+    if (normalizedDirect && normalizedDirect !== 'UNKNOWN') {
+      return normalizedDirect;
+    }
+  }
+
+  const resultText = String(
+    firstDefinedValue(problem?.result, problem?.status, '') || ''
+  ).trim();
+
+  if (resultText) {
+    const normalizedResult = resultText.toLowerCase();
+    if (/^\+/.test(resultText) || /accepted|solved/.test(normalizedResult)) {
+      return 'AC';
+    }
+    if (/pending|running|queue|judging|testing/.test(normalizedResult)) {
+      return 'PENDING';
+    }
+    if (/partial/.test(normalizedResult)) {
+      return 'PC';
+    }
+    if (/time limit|timeout/.test(normalizedResult)) {
+      return 'TLE';
+    }
+    if (/memory limit/.test(normalizedResult)) {
+      return 'MLE';
+    }
+    if (/runtime error/.test(normalizedResult)) {
+      return 'RE';
+    }
+    if (/compile|compilation/.test(normalizedResult)) {
+      return 'CE';
+    }
+    if (/wrong|failed|unsolved/.test(normalizedResult)) {
+      return 'WA';
+    }
+
+    const normalizedFallback = normalizeVerdict(resultText);
+    if (normalizedFallback && normalizedFallback !== 'UNKNOWN') {
+      return normalizedFallback;
+    }
+  }
+
+  const solvedFlag = firstDefinedValue(problem?.solved, problem?.accepted);
+  if (parseBooleanLike(solvedFlag)) {
+    return 'AC';
+  }
+
+  return 'WA';
+}
+
+async function fetchHackerCupSubmissionsFromClist(handle) {
+  const normalizedHandle = normalizeHackerCupHandleInput(handle);
+  if (!normalizedHandle || normalizedHandle === 'me') {
+    return [];
+  }
+
+  const { apiUrl, token } = await getApiCredentials();
+  if (!apiUrl || !token) {
+    return [];
+  }
+
+  const query = new URLSearchParams({
+    platform: 'facebookhackercup',
+    handle: normalizedHandle,
+    type: 'contests',
+    limit: '10000',
   });
 
+  const endpoint = `${apiUrl}/api/problem-solving/clist?${query.toString()}`;
+
+  let response;
+  try {
+    response = await fetch(endpoint, {
+      method: 'GET',
+      mode: 'cors',
+      credentials: 'omit',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch (error) {
+    console.warn(
+      '[NEUPC-FBHC] CLIST request failed:',
+      error?.message || String(error)
+    );
+    return [];
+  }
+
+  if (!response.ok) {
+    if (response.status !== 404) {
+      console.warn(
+        '[NEUPC-FBHC] CLIST request returned non-OK status:',
+        response.status
+      );
+    }
+    return [];
+  }
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    return [];
+  }
+
+  if (!payload?.success) {
+    return [];
+  }
+
+  const contests = Array.isArray(payload?.data) ? payload.data : [];
+  if (contests.length === 0) {
+    return [];
+  }
+
+  const submissions = [];
+  const seenSubmissionIds = new Set();
+
+  for (let contestIndex = 0; contestIndex < contests.length; contestIndex++) {
+    const contest = contests[contestIndex] || {};
+    const problems = Array.isArray(contest?.problems) ? contest.problems : [];
+    if (problems.length === 0) {
+      continue;
+    }
+
+    const rawContestId = firstDefinedValue(
+      contest?.platformContestId,
+      contest?.platform_contest_id,
+      contest?.contestId,
+      contest?.contest_id,
+      contest?.id,
+      contest?.name,
+      `contest_${contestIndex + 1}`
+    );
+    const contestId = rawContestId != null ? String(rawContestId) : null;
+    const contestToken = normalizeHackerCupClistToken(
+      contestId,
+      `contest_${contestIndex + 1}`
+    );
+    const roundName = firstDefinedValue(
+      contest?.name,
+      contest?.contestName,
+      contest?.title,
+      contestId ? `Hacker Cup ${contestId}` : null,
+      `Hacker Cup Contest ${contestIndex + 1}`
+    );
+    const contestUrl = firstDefinedValue(contest?.url, contest?.contestUrl);
+    const contestDateIso = normalizeSubmissionTimestampToIso(
+      firstDefinedValue(
+        contest?.date,
+        contest?.startDate,
+        contest?.startTime,
+        contest?.endDate,
+        null
+      )
+    );
+
+    for (let problemIndex = 0; problemIndex < problems.length; problemIndex++) {
+      const problem = problems[problemIndex] || {};
+      if (!isHackerCupClistProblemAttempted(problem)) {
+        continue;
+      }
+
+      const verdict = normalizeHackerCupClistProblemVerdict(problem);
+      const statusType =
+        verdict === 'AC'
+          ? 'solved'
+          : verdict === 'PENDING'
+            ? 'pending'
+            : 'tried';
+
+      const rawProblemId = firstDefinedValue(
+        problem?.problemId,
+        problem?.problem_id,
+        problem?.id,
+        problem?.label,
+        problem?.code,
+        problem?.short,
+        problem?.name,
+        `problem_${problemIndex + 1}`
+      );
+
+      const problemId = rawProblemId != null ? String(rawProblemId) : null;
+      const problemToken = normalizeHackerCupClistToken(
+        problemId,
+        `problem_${problemIndex + 1}`
+      );
+      const syntheticId = `fbhc_clist_${contestToken}_${problemToken}_${statusType}`;
+
+      if (!syntheticId || seenSubmissionIds.has(syntheticId)) {
+        continue;
+      }
+      seenSubmissionIds.add(syntheticId);
+
+      const problemName = firstDefinedValue(
+        problem?.name,
+        problem?.title,
+        problem?.short,
+        problem?.label,
+        problemId,
+        `Hacker Cup ${problemToken}`
+      );
+
+      const problemUrl = firstDefinedValue(
+        problem?.url,
+        problem?.problemUrl,
+        contestUrl,
+        null
+      );
+
+      const problemDateIso = normalizeSubmissionTimestampToIso(
+        firstDefinedValue(
+          problem?.date,
+          problem?.submittedAt,
+          problem?.submitted_at,
+          problem?.time,
+          null
+        )
+      );
+
+      submissions.push({
+        platform: 'facebookhackercup',
+        handle: normalizedHandle,
+        submission_id: syntheticId,
+        submissionId: syntheticId,
+        submission_url: null,
+        submissionUrl: null,
+        problem_id: problemId || problemToken,
+        problemId: problemId || problemToken,
+        problem_name:
+          String(problemName || '').trim() || `Hacker Cup ${problemToken}`,
+        problemName:
+          String(problemName || '').trim() || `Hacker Cup ${problemToken}`,
+        problem_url: problemUrl || null,
+        problemUrl: problemUrl || null,
+        verdict,
+        language: 'Unknown',
+        submitted_at: problemDateIso || contestDateIso || null,
+        submittedAt: problemDateIso || contestDateIso || null,
+        contest_id: contestId || contestToken,
+        contestId: contestId || contestToken,
+        roundName: roundName || null,
+        round_name: roundName || null,
+        source_code: null,
+        execution_time_ms: null,
+        memory_kb: null,
+        synthetic_submission: true,
+        syntheticSubmission: true,
+        status_type: statusType,
+        statusType,
+      });
+    }
+  }
+
+  return submissions;
+}
+
+async function fetchHackerCupSubmissions(handle) {
   const normalizedHandle = normalizeHackerCupHandleInput(handle) || 'me';
+
+  sendProgress({
+    phase: 'fetching_api',
+    message:
+      'Trying CLIST for Hacker Cup first, then falling back to Competition History crawl if needed...',
+  });
 
   const submissions = [];
   const seenSubmissionIds = new Set();
@@ -6761,13 +7095,21 @@ async function fetchHackerCupSubmissions(handle) {
       `Hacker Cup ${submissionId}`
     );
 
-    const submissionUrl = firstDefinedValue(
+    const isSynthetic =
+      entry?.synthetic_submission === true ||
+      entry?.syntheticSubmission === true;
+    const providedSubmissionUrl = firstDefinedValue(
       entry?.submission_url,
-      entry?.submissionUrl,
-      `https://www.facebook.com/codingcompetitions/hacker-cup/submissions/${encodeURIComponent(
-        submissionId
-      )}`
+      entry?.submissionUrl
     );
+
+    const submissionUrl =
+      providedSubmissionUrl ||
+      (isSynthetic
+        ? null
+        : `https://www.facebook.com/codingcompetitions/hacker-cup/submissions/${encodeURIComponent(
+            submissionId
+          )}`);
 
     const problemUrl = firstDefinedValue(
       entry?.problem_url,
@@ -6821,13 +7163,58 @@ async function fetchHackerCupSubmissions(handle) {
         entry?.executionTime
       ),
       memory_kb: firstDefinedValue(entry?.memory_kb, entry?.memoryUsed),
+      synthetic_submission: isSynthetic,
+      syntheticSubmission: isSynthetic,
+      status_type: firstDefinedValue(entry?.status_type, entry?.statusType),
+      statusType: firstDefinedValue(entry?.status_type, entry?.statusType),
     });
 
     seenSubmissionIds.add(submissionId);
     return true;
   };
 
+  const clistSubmissions =
+    await fetchHackerCupSubmissionsFromClist(normalizedHandle);
+
+  if (Array.isArray(clistSubmissions) && clistSubmissions.length > 0) {
+    for (const entry of clistSubmissions) {
+      appendSubmission(entry);
+    }
+
+    submissions.sort((a, b) => {
+      const aId = Number.parseInt(String(a?.submission_id || ''), 10);
+      const bId = Number.parseInt(String(b?.submission_id || ''), 10);
+
+      if (Number.isFinite(aId) && Number.isFinite(bId)) {
+        return bId - aId;
+      }
+
+      return String(b?.submission_id || '').localeCompare(
+        String(a?.submission_id || '')
+      );
+    });
+
+    if (submissions.length > 0) {
+      sendProgress({
+        phase: 'fetching_api',
+        message: `Collected ${submissions.length} Hacker Cup submissions from CLIST.`,
+      });
+
+      return submissions;
+    }
+  }
+
+  sendProgress({
+    phase: 'fetching_api',
+    message:
+      'CLIST did not return attempted Hacker Cup entries. Crawling Competition History pages...',
+  });
+
   const initialUrls = [
+    'https://www.facebook.com/codingcompetitions/profile',
+    'https://facebook.com/codingcompetitions/profile',
+    'https://m.facebook.com/codingcompetitions/profile',
+    'https://web.facebook.com/codingcompetitions/profile',
     'https://www.facebook.com/codingcompetitions/hacker-cup',
     'https://facebook.com/codingcompetitions/hacker-cup',
     'https://m.facebook.com/codingcompetitions/hacker-cup',
@@ -6906,8 +7293,240 @@ async function fetchHackerCupSubmissions(handle) {
     return null;
   };
 
+  const normalizeSeedUrl = (rawUrl) => {
+    const value = String(rawUrl || '').trim();
+    if (!value) return null;
+
+    const decodeUriComponentSafe = (candidate) => {
+      const text = String(candidate || '').trim();
+      if (!text) return '';
+
+      try {
+        return decodeURIComponent(text);
+      } catch {
+        return text;
+      }
+    };
+
+    const toParsedUrl = (candidate) => {
+      try {
+        return new URL(candidate, 'https://www.facebook.com');
+      } catch {
+        return null;
+      }
+    };
+
+    let parsed = toParsedUrl(value);
+    if (!parsed) {
+      return null;
+    }
+
+    const isFacebookHost =
+      /facebook\.com$/i.test(parsed.hostname) ||
+      /\.facebook\.com$/i.test(parsed.hostname);
+    if (!isFacebookHost) {
+      return null;
+    }
+
+    if (/\/l\.php$/i.test(parsed.pathname)) {
+      const redirectedCandidates = [
+        parsed.searchParams.get('u'),
+        parsed.searchParams.get('href'),
+        parsed.searchParams.get('url'),
+        parsed.searchParams.get('target'),
+      ];
+
+      for (const redirected of redirectedCandidates) {
+        const decoded = decodeUriComponentSafe(redirected);
+        const redirectedParsed = toParsedUrl(decoded);
+        if (redirectedParsed) {
+          parsed = redirectedParsed;
+          break;
+        }
+      }
+    }
+
+    const normalizedPath =
+      String(parsed.pathname || '').replace(/\/+$/, '') || '/';
+    if (
+      !/\/codingcompetitions\/(?:hacker-cup|profile)(?:\/|$)/i.test(
+        normalizedPath
+      )
+    ) {
+      return null;
+    }
+
+    const allowedSearchKeys = new Set([
+      'view',
+      'tab',
+      'section',
+      'problem',
+      'task',
+      'problem_id',
+      'submission_id',
+      'submissionId',
+      'result_id',
+      'resultId',
+      'id',
+    ]);
+    const normalizedSearch = new URLSearchParams();
+    parsed.searchParams.forEach((paramValue, paramKey) => {
+      if (allowedSearchKeys.has(paramKey)) {
+        normalizedSearch.append(paramKey, paramValue);
+      }
+    });
+
+    parsed.pathname = normalizedPath;
+    parsed.search = normalizedSearch.toString()
+      ? `?${normalizedSearch.toString()}`
+      : '';
+    parsed.hash = '';
+
+    return parsed.toString();
+  };
+
+  const crawlProblemStatusFallback = async ({
+    seedUrls = [],
+    maxPagesLimit = 80,
+    stopAfterStagnantPages = 8,
+  } = {}) => {
+    const queue = [];
+    const queued = new Set();
+    const visited = new Set();
+
+    const enqueue = (url) => {
+      const normalized = normalizeSeedUrl(url);
+      if (!normalized) return;
+      if (visited.has(normalized) || queued.has(normalized)) return;
+      queued.add(normalized);
+      queue.push(normalized);
+    };
+
+    (Array.isArray(seedUrls) ? seedUrls : []).forEach(enqueue);
+
+    let pagesScanned = 0;
+    let recovered = 0;
+    let stagnantPages = 0;
+    const maxPages =
+      Number.isFinite(maxPagesLimit) && maxPagesLimit > 0
+        ? Math.min(maxPagesLimit, 220)
+        : 80;
+
+    while (
+      queue.length > 0 &&
+      !importState.stopRequested &&
+      pagesScanned < maxPages
+    ) {
+      const current = queue.shift();
+      queued.delete(current);
+      if (visited.has(current)) {
+        continue;
+      }
+
+      visited.add(current);
+      pagesScanned += 1;
+
+      await new Promise((resolve) => {
+        browserAPI.tabs.update(tab.id, { url: current }, () => resolve());
+      });
+
+      const loadedInfo = await waitForLoad();
+      if (!loadedInfo) {
+        continue;
+      }
+
+      await injectAndWait();
+
+      const ping = await askTab({ action: 'ping' });
+      if (ping?.pageUnavailable === true) {
+        continue;
+      }
+
+      let statusResponse = null;
+      for (
+        let attempt = 0;
+        attempt < 3 && !importState.stopRequested;
+        attempt++
+      ) {
+        statusResponse = await askTab({
+          action: 'extractProblemStatuses',
+          handle: normalizedHandle,
+          options: {
+            expectedHandle: normalizedHandle,
+          },
+        });
+
+        if (statusResponse?.success || statusResponse?.nonRetriable) {
+          break;
+        }
+
+        await sleep(900);
+        await injectAndWait();
+      }
+
+      if (!statusResponse?.success) {
+        continue;
+      }
+
+      const statusData = statusResponse.data || {};
+      const statusSubmissions = Array.isArray(statusData.submissions)
+        ? statusData.submissions
+        : [];
+      const contestLinks = Array.isArray(statusData.contestLinks)
+        ? statusData.contestLinks
+        : [];
+      const queueSizeBeforeEnqueue = queue.length;
+
+      let addedOnPage = 0;
+      for (const entry of statusSubmissions) {
+        if (appendSubmission(entry)) {
+          addedOnPage += 1;
+          recovered += 1;
+        }
+      }
+
+      contestLinks.forEach(enqueue);
+      const discoveredNewLinks = Math.max(
+        0,
+        queue.length - queueSizeBeforeEnqueue
+      );
+
+      if (addedOnPage === 0 && discoveredNewLinks === 0) {
+        stagnantPages += 1;
+      } else {
+        stagnantPages = 0;
+      }
+
+      sendProgress({
+        phase: 'fetching_api',
+        message: `Hacker Cup crawl page ${pagesScanned}: +${addedOnPage}, +${discoveredNewLinks} links, total ${submissions.length}`,
+      });
+
+      if (stagnantPages >= stopAfterStagnantPages) {
+        break;
+      }
+    }
+
+    return { recovered, pagesScanned };
+  };
+
   try {
     const existingTabs = [
+      ...(await queryTabsByPattern(
+        '*://*.facebook.com/codingcompetitions/profile*'
+      )),
+      ...(await queryTabsByPattern(
+        '*://www.facebook.com/codingcompetitions/profile*'
+      )),
+      ...(await queryTabsByPattern(
+        '*://facebook.com/codingcompetitions/profile*'
+      )),
+      ...(await queryTabsByPattern(
+        '*://m.facebook.com/codingcompetitions/profile*'
+      )),
+      ...(await queryTabsByPattern(
+        '*://web.facebook.com/codingcompetitions/profile*'
+      )),
       ...(await queryTabsByPattern(
         '*://*.facebook.com/codingcompetitions/hacker-cup*'
       )),
@@ -6925,9 +7544,26 @@ async function fetchHackerCupSubmissions(handle) {
       )),
     ];
 
-    const preferredExistingTab = existingTabs.find((candidate) =>
-      /facebook\.com\/codingcompetitions/i.test(String(candidate.url || ''))
-    );
+    const preferredExistingTab =
+      existingTabs.find((candidate) =>
+        /facebook\.com\/codingcompetitions\/profile/i.test(
+          String(candidate.url || '')
+        )
+      ) ||
+      existingTabs.find(
+        (candidate) =>
+          /facebook\.com\/codingcompetitions\/hacker-cup/i.test(
+            String(candidate.url || '')
+          ) && /\/\d{4}\//i.test(String(candidate.url || ''))
+      ) ||
+      existingTabs.find((candidate) =>
+        /facebook\.com\/codingcompetitions\/hacker-cup/i.test(
+          String(candidate.url || '')
+        )
+      ) ||
+      existingTabs.find((candidate) =>
+        /facebook\.com\/codingcompetitions/i.test(String(candidate.url || ''))
+      );
 
     if (preferredExistingTab) {
       tab = preferredExistingTab;
@@ -6972,10 +7608,20 @@ async function fetchHackerCupSubmissions(handle) {
       const injected = await injectAndWait();
       const ping = await askTab({ action: 'ping' });
       const loadedUrl = String(loadedInfo.url || candidateUrl || '');
-      const onHackerCupUrl =
-        /facebook\.com\/codingcompetitions\/hacker-cup/i.test(loadedUrl);
+      const onCodingCompetitionsUrl =
+        /facebook\.com\/codingcompetitions\/(?:hacker-cup|profile)/i.test(
+          loadedUrl
+        );
+      const pageUnavailable = ping?.pageUnavailable === true;
 
-      if (ping?.success || onHackerCupUrl) {
+      if (pageUnavailable) {
+        console.warn('[NEUPC-FBHC] Skipping unavailable Hacker Cup URL', {
+          loadedUrl,
+        });
+        continue;
+      }
+
+      if (ping?.success || onCodingCompetitionsUrl) {
         if (!ping?.success) {
           console.warn(
             '[NEUPC-FBHC] Ping not ready yet, proceeding with loaded Hacker Cup URL',
@@ -6992,93 +7638,49 @@ async function fetchHackerCupSubmissions(handle) {
 
     if (!startUrl) {
       throw new Error(
-        `Could not open Hacker Cup pages. Open a Hacker Cup page (www/m/web.facebook.com/codingcompetitions/hacker-cup) while signed in and retry. Last loaded URL: ${lastLoadedUrl || 'none'}`
+        `Could not open Hacker Cup pages. Open https://www.facebook.com/codingcompetitions/profile (or a Hacker Cup page) while signed in and retry. Last loaded URL: ${lastLoadedUrl || 'none'}`
       );
     }
 
-    const visited = new Set();
-    let currentUrl = startUrl;
-    let pageCount = 0;
-    const maxPages = 300;
-
-    while (currentUrl && !importState.stopRequested && pageCount < maxPages) {
-      if (visited.has(currentUrl)) {
-        break;
-      }
-      visited.add(currentUrl);
-      pageCount += 1;
-
-      await new Promise((resolve) => {
-        browserAPI.tabs.update(tab.id, { url: currentUrl }, () => resolve());
-      });
-
-      const pageInfo = await waitForLoad();
-      if (!pageInfo) {
-        break;
-      }
-
-      await injectAndWait();
-
-      let pageResponse = null;
-      for (
-        let attempt = 0;
-        attempt < 3 && !importState.stopRequested;
-        attempt++
-      ) {
-        pageResponse = await askTab({
-          action: 'extractSubmissionsPage',
-          handle: normalizedHandle,
-          includeMeta: true,
-          options: {
-            expectedHandle: normalizedHandle,
-            filterByHandle: false,
-          },
-        });
-
-        if (pageResponse?.success || pageResponse?.nonRetriable) {
-          break;
-        }
-
-        await sleep(1000);
-        await injectAndWait();
-      }
-
-      if (!pageResponse?.success) {
-        if (pageResponse?.nonRetriable) {
-          throw new Error(
-            pageResponse.error ||
-              'Failed to extract submissions from Hacker Cup page.'
-          );
-        }
-        break;
-      }
-
-      const pageData = pageResponse.data || {};
-      const pageSubmissions = Array.isArray(pageData.submissions)
-        ? pageData.submissions
-        : [];
-
-      let addedOnPage = 0;
-      for (const entry of pageSubmissions) {
-        if (appendSubmission(entry)) {
-          addedOnPage += 1;
-        }
-      }
-
+    if (!importState.stopRequested) {
       sendProgress({
         phase: 'fetching_api',
-        message: `Hacker Cup page ${pageCount}: +${addedOnPage}, total ${submissions.length}`,
+        message:
+          'Crawling attempted Hacker Cup entries from Competition History...',
       });
 
-      const nextPageUrlRaw = firstDefinedValue(pageData.nextPageUrl, null);
-      const nextPageUrl =
-        typeof nextPageUrlRaw === 'string' ? nextPageUrlRaw.trim() : '';
+      const targetedCrawl = await crawlProblemStatusFallback({
+        seedUrls: [startUrl],
+        maxPagesLimit: 70,
+        stopAfterStagnantPages: 6,
+      });
+      let recoveredTotal = targetedCrawl.recovered;
+      let pagesScannedTotal = targetedCrawl.pagesScanned;
 
-      if (!nextPageUrl || visited.has(nextPageUrl)) {
-        break;
+      if (recoveredTotal === 0 && !importState.stopRequested) {
+        sendProgress({
+          phase: 'fetching_api',
+          message:
+            'No attempted entries found in targeted pass. Running limited fallback crawl...',
+        });
+
+        const fallbackSeedUrls = [startUrl, ...candidateUrls, ...initialUrls];
+        const fallbackCrawl = await crawlProblemStatusFallback({
+          seedUrls: fallbackSeedUrls,
+          maxPagesLimit: 40,
+          stopAfterStagnantPages: 6,
+        });
+
+        recoveredTotal += fallbackCrawl.recovered;
+        pagesScannedTotal += fallbackCrawl.pagesScanned;
       }
 
-      currentUrl = nextPageUrl;
+      if (recoveredTotal > 0) {
+        sendProgress({
+          phase: 'fetching_api',
+          message: `Recovered ${recoveredTotal} Hacker Cup entries from ${pagesScannedTotal} pages.`,
+        });
+      }
     }
   } finally {
     if (tab && tabCreatedByUs) {
@@ -7114,7 +7716,7 @@ async function fetchHackerCupSubmissions(handle) {
 
   if (submissions.length === 0) {
     throw new Error(
-      'No Hacker Cup submissions found. Open your Hacker Cup submissions/results page while signed in and retry.'
+      'No Hacker Cup submissions or problem statuses found. Open https://www.facebook.com/codingcompetitions/profile, scroll to Competition History, then retry sync.'
     );
   }
 

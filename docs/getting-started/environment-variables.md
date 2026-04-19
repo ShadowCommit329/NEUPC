@@ -1,147 +1,161 @@
 # Environment Variables
 
-Complete reference for all environment variables used by the NEUPC Platform.
-
----
-
-## Quick Setup
+Complete reference for every environment variable in the NEUPC platform.
 
 ```bash
-cp .env.example .env.local
-# Fill in the values below
+cp .env.example .env.local   # never commit .env.local
 ```
 
-> **Never commit `.env.local` to version control.** It is already in `.gitignore`.
+---
+
+## Prefix Rules
+
+| Prefix | Behaviour |
+|---|---|
+| `NEXT_PUBLIC_` | Bundled into client JS — visible in the browser |
+| *(no prefix)* | Server-only — available in RSCs, server actions, API routes |
+
+**Rule:** Never prefix secrets with `NEXT_PUBLIC_`. This applies to `SUPABASE_SERVICE_ROLE_KEY`, `NEXTAUTH_SECRET`, `GDRIVE_CLIENT_SECRET`, and all API keys.
 
 ---
 
-## Required Variables
+## Required
 
-These must be set for the application to function.
-
-### Supabase
-
-| Variable | Description | Where to find |
-|---|---|---|
-| `SUPABASE_URL` | Your Supabase project URL | Supabase Dashboard → Settings → API |
-| `SUPABASE_KEY` | Anonymous/public API key (safe to expose) | Same location |
-| `SUPABASE_SERVICE_KEY` | Service role secret key (**server-only**) | Same location |
-
-> **Security:** `SUPABASE_SERVICE_KEY` bypasses Row Level Security. It must **never** be prefixed with `NEXT_PUBLIC_` and must never reach the client bundle.
-
-### Auth.js (NextAuth)
-
-| Variable | Description | How to generate |
-|---|---|---|
-| `NEXTAUTH_URL` | Your application url | e.g. `http://localhost:3000/` |
-| `NEXTAUTH_SECRET` | JWT signing secret | `openssl rand -base64 32` |
-
-> Set `NEXTAUTH_URL` to your canonical URL for NextAuth.js to function correctly.
-
-### Google OAuth
-
-| Variable | Description | Where to find |
-|---|---|---|
-| `AUTH_GOOGLE_ID` | Google OAuth 2.0 Client ID | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) |
-| `AUTH_GOOGLE_SECRET` | Google OAuth 2.0 Client Secret | Same location |
-
-**Setup steps:**
-1. Create a project in Google Cloud Console
-2. Go to **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**
-3. Application type: **Web application**
-4. Add **Authorized redirect URIs:**
-   - Dev: `http://localhost:3000/api/auth/callback/google`
-   - Prod: `https://your-domain.com/api/auth/callback/google`
-
-### Site URL
-
-| Variable | Description | Example |
-|---|---|---|
-| `NEXT_PUBLIC_SITE_URL` | Canonical site URL (no trailing slash) | `http://localhost:3000` or `https://neupc.vercel.app` |
-
-Used for SEO metadata, sitemaps, canonical URLs, and OG images. The `NEXT_PUBLIC_` prefix makes it available on the client side.
-
----
-
-## Optional Variables
-
-### Email (Gmail / Nodemailer)
-
-Required for contact form emails, verification emails, and notifications.
+### Auth.js
 
 | Variable | Description |
 |---|---|
-| `GMAIL_USER` | Gmail address |
-| `GMAIL_CLIENT_ID` | OAuth Client ID |
-| `GMAIL_CLIENT_SECRET` | OAuth Client Secret |
-| `GMAIL_REFRESH_TOKEN` | OAuth Refresh Token |
+| `NEXTAUTH_URL` | Canonical app URL (e.g. `http://localhost:3000/`) |
+| `NEXTAUTH_SECRET` | JWT signing secret — `openssl rand -base64 32` |
 
-> For Gmail: Setting up OAuth2 requires generating OAuth credentials and obtaining a refresh token from the Google Cloud Platform.
+### Google OAuth
 
-### Google Drive (Avatar & Image Storage)
+| Variable | Description | Where to get it |
+|---|---|---|
+| `AUTH_GOOGLE_ID` | OAuth 2.0 Client ID | [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials) |
+| `AUTH_GOOGLE_SECRET` | OAuth 2.0 Client Secret | Same location |
 
-Required for uploading user avatars and content images to Google Drive.
+Setup: Create **Web application** credential, add redirect URIs:
+- Dev: `http://localhost:3000/api/auth/callback/google`
+- Prod: `https://your-domain.com/api/auth/callback/google`
+
+### Supabase
+
+| Variable | Description | Where to get it |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Project API URL | Supabase Dashboard → Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anon key | Same location |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key — bypasses RLS, **server-only** | Same location |
+
+> `SUPABASE_SERVICE_ROLE_KEY` must never have a `NEXT_PUBLIC_` prefix. It is imported only in `supabase.js` and used exclusively in server actions and API routes.
+
+### Site URL
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_SITE_URL` | Canonical site URL, no trailing slash (e.g. `https://neupc.vercel.app`) |
+
+Used for SEO metadata, sitemaps, canonical URLs, and OG images.
+
+### Local Supabase (development only)
+
+| Variable | Description |
+|---|---|
+| `SUPABASE_LOCAL` | Set to `true` to use local Supabase at `127.0.0.1:54321` |
+
+When `SUPABASE_LOCAL=true`, the app uses the URL from `NEXT_PUBLIC_SUPABASE_URL`. Set it to `http://127.0.0.1:54321` for local dev. Remove or omit for production.
+
+---
+
+## Optional
+
+### Gmail / Nodemailer
+
+Required for contact form emails, membership notifications, and verification emails.
+
+| Variable | Description |
+|---|---|
+| `GMAIL_USER` | Gmail address used to send email |
+| `GMAIL_CLIENT_ID` | Google OAuth Client ID |
+| `GMAIL_CLIENT_SECRET` | Google OAuth Client Secret |
+| `GMAIL_REFRESH_TOKEN` | OAuth2 refresh token for Gmail |
+
+Setup: Enable the Gmail API, create OAuth credentials, and obtain a refresh token via the OAuth playground.
+
+### Google Drive (Image Storage)
+
+Required for avatar uploads and content image storage.
 
 | Variable | Description |
 |---|---|
 | `GDRIVE_CLIENT_ID` | Google OAuth Client ID |
 | `GDRIVE_CLIENT_SECRET` | Google OAuth Client Secret |
-| `GDRIVE_REFRESH_TOKEN` | Google OAuth Refresh Token |
-| `GDRIVE_FOLDER_ID` | Google Drive folder ID for uploads |
+| `GDRIVE_REFRESH_TOKEN` | OAuth2 refresh token |
+| `GDRIVE_FOLDER_ID` | Drive folder ID for uploads (from the folder URL) |
 
-**Setup steps:**
-1. Enable the [Drive API](https://console.cloud.google.com/apis/api/drive.googleapis.com)
-2. Configure OAuth Consent Screen & get OAuth credentials.
-3. Obtain a Refresh Token by authenticating yourself via a script.
-4. Create a Drive folder and make sure its permissions allow your operations.
-5. Copy the folder ID from the Drive URL.
+Setup: Enable the Drive API, create OAuth credentials, get a refresh token, create a shared Drive folder.
 
----
+### AI / LLM Providers
 
-### Gemini API (AI Features)
+Used for AI-powered problem analysis and solution review. At least one provider is needed for AI features. All listed have free tiers.
+
+| Variable | Provider | Notes |
+|---|---|---|
+| `GITHUB_TOKEN` | GitHub Models | **Recommended** — free with any GitHub account, no extra signup |
+| `GEMINI_API_KEY` | Google Gemini | Free tier via [AI Studio](https://aistudio.google.com/) |
+| `GROQ_API_KEY` | Groq | Fast inference, generous free tier |
+| `TOGETHER_API_KEY` | Together AI | Good free tier |
+| `CEREBRAS_API_KEY` | Cerebras | Fast inference |
+| `OPENROUTER_API_KEY` | OpenRouter | Access to many models, free models available |
+| `OPENAI_API_KEY` | OpenAI | Paid |
+
+The system tries providers in priority order until one succeeds.
+
+### CLIST API
+
+Required for competitive programming contest history and rating sync.
+
+| Variable | Description | Where to get it |
+|---|---|---|
+| `CLIST_API_KEY` | API key | [clist.by](https://clist.by/api/v4/doc/) — requires login |
+| `CLIST_API_USERNAME` | Your CLIST username | Same account |
+
+### Browser Extension
 
 | Variable | Description |
 |---|---|
-| `GEMINI_API_KEY` | Gemini API Key |
+| `NEUPC_EXTENSION_TOKEN` | Token for authenticating browser extension sync requests |
 
-Get your API key from [Google AI Studio](https://aistudio.google.com/).
+Generate: `openssl rand -base64 32`
 
----
+### Internal API Key
 
-## Variable Prefix Rules
-
-| Prefix | Behavior |
+| Variable | Description |
 |---|---|
-| `NEXT_PUBLIC_` | Exposed to the browser (bundled into client JS) |
-| No prefix | Server-only — accessible in server components, server actions, API routes |
+| `INTERNAL_API_KEY` | Authenticates background cron jobs and internal API calls |
 
-**Rule:** Never prefix sensitive keys (`SUPABASE_SERVICE_KEY`, `AUTH_SECRET`, `GDRIVE_PRIVATE_KEY`) with `NEXT_PUBLIC_`.
+Generate: `openssl rand -base64 32`
 
 ---
 
 ## Vercel Deployment
 
-When deploying to Vercel, add all variables under **Project → Settings → Environment Variables**.
+Add all variables under **Project → Settings → Environment Variables**.
 
 Vercel auto-sets:
-- `VERCEL_URL` — the deployment URL (used by Auth.js)
-- `NODE_ENV` — set to `production`
+- `NODE_ENV=production`
+- `VERCEL_URL` — the deployment hostname
 
-You must manually set:
-- All Supabase variables
-- `AUTH_SECRET`
-- Google OAuth credentials
-- `NEXT_PUBLIC_SITE_URL` (your production domain)
-- SMTP variables (if using email)
-- Google Drive variables (if using image uploads)
+You must manually set everything else, including `NEXTAUTH_URL` and `NEXT_PUBLIC_SITE_URL` pointing to your production domain.
 
 ---
 
-## Troubleshooting
+## Security Checklist
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| `SUPABASE_SERVICE_KEY` undefined | Env var not set or has `NEXT_PUBLIC_` prefix | Set in `.env.local` without prefix |
-| Google sign-in fails | Redirect URI mismatch | Add exact callback URL to Google Cloud Console |
-| Images don't load from Supabase | Hostname not whitelisted | Check `remotePatterns` in `next.config.mjs` |
-| `NEXTAUTH_SECRET` error | Missing or invalid secret | Generate with `openssl rand -base64 32` |
+```text
+✓ NEXTAUTH_SECRET is a random 32-byte base64 string
+✓ SUPABASE_SERVICE_ROLE_KEY has no NEXT_PUBLIC_ prefix
+✓ .env.local is in .gitignore (it is — don't override this)
+✓ No secrets are logged or returned to the client
+✓ Production uses cloud Supabase (SUPABASE_LOCAL is not set)
+```
