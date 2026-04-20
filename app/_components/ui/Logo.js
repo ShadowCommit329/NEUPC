@@ -11,44 +11,43 @@ function Logo() {
   return (
     <Link
       href="/"
-      className="group flex items-center gap-3 transition-opacity duration-300 hover:opacity-90"
+      className="group focus-visible:ring-primary-500/50 relative flex items-center gap-2.5 rounded-xl transition-all duration-300 focus-visible:ring-2 focus-visible:outline-none sm:gap-3"
+      aria-label="Home"
     >
-      {/* Icon block — always true brand colors, never overridden by light-mode CSS */}
-      <div className="relative">
-        <div
-          className="absolute inset-0 rounded-full opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-100"
-          style={{ background: 'rgba(182,243,107,0.25)' }}
-        />
-        <div
-          className="relative h-10 w-10 overflow-hidden rounded-xl p-1.5 shadow-lg transition-all duration-300 group-hover:shadow-[0_0_20px_rgba(182,243,107,0.4)] sm:h-11 sm:w-11"
-          style={{ background: 'linear-gradient(135deg, #B6F36B 0%, #7C5CFF 100%)' }}
-        >
+      {/* Left: Logo Icon Block */}
+      <div className="relative flex shrink-0 items-center justify-center">
+        {/* Ambient dynamic glow */}
+        <div className="bg-primary-500/0 group-hover:bg-primary-500/20 dark:group-hover:bg-primary-500/25 absolute inset-0 z-0 scale-[1.5] rounded-full blur-xl transition-all duration-500" />
+
+        {/* Glassmorphic Logo Container */}
+        <div className="group-hover:border-primary-500/30 group-hover:shadow-glow dark:bg-surface-2/60 dark:group-hover:border-primary-400/30 dark:group-hover:bg-surface-2 relative z-10 flex h-9 w-9 overflow-hidden rounded-xl border border-slate-200/50 bg-white/60 shadow-sm backdrop-blur-md transition-all duration-500 group-hover:scale-[1.05] group-hover:bg-white sm:h-10 sm:w-10 dark:border-white/10">
           <Image
             src="/logo.png"
-            alt="Netrokona University Programming Club logo"
+            alt="NEUPC Logo"
             fill
-            sizes="(max-width: 640px) 40px, 44px"
-            className="object-contain p-0.5"
+            sizes="(max-width: 640px) 36px, 40px"
+            className="object-contain p-1 transition-transform duration-500 group-hover:scale-110"
           />
         </div>
       </div>
 
-      {/* Name */}
-      <div className="flex flex-col">
-        <span className="font-heading text-lg font-bold leading-tight text-slate-900 transition-colors duration-300 dark:text-white sm:text-xl">
+      {/* Middle: Brand Name (Responsive handling) */}
+      <div className="flex flex-col justify-center">
+        <span className="font-heading group-hover:text-primary-600 dark:group-hover:text-primary-400 text-[1.1rem] leading-none font-bold tracking-tight text-slate-900 transition-colors duration-300 sm:text-xl dark:text-white">
+          {/* N<span className="lowercase text-[0.8em]">e</span>UPC */}
           NEUPC
         </span>
-        <span className="hidden text-[11px] leading-tight text-slate-500 transition-colors duration-300 group-hover:text-slate-700 sm:block dark:text-zinc-500 dark:group-hover:text-zinc-300">
-          Programming Club
+        <span className="mt-0.5 hidden text-[0.6875rem] font-medium tracking-widest text-slate-500 transition-colors duration-300 group-hover:text-slate-700 md:block dark:text-slate-400 dark:group-hover:text-slate-300">
+          NeU Programming Club
         </span>
       </div>
 
-      {/* Divider + icon */}
-      <div className="ml-1 hidden items-center gap-2 text-slate-400 lg:flex dark:text-zinc-600">
-        <div className="h-7 w-px bg-slate-200 dark:bg-white/10" />
+      {/* Right: Decorative element (Desktop only) */}
+      <div className="hidden items-center gap-3 pl-2 opacity-40 transition-all duration-500 group-hover:opacity-100 lg:flex">
+        <div className="h-6 w-[1.5px] rounded-full bg-slate-200 dark:bg-white/10" />
         <CodeXml
-          className="h-5 w-5 opacity-50 transition-all duration-300 group-hover:opacity-100"
-          style={{}}
+          className="text-primary-600 dark:text-primary-400 h-4 w-4 transition-transform duration-500 group-hover:scale-110"
+          strokeWidth={2.5}
           aria-hidden
         />
       </div>

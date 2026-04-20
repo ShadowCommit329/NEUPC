@@ -14,7 +14,7 @@ import {
   startTransition,
 } from 'react';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ChevronDown, LogOut, UserCircle, Moon, Sun } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, UserCircle } from 'lucide-react';
 import { cn } from '@/app/_lib/utils';
 import { signOutAction } from '@/app/_lib/actions';
 
@@ -31,7 +31,7 @@ const NAV_CONFIG = {
       items: [
         { href: '/blogs', label: 'Blogs' },
         { href: '/roadmaps', label: 'Roadmaps' },
-        { href: '/resources', label: 'Resources' },
+        // { href: '/resources', label: 'Resources' },
       ],
     },
     {
@@ -55,8 +55,6 @@ const NAV_CONFIG = {
   cta: { href: '/account', label: 'Get Started' },
 };
 
-const THEME_KEY = 'neupc-theme';
-
 function isNavActive(pathname, href) {
   if (href === '/') return pathname === '/';
   return pathname === href || pathname.startsWith(href + '/');
@@ -71,24 +69,24 @@ function DesktopDropdown({ dropdown, isOpen, onToggle, pathname }) {
   const active = isDropdownActive(pathname, dropdown);
   const isArchives = dropdown.id === 'archives';
   const activeColor = isArchives
-    ? 'text-neon-lime dark:text-neon-lime text-emerald-600'
-    : 'text-neon-violet';
+    ? 'text-emerald-600 dark:text-neon-lime'
+    : 'text-violet-600 dark:text-violet-400';
   const hoverItem = isArchives
     ? 'hover:text-emerald-600 dark:hover:text-neon-lime'
-    : 'hover:text-violet-600 dark:hover:text-neon-violet';
+    : 'hover:text-violet-600 dark:hover:text-violet-400';
   const activeItem = isArchives
     ? 'text-emerald-600 dark:text-neon-lime'
-    : 'text-violet-600 dark:text-neon-violet';
+    : 'text-violet-600 dark:text-violet-400';
 
   return (
     <li ref={ref} className="group relative py-2">
       <button
         onClick={onToggle}
         className={cn(
-          'flex items-center gap-1.5 font-heading text-[11px] font-bold uppercase tracking-widest transition-colors duration-200',
+          'font-heading flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase transition-colors duration-200 xl:gap-1.5 xl:text-[11px] xl:tracking-widest',
           active
             ? activeColor
-            : 'text-slate-500 hover:text-slate-900 dark:text-zinc-500 dark:hover:text-white'
+            : 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white'
         )}
         aria-expanded={isOpen}
         aria-haspopup="true"
@@ -103,11 +101,11 @@ function DesktopDropdown({ dropdown, isOpen, onToggle, pathname }) {
       </button>
       <ul
         className={cn(
-          'absolute top-full left-0 z-50 mt-2 min-w-[12rem] space-y-1 rounded-xl border p-3 shadow-2xl backdrop-blur-xl transition-all duration-200',
+          'absolute top-full left-0 z-[250] mt-2 min-w-[12rem] space-y-1 rounded-xl border p-3 shadow-2xl backdrop-blur-xl transition-all duration-200',
           'bg-white/95 dark:bg-[#0c0e16]',
           isArchives
-            ? 'border-emerald-100 dark:border-neon-lime/20'
-            : 'border-violet-100 dark:border-neon-violet/20',
+            ? 'dark:border-neon-lime/20 border-emerald-100'
+            : 'dark:border-neon-violet/20 border-violet-100',
           isOpen
             ? 'visible translate-y-0 opacity-100'
             : 'invisible translate-y-2 opacity-0 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100'
@@ -123,7 +121,7 @@ function DesktopDropdown({ dropdown, isOpen, onToggle, pathname }) {
                 'block rounded-lg px-3 py-1.5 font-mono text-[11px] transition-colors duration-200',
                 isNavActive(pathname, item.href)
                   ? activeItem
-                  : cn('text-slate-500 dark:text-zinc-400', hoverItem)
+                  : cn('text-slate-600 dark:text-zinc-200', hoverItem)
               )}
             >
               {item.label}
@@ -180,7 +178,7 @@ function MobileDropdown({ dropdown, isOpen, onToggle, onNavigate, pathname }) {
                 'block px-10 py-2.5 text-sm transition-colors duration-200',
                 isNavActive(pathname, item.href)
                   ? activeItemColor
-                  : 'text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white'
+                  : 'text-slate-600 hover:text-slate-900 dark:text-zinc-200 dark:hover:text-white'
               )}
             >
               {item.label}
@@ -195,29 +193,8 @@ function MobileDropdown({ dropdown, isOpen, onToggle, onNavigate, pathname }) {
 export default function Navbar({ session }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
-  const [theme, setTheme] = useState('dark');
   const pathname = usePathname();
   const navRef = useRef(null);
-
-  // Initialize theme from storage/DOM
-  useEffect(() => {
-    const stored = localStorage.getItem(THEME_KEY);
-    const initial = stored === 'light' || stored === 'dark'
-      ? stored
-      : document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-    setTheme(initial);
-  }, []);
-
-  // Apply theme to DOM
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    document.documentElement.style.colorScheme = theme;
-    localStorage.setItem(THEME_KEY, theme);
-  }, [theme]);
-
-  const toggleTheme = useCallback(() => {
-    setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
-  }, []);
 
   const toggleDropdown = useCallback(
     (id) => setOpenDropdown((prev) => (prev === id ? null : id)),
@@ -243,13 +220,18 @@ export default function Navbar({ session }) {
   useEffect(() => {
     if (mobileMenuOpen) {
       document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = ''; };
+      return () => {
+        document.body.style.overflow = '';
+      };
     }
   }, [mobileMenuOpen]);
 
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === 'Escape') { closeMobileMenu(); setOpenDropdown(null); }
+      if (e.key === 'Escape') {
+        closeMobileMenu();
+        setOpenDropdown(null);
+      }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
@@ -258,7 +240,8 @@ export default function Navbar({ session }) {
   useEffect(() => {
     if (openDropdown === null) return;
     const handler = (e) => {
-      if (navRef.current && !navRef.current.contains(e.target)) setOpenDropdown(null);
+      if (navRef.current && !navRef.current.contains(e.target))
+        setOpenDropdown(null);
     };
     document.addEventListener('pointerdown', handler);
     return () => document.removeEventListener('pointerdown', handler);
@@ -267,9 +250,9 @@ export default function Navbar({ session }) {
   const isLoggedIn = Boolean(session?.user);
 
   return (
-    <nav ref={navRef} className="relative z-50">
+    <nav ref={navRef} className="relative z-[210]">
       {/* ── Desktop ────────────────────────────────────────────── */}
-      <ul className="hidden items-center gap-8 lg:flex xl:gap-12">
+      <ul className="hidden items-center gap-3 xl:flex xl:gap-4 2xl:gap-6">
         {NAV_CONFIG.links.map((link) => {
           const active = isNavActive(pathname, link.href);
           return (
@@ -277,10 +260,10 @@ export default function Navbar({ session }) {
               <Link
                 href={link.href}
                 className={cn(
-                  'font-heading whitespace-nowrap text-[11px] font-bold uppercase tracking-widest transition-colors duration-200',
+                  'font-heading text-[10px] font-bold tracking-wider whitespace-nowrap uppercase transition-colors duration-200 xl:text-[11px] xl:tracking-widest',
                   active
-                    ? 'text-emerald-600 dark:text-neon-lime'
-                    : 'text-slate-500 hover:text-slate-900 dark:text-zinc-500 dark:hover:text-white'
+                    ? 'dark:text-neon-lime text-emerald-600'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white'
                 )}
               >
                 {link.label}
@@ -288,7 +271,7 @@ export default function Navbar({ session }) {
               {active && (
                 <span
                   aria-hidden
-                  className="pulse-dot absolute -top-2 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-neon-lime"
+                  className="pulse-dot bg-neon-lime absolute -top-2 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full"
                 />
               )}
             </li>
@@ -305,23 +288,11 @@ export default function Navbar({ session }) {
           />
         ))}
 
-        {/* Theme toggle */}
-        <li>
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition-all hover:border-slate-400 hover:text-slate-900 dark:border-white/15 dark:text-zinc-400 dark:hover:border-neon-lime/60 dark:hover:text-neon-lime"
-            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
-        </li>
-
         {isLoggedIn ? (
           <>
             <li>
               <Link href="/account" title="Go to Account">
-                <UserCircle className="h-10 w-10 rounded-full text-slate-400 transition-all hover:scale-105 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white" />
+                <UserCircle className="h-10 w-10 rounded-full text-slate-600 transition-all hover:scale-105 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white" />
               </Link>
             </li>
             <li>
@@ -340,7 +311,7 @@ export default function Navbar({ session }) {
           <li>
             <Link
               href={NAV_CONFIG.cta.href}
-              className="font-heading whitespace-nowrap rounded-full bg-neon-lime px-7 py-2.5 text-[11px] font-bold uppercase tracking-widest text-black shadow-lg transition-all hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-black"
+              className="font-heading bg-neon-lime rounded-full px-4 py-2 text-[10px] font-bold tracking-wider whitespace-nowrap text-black uppercase shadow-lg transition-all hover:bg-slate-900 hover:text-white xl:px-7 xl:py-2.5 xl:text-[11px] xl:tracking-widest dark:hover:bg-white dark:hover:text-black"
             >
               {NAV_CONFIG.cta.label}
             </Link>
@@ -349,29 +320,30 @@ export default function Navbar({ session }) {
       </ul>
 
       {/* ── Mobile header controls ──────────────────────────────── */}
-      <div className="flex items-center gap-2 lg:hidden">
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="touch-manipulation rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:text-slate-900 dark:border-white/20 dark:text-zinc-400 dark:hover:text-neon-lime"
-          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-        </button>
+      <div className="flex items-center gap-2 xl:hidden">
         <button
           onClick={() => setMobileMenuOpen((prev) => !prev)}
-          className="touch-manipulation p-1 text-slate-600 transition-colors hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white"
+          className="touch-manipulation rounded-md p-2 text-slate-600 transition-colors hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white"
           aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={mobileMenuOpen}
+          aria-controls="mobile-nav-drawer"
         >
-          {mobileMenuOpen ? <X className="h-7 w-7" /> : <Menu className="h-7 w-7" />}
+          {mobileMenuOpen ? (
+            <X className="h-7 w-7" />
+          ) : (
+            <Menu className="h-7 w-7" />
+          )}
         </button>
       </div>
 
       {/* ── Mobile backdrop ─────────────────────────────────────── */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+          className="fixed inset-x-0 z-[205] bg-black/40 backdrop-blur-sm xl:hidden"
+          style={{
+            top: 'var(--header-h, 69px)',
+            height: 'calc(100dvh - var(--header-h, 69px))',
+          }}
           onClick={closeMobileMenu}
           aria-hidden="true"
         />
@@ -379,14 +351,19 @@ export default function Navbar({ session }) {
 
       {/* ── Mobile drawer ───────────────────────────────────────── */}
       <div
+        id="mobile-nav-drawer"
         className={cn(
-          'fixed inset-x-0 top-[69px] bottom-0 z-50 bg-white/95 backdrop-blur-md transition-all duration-300 dark:bg-[#05060b]/98 lg:hidden',
+          'fixed inset-x-0 z-[206] bg-white/95 backdrop-blur-md transition-all duration-300 xl:hidden dark:bg-[#05060b]/98',
           mobileMenuOpen
             ? 'visible opacity-100'
             : 'pointer-events-none invisible opacity-0'
         )}
+        style={{
+          top: 'var(--header-h, 69px)',
+          height: 'calc(100dvh - var(--header-h, 69px))',
+        }}
       >
-        <ul className="pb-safe mx-auto flex h-full max-w-md flex-col gap-0.5 overflow-y-auto overscroll-contain p-4 sm:p-6">
+        <ul className="pb-safe mx-auto flex h-full max-w-lg flex-col gap-0.5 overflow-y-auto overscroll-contain p-4 sm:p-6 md:grid md:max-w-3xl md:grid-cols-2 md:content-start md:gap-2 md:p-8">
           {NAV_CONFIG.links.map((link) => (
             <li key={link.href}>
               <Link
@@ -395,7 +372,7 @@ export default function Navbar({ session }) {
                 className={cn(
                   'block touch-manipulation rounded-lg px-5 py-3.5 text-base font-medium transition-colors duration-200',
                   isNavActive(pathname, link.href)
-                    ? 'bg-emerald-50 text-emerald-700 dark:bg-white/5 dark:text-neon-lime'
+                    ? 'dark:text-neon-lime bg-emerald-50 text-emerald-700 dark:bg-white/5'
                     : 'text-slate-700 hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white'
                 )}
               >
@@ -415,20 +392,20 @@ export default function Navbar({ session }) {
             />
           ))}
 
-          <li className="my-3 border-t border-slate-100 dark:border-white/10" />
+          <li className="my-3 border-t border-slate-100 md:col-span-2 dark:border-white/10" />
 
           {isLoggedIn ? (
             <>
-              <li>
+              <li className="md:col-span-1">
                 <Link
                   href="/account"
                   onClick={closeMobileMenu}
-                  className="block w-full touch-manipulation rounded-lg border border-slate-200 bg-slate-50 px-5 py-3.5 text-center text-base font-semibold text-slate-700 transition-all hover:border-slate-400 dark:border-white/15 dark:bg-white/5 dark:text-zinc-300 dark:hover:border-neon-lime/40 dark:hover:text-neon-lime"
+                  className="dark:hover:border-neon-lime/40 dark:hover:text-neon-lime block w-full touch-manipulation rounded-lg border border-slate-200 bg-slate-50 px-5 py-3.5 text-center text-base font-semibold text-slate-700 transition-all hover:border-slate-400 dark:border-white/15 dark:bg-white/5 dark:text-zinc-300"
                 >
                   My Account
                 </Link>
               </li>
-              <li className="mt-2">
+              <li className="md:col-span-1">
                 <form action={signOutAction}>
                   <button
                     type="submit"
@@ -441,11 +418,11 @@ export default function Navbar({ session }) {
               </li>
             </>
           ) : (
-            <li>
+            <li className="md:col-span-2">
               <Link
                 href={NAV_CONFIG.cta.href}
                 onClick={closeMobileMenu}
-                className="block touch-manipulation rounded-lg bg-neon-lime px-5 py-3.5 text-center text-base font-bold text-black transition-all hover:brightness-110"
+                className="bg-neon-lime block touch-manipulation rounded-lg px-5 py-3.5 text-center text-base font-bold text-black transition-all hover:brightness-110"
               >
                 {NAV_CONFIG.cta.label}
               </Link>

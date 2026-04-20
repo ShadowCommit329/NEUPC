@@ -146,14 +146,8 @@ export default async function RootLayout({ children }) {
     <html
       lang="en"
       className={`dark ${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} ${sora.variable} ${lora.variable}`}
+      style={{ colorScheme: 'dark' }}
     >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('neupc-theme');if(t==='light'){document.documentElement.classList.remove('dark')}else{document.documentElement.classList.add('dark')}}catch(e){}})();`,
-          }}
-        />
-      </head>
       <body
         className={`${inter.className} bg-background-dark text-primary-50 flex min-h-screen flex-col`}
       >
@@ -163,7 +157,7 @@ export default async function RootLayout({ children }) {
           role={session?.user?.role || null}
           isLoggedIn={!!session}
         >
-          <Header />
+          <Header session={session} />
           <main className="w-full flex-grow">
             <PageTransition>{children}</PageTransition>
           </main>
