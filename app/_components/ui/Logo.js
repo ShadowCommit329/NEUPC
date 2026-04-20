@@ -26,7 +26,7 @@ function Logo() {
             alt="NEUPC Logo"
             fill
             sizes="(max-width: 640px) 36px, 40px"
-            className="object-contain p-1 transition-transform duration-500 group-hover:scale-110"
+            className="object-cover p-0 transition-transform duration-500 group-hover:scale-110"
           />
         </div>
       </div>

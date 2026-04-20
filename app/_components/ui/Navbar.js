@@ -67,26 +67,20 @@ function isDropdownActive(pathname, dropdown) {
 function DesktopDropdown({ dropdown, isOpen, onToggle, pathname }) {
   const ref = useRef(null);
   const active = isDropdownActive(pathname, dropdown);
-  const isArchives = dropdown.id === 'archives';
-  const activeColor = isArchives
-    ? 'text-emerald-600 dark:text-neon-lime'
-    : 'text-violet-600 dark:text-violet-400';
-  const hoverItem = isArchives
-    ? 'hover:text-emerald-600 dark:hover:text-neon-lime'
-    : 'hover:text-violet-600 dark:hover:text-violet-400';
-  const activeItem = isArchives
-    ? 'text-emerald-600 dark:text-neon-lime'
-    : 'text-violet-600 dark:text-violet-400';
+  const activeColor = 'text-primary-400 bg-primary-500/10';
+  const hoverColor = 'group-hover:text-primary-400';
+  const hoverItem = 'hover:text-primary-400 hover:bg-primary-500/10';
+  const activeItem = 'text-primary-400 bg-primary-500/10';
 
   return (
     <li ref={ref} className="group relative py-2">
       <button
         onClick={onToggle}
         className={cn(
-          'font-heading flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase transition-colors duration-200 xl:gap-1.5 xl:text-[11px] xl:tracking-widest',
+          'font-heading flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold tracking-widest uppercase transition-all duration-300',
           active
             ? activeColor
-            : 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white'
+            : cn('text-zinc-300 hover:bg-white/5 hover:text-white', hoverColor)
         )}
         aria-expanded={isOpen}
         aria-haspopup="true"
@@ -94,21 +88,21 @@ function DesktopDropdown({ dropdown, isOpen, onToggle, pathname }) {
         {dropdown.label}
         <ChevronDown
           className={cn(
-            'h-3.5 w-3.5 transition-transform duration-200',
+            'h-3.5 w-3.5 transition-transform duration-300',
             isOpen ? 'rotate-180' : 'group-hover:rotate-180'
           )}
         />
       </button>
+
+      {/* Invisible hover bridge */}
+      <div className="absolute top-full left-0 h-3 w-full" />
+
       <ul
         className={cn(
-          'absolute top-full left-0 z-[250] mt-2 min-w-[12rem] space-y-1 rounded-xl border p-3 shadow-2xl backdrop-blur-xl transition-all duration-200',
-          'bg-white/95 dark:bg-[#0c0e16]',
-          isArchives
-            ? 'dark:border-neon-lime/20 border-emerald-100'
-            : 'dark:border-neon-violet/20 border-violet-100',
+          'bg-surface-2/95 absolute top-[calc(100%+0.5rem)] left-0 z-[250] min-w-[14rem] origin-top-left space-y-1 rounded-2xl border border-white/10 p-2.5 shadow-[0_8px_30px_rgb(0,0,0,0.5)] backdrop-blur-xl transition-all duration-300',
           isOpen
-            ? 'visible translate-y-0 opacity-100'
-            : 'invisible translate-y-2 opacity-0 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100'
+            ? 'visible translate-y-0 scale-100 opacity-100'
+            : 'invisible -translate-y-2 scale-95 opacity-0 group-hover:visible group-hover:translate-y-0 group-hover:scale-100 group-hover:opacity-100'
         )}
         role="menu"
       >
@@ -118,10 +112,10 @@ function DesktopDropdown({ dropdown, isOpen, onToggle, pathname }) {
               href={item.href}
               role="menuitem"
               className={cn(
-                'block rounded-lg px-3 py-1.5 font-mono text-[11px] transition-colors duration-200',
+                'block rounded-xl px-3.5 py-2 font-mono text-[11px] transition-all duration-200',
                 isNavActive(pathname, item.href)
                   ? activeItem
-                  : cn('text-slate-600 dark:text-zinc-200', hoverItem)
+                  : cn('text-zinc-300', hoverItem)
               )}
             >
               {item.label}
@@ -135,22 +129,16 @@ function DesktopDropdown({ dropdown, isOpen, onToggle, pathname }) {
 
 function MobileDropdown({ dropdown, isOpen, onToggle, onNavigate, pathname }) {
   const active = isDropdownActive(pathname, dropdown);
-  const isArchives = dropdown.id === 'archives';
-  const activeColor = isArchives
-    ? 'bg-emerald-50 text-emerald-700 dark:bg-white/5 dark:text-neon-lime'
-    : 'bg-violet-50 text-violet-700 dark:bg-white/5 dark:text-neon-violet';
-  const inactiveColor =
-    'text-slate-700 hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white';
-  const activeItemColor = isArchives
-    ? 'text-emerald-700 dark:text-neon-lime'
-    : 'text-violet-700 dark:text-neon-violet';
+  const activeColor = 'bg-primary-500/10 text-primary-400';
+  const inactiveColor = 'text-zinc-300 hover:bg-white/5 hover:text-white';
+  const activeItemColor = 'text-primary-400';
 
   return (
-    <li>
+    <li className="flex flex-col">
       <button
         onClick={onToggle}
         className={cn(
-          'flex w-full touch-manipulation items-center justify-between rounded-lg px-5 py-3.5 text-base font-medium transition-colors duration-200',
+          'flex w-full touch-manipulation items-center justify-between rounded-xl px-5 py-3.5 text-[15px] font-medium transition-all duration-300',
           active ? activeColor : inactiveColor
         )}
         aria-expanded={isOpen}
@@ -158,34 +146,40 @@ function MobileDropdown({ dropdown, isOpen, onToggle, onNavigate, pathname }) {
         {dropdown.label}
         <ChevronDown
           className={cn(
-            'h-4 w-4 transition-transform duration-200',
+            'h-4 w-4 transition-transform duration-300',
             isOpen && 'rotate-180'
           )}
         />
       </button>
-      <ul
+      <div
         className={cn(
-          'overflow-hidden transition-all duration-300',
-          isOpen ? 'max-h-60 opacity-100' : 'max-h-0 opacity-0'
+          'grid transition-all duration-300 ease-in-out',
+          isOpen
+            ? 'mt-1 grid-rows-[1fr] opacity-100'
+            : 'mt-0 grid-rows-[0fr] opacity-0'
         )}
       >
-        {dropdown.items.map((item) => (
-          <li key={item.href}>
-            <Link
-              href={item.href}
-              onClick={onNavigate}
-              className={cn(
-                'block px-10 py-2.5 text-sm transition-colors duration-200',
-                isNavActive(pathname, item.href)
-                  ? activeItemColor
-                  : 'text-slate-600 hover:text-slate-900 dark:text-zinc-200 dark:hover:text-white'
-              )}
-            >
-              {item.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
+        <ul className="overflow-hidden">
+          <div className="flex flex-col gap-1 px-3 pt-1 pb-2">
+            {dropdown.items.map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  onClick={onNavigate}
+                  className={cn(
+                    'block rounded-lg px-6 py-2.5 text-[13px] transition-all duration-200 hover:bg-white/5',
+                    isNavActive(pathname, item.href)
+                      ? activeItemColor
+                      : 'text-zinc-400 hover:text-white'
+                  )}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </div>
+        </ul>
+      </div>
     </li>
   );
 }
@@ -252,7 +246,7 @@ export default function Navbar({ session }) {
   return (
     <nav ref={navRef} className="relative z-[210]">
       {/* ── Desktop ────────────────────────────────────────────── */}
-      <ul className="hidden items-center gap-3 xl:flex xl:gap-4 2xl:gap-6">
+      <ul className="hidden items-center gap-1 lg:flex lg:gap-2 xl:gap-4">
         {NAV_CONFIG.links.map((link) => {
           const active = isNavActive(pathname, link.href);
           return (
@@ -260,20 +254,14 @@ export default function Navbar({ session }) {
               <Link
                 href={link.href}
                 className={cn(
-                  'font-heading text-[10px] font-bold tracking-wider whitespace-nowrap uppercase transition-colors duration-200 xl:text-[11px] xl:tracking-widest',
+                  'font-heading relative rounded-full px-4 py-2 text-[11px] font-bold tracking-widest uppercase transition-all duration-300',
                   active
-                    ? 'dark:text-neon-lime text-emerald-600'
-                    : 'text-slate-600 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white'
+                    ? 'bg-primary-500/10 text-primary-400'
+                    : 'text-zinc-300 hover:bg-white/5 hover:text-white'
                 )}
               >
                 {link.label}
               </Link>
-              {active && (
-                <span
-                  aria-hidden
-                  className="pulse-dot bg-neon-lime absolute -top-2 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full"
-                />
-              )}
             </li>
           );
         })}
@@ -289,29 +277,36 @@ export default function Navbar({ session }) {
         ))}
 
         {isLoggedIn ? (
-          <>
+          <div className="ml-2 flex items-center gap-3">
             <li>
-              <Link href="/account" title="Go to Account">
-                <UserCircle className="h-10 w-10 rounded-full text-slate-600 transition-all hover:scale-105 hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white" />
+              <Link
+                href="/account"
+                title="Go to Account"
+                className="block transition-transform hover:scale-105"
+              >
+                <UserCircle
+                  className="h-9 w-9 text-zinc-300 opacity-80 transition-colors hover:text-white hover:opacity-100"
+                  strokeWidth={1.5}
+                />
               </Link>
             </li>
             <li>
               <form action={signOutAction}>
                 <button
                   type="submit"
-                  className="flex items-center justify-center rounded-lg border border-red-200 p-2 text-red-400 transition-all hover:scale-105 hover:border-red-400 hover:bg-red-50 dark:border-red-500/50 dark:text-red-400 dark:hover:border-red-500 dark:hover:bg-red-500/10"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-red-500/80 transition-all hover:scale-105 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400"
                   title="Logout"
                 >
-                  <LogOut className="h-5 w-5" />
+                  <LogOut className="h-4 w-4" />
                 </button>
               </form>
             </li>
-          </>
+          </div>
         ) : (
-          <li>
+          <li className="pl-3">
             <Link
               href={NAV_CONFIG.cta.href}
-              className="font-heading bg-neon-lime rounded-full px-4 py-2 text-[10px] font-bold tracking-wider whitespace-nowrap text-black uppercase shadow-lg transition-all hover:bg-slate-900 hover:text-white xl:px-7 xl:py-2.5 xl:text-[11px] xl:tracking-widest dark:hover:bg-white dark:hover:text-black"
+              className="bg-primary-500 font-heading hover:shadow-glow/50 hover:bg-primary-400 block flex items-center justify-center rounded-full px-5 py-2.5 text-[11px] font-bold tracking-widest text-white uppercase shadow-lg transition-all duration-300 hover:scale-105"
             >
               {NAV_CONFIG.cta.label}
             </Link>
@@ -320,18 +315,18 @@ export default function Navbar({ session }) {
       </ul>
 
       {/* ── Mobile header controls ──────────────────────────────── */}
-      <div className="flex items-center gap-2 xl:hidden">
+      <div className="flex items-center gap-2 lg:hidden">
         <button
           onClick={() => setMobileMenuOpen((prev) => !prev)}
-          className="touch-manipulation rounded-md p-2 text-slate-600 transition-colors hover:text-slate-900 dark:text-zinc-300 dark:hover:text-white"
+          className="touch-manipulation rounded-full border border-white/10 bg-white/5 p-2 text-zinc-300 transition-all hover:bg-white/10 hover:text-white active:scale-95"
           aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={mobileMenuOpen}
           aria-controls="mobile-nav-drawer"
         >
           {mobileMenuOpen ? (
-            <X className="h-7 w-7" />
+            <X className="h-6 w-6" />
           ) : (
-            <Menu className="h-7 w-7" />
+            <Menu className="h-6 w-6" />
           )}
         </button>
       </div>
@@ -339,7 +334,7 @@ export default function Navbar({ session }) {
       {/* ── Mobile backdrop ─────────────────────────────────────── */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-x-0 z-[205] bg-black/40 backdrop-blur-sm xl:hidden"
+          className="fixed inset-x-0 z-[205] bg-black/60 backdrop-blur-md transition-opacity duration-500 lg:hidden"
           style={{
             top: 'var(--header-h, 69px)',
             height: 'calc(100dvh - var(--header-h, 69px))',
@@ -353,27 +348,27 @@ export default function Navbar({ session }) {
       <div
         id="mobile-nav-drawer"
         className={cn(
-          'fixed inset-x-0 z-[206] bg-white/95 backdrop-blur-md transition-all duration-300 xl:hidden dark:bg-[#05060b]/98',
+          'bg-surface-2/95 fixed inset-x-0 z-[206] border-t border-white/5 backdrop-blur-2xl transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:hidden',
           mobileMenuOpen
-            ? 'visible opacity-100'
-            : 'pointer-events-none invisible opacity-0'
+            ? 'visible translate-y-0 opacity-100'
+            : 'pointer-events-none invisible -translate-y-8 opacity-0'
         )}
         style={{
           top: 'var(--header-h, 69px)',
           height: 'calc(100dvh - var(--header-h, 69px))',
         }}
       >
-        <ul className="pb-safe mx-auto flex h-full max-w-lg flex-col gap-0.5 overflow-y-auto overscroll-contain p-4 sm:p-6 md:grid md:max-w-3xl md:grid-cols-2 md:content-start md:gap-2 md:p-8">
+        <ul className="pb-safe mx-auto flex h-full max-w-lg flex-col gap-1 overflow-y-auto overscroll-contain p-4 sm:p-6 md:grid md:max-w-3xl md:grid-cols-2 md:content-start md:gap-2 md:p-8">
           {NAV_CONFIG.links.map((link) => (
             <li key={link.href}>
               <Link
                 href={link.href}
                 onClick={closeMobileMenu}
                 className={cn(
-                  'block touch-manipulation rounded-lg px-5 py-3.5 text-base font-medium transition-colors duration-200',
+                  'block touch-manipulation rounded-xl px-5 py-3.5 text-[15px] font-medium transition-all duration-300',
                   isNavActive(pathname, link.href)
-                    ? 'dark:text-neon-lime bg-emerald-50 text-emerald-700 dark:bg-white/5'
-                    : 'text-slate-700 hover:bg-slate-100 dark:text-zinc-300 dark:hover:bg-white/5 dark:hover:text-white'
+                    ? 'bg-primary-500/10 text-primary-400'
+                    : 'text-zinc-300 hover:bg-white/5 hover:text-white'
                 )}
               >
                 {link.label}
@@ -392,7 +387,7 @@ export default function Navbar({ session }) {
             />
           ))}
 
-          <li className="my-3 border-t border-slate-100 md:col-span-2 dark:border-white/10" />
+          <li className="my-3 border-t border-white/10 md:col-span-2" />
 
           {isLoggedIn ? (
             <>
@@ -400,17 +395,17 @@ export default function Navbar({ session }) {
                 <Link
                   href="/account"
                   onClick={closeMobileMenu}
-                  className="dark:hover:border-neon-lime/40 dark:hover:text-neon-lime block w-full touch-manipulation rounded-lg border border-slate-200 bg-slate-50 px-5 py-3.5 text-center text-base font-semibold text-slate-700 transition-all hover:border-slate-400 dark:border-white/15 dark:bg-white/5 dark:text-zinc-300"
+                  className="block w-full touch-manipulation rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 text-center text-[15px] font-semibold text-zinc-300 transition-all hover:border-white/20 hover:text-white"
                 >
                   My Account
                 </Link>
               </li>
               <li className="md:col-span-1">
-                <form action={signOutAction}>
+                <form action={signOutAction} className="h-full">
                   <button
                     type="submit"
                     onClick={closeMobileMenu}
-                    className="block w-full touch-manipulation rounded-lg border border-red-200 px-5 py-3.5 text-center text-base font-semibold text-red-500 transition-all hover:bg-red-50 dark:border-red-500/50 dark:text-red-400 dark:hover:bg-red-500/10"
+                    className="block h-full w-full touch-manipulation rounded-xl border border-red-500/20 bg-red-500/5 px-5 py-3.5 text-center text-[15px] font-semibold text-red-400 transition-all hover:bg-red-500/10 hover:text-red-300"
                   >
                     Logout
                   </button>
@@ -418,11 +413,11 @@ export default function Navbar({ session }) {
               </li>
             </>
           ) : (
-            <li className="md:col-span-2">
+            <li className="mt-2 md:col-span-2">
               <Link
                 href={NAV_CONFIG.cta.href}
                 onClick={closeMobileMenu}
-                className="bg-neon-lime block touch-manipulation rounded-lg px-5 py-3.5 text-center text-base font-bold text-black transition-all hover:brightness-110"
+                className="bg-primary-500 hover:shadow-glow/50 hover:bg-primary-400 block touch-manipulation rounded-xl px-5 py-3.5 text-center text-[15px] font-bold text-white shadow-lg transition-all hover:scale-[1.02]"
               >
                 {NAV_CONFIG.cta.label}
               </Link>
