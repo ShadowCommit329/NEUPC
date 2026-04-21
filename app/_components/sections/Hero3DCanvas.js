@@ -188,6 +188,10 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
     scene.add(worldGroup);
 
     const coreRadius = 10.5;
+    const worldOffsetX = -coreRadius * 0.2;
+    const nodeBaseScale = 6.8;
+    const nodePulse = 0.28;
+    const nodeHoverBoost = 1.42;
 
     const geo = new THREE.IcosahedronGeometry(coreRadius, 2);
     const edges = new THREE.EdgesGeometry(geo);
@@ -339,7 +343,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
       });
       const sprite = new THREE.Sprite(mat);
       sprite.position.set(px, py, pz);
-      sprite.scale.set(5.0, 5.0, 1);
+      sprite.scale.set(nodeBaseScale, nodeBaseScale, 1);
 
       sprite.userData.texCyan = texCyan;
       sprite.userData.texPurple = texPurple;
@@ -556,7 +560,7 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
 
       const timeSec = Date.now() * 0.001;
 
-      worldGroup.position.y = Math.sin(timeSec * 0.4) * 0.2;
+      worldGroup.position.set(worldOffsetX, Math.sin(timeSec * 0.4) * 0.2, 0);
 
       nodeSprites.forEach((s, i) => {
         tempVec.copy(s.position).applyMatrix4(worldGroup.matrixWorld);
@@ -564,12 +568,12 @@ export default function Hero3DCanvas({ onNodeClick } = {}) {
         const isLeft = tempVec.x < 0;
         s.material.map = isLeft ? s.userData.texCyan : s.userData.texPurple;
 
-        let targetScale = 5.0 + Math.sin(timeSec + i) * 0.2;
+        let targetScale = nodeBaseScale + Math.sin(timeSec + i) * nodePulse;
         let targetOpacity = 0.65;
 
         if (hoveredNode) {
           if (hoveredNode === s) {
-            targetScale *= 1.35;
+            targetScale *= nodeHoverBoost;
             targetOpacity = 1;
           } else {
             targetOpacity = 0.2;

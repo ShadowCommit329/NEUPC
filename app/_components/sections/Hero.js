@@ -6,7 +6,7 @@
  */
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Hero3DCanvas from './Hero3DCanvas';
 
 const DEFAULTS = {
@@ -18,6 +18,18 @@ function Hero({ data = {}, settings = {} }) {
   const { department = DEFAULTS.department, university = DEFAULTS.university } =
     data;
   const [selectedNode, setSelectedNode] = useState(null);
+
+  useEffect(() => {
+    if (!selectedNode) return undefined;
+
+    const timerId = window.setTimeout(() => {
+      setSelectedNode(null);
+    }, 5000);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [selectedNode]);
 
   return (
     <section
@@ -39,7 +51,7 @@ function Hero({ data = {}, settings = {} }) {
           <div className="flex items-center gap-4">
             <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
             <span className="font-mono text-[11px] font-medium tracking-[0.35em] text-slate-500 uppercase dark:text-zinc-500">
-              {department} — {university}
+              {department} <br/> {university}
             </span>
           </div>
 
@@ -121,12 +133,12 @@ function Hero({ data = {}, settings = {} }) {
             </div>
 
             {/* Interactive Drag Hint UI */}
-            <div className="pointer-events-none absolute top-6 right-6 flex items-center gap-2 rounded-full border border-white/10 bg-zinc-900/60 px-3 py-1.5 backdrop-blur-md transition-opacity duration-700 group-hover:opacity-0">
-              <div className="bg-neon-lime h-1.5 w-1.5 animate-pulse rounded-full shadow-[0_0_10px_rgba(182,243,107,1)]" />
-              <span className="font-mono text-[9px] font-medium tracking-widest text-zinc-300 uppercase">
+            {/* <div className="pointer-events-none absolute top-6 right-6 flex items-center gap-2 rounded-full border border-white/10 bg-zinc-900/60 px-3 py-1.5 backdrop-blur-md transition-opacity duration-700 group-hover:opacity-0"> */}
+            {/* <div className="bg-neon-lime h-1.5 w-1.5 animate-pulse rounded-full shadow-[0_0_10px_rgba(182,243,107,1)]" /> */}
+            {/* <span className="font-mono text-[9px] font-medium tracking-widest text-zinc-300 uppercase">
                 Drag · Click a Node
-              </span>
-            </div>
+              </span> */}
+            {/* </div> */}
 
             {selectedNode ? (
               <div className="absolute right-6 bottom-6 left-6 z-30 rounded-2xl border border-white/10 bg-zinc-950/75 p-4 backdrop-blur-md">
@@ -155,25 +167,25 @@ function Hero({ data = {}, settings = {} }) {
               </div>
             ) : (
               <div className="pointer-events-none absolute right-6 bottom-6 left-6 flex items-end justify-between text-zinc-300">
-                <div>
+                {/* <div>
                   <div className="font-heading text-4xl leading-none font-black text-white drop-shadow-lg">
                     2024
                   </div>
                   <div className="mt-1 font-mono text-[10px] tracking-[0.3em] uppercase opacity-70">
                     Est. year
                   </div>
-                </div>
-                <div className="text-right font-mono text-[10px] tracking-[0.3em] uppercase opacity-70">
+                </div> */}
+                {/* <div className="text-right font-mono text-[10px] tracking-[0.3em] uppercase opacity-70">
                   N—22.02°
                   <br />
                   E—90.73°
-                </div>
+                </div> */}
               </div>
             )}
           </div>
 
           {/* Floating stats card */}
-          <div className="glass-panel absolute -bottom-6 -left-6 max-w-[14rem] rounded-2xl p-5">
+          {/* <div className="glass-panel absolute -bottom-6 -left-6 max-w-[14rem] rounded-2xl p-5">
             <div className="mb-2 flex items-center gap-2">
               <span className="pulse-dot bg-neon-lime h-1.5 w-1.5 rounded-full" />
               <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.3em] uppercase">
@@ -183,14 +195,14 @@ function Hero({ data = {}, settings = {} }) {
             <p className="font-sans text-xs leading-relaxed text-slate-600 dark:text-zinc-400">
               Weekly practice contests every Friday at 9:00 PM.
             </p>
-          </div>
+          </div> */}
 
           {/* Floating accent chip */}
-          <div className="border-neon-violet/30 bg-neon-violet/10 absolute -top-4 -right-4 rotate-6 rounded-xl border px-4 py-2 backdrop-blur-xl">
+          {/* <div className="border-neon-violet/30 bg-neon-violet/10 absolute -top-4 -right-4 rotate-6 rounded-xl border px-4 py-2 backdrop-blur-xl">
             <span className="text-neon-violet font-mono text-[10px] font-bold tracking-[0.3em] uppercase">
               ICPC ready
             </span>
-          </div>
+          </div> */}
         </div>
       </div>
 
