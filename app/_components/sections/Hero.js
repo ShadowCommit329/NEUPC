@@ -4,6 +4,7 @@
  */
 
 import Link from 'next/link';
+import Hero3DCanvas from './Hero3DCanvas';
 
 const DEFAULTS = {
   department: 'Dept of CSE',
@@ -97,7 +98,7 @@ function Hero({ data = {}, settings = {} }) {
         {/* ── Right column: decorative stack ─────────────────── */}
         <div className="relative hidden lg:col-span-5 lg:block">
           {/* Main portrait placeholder */}
-          <div className="ph-lime soft-glow-lime relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden rounded-3xl border border-white/5 bg-zinc-950/50">
+          <div className="ph-lime soft-glow-lime group relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden rounded-3xl border border-white/5">
             {/* 1. IDEAL UX: Place a real dark/moody photograph of your club here. */}
             {/* Just add a photo to your public folder and uncomment the Image component below */}
             {/* <Image 
@@ -107,46 +108,48 @@ function Hero({ data = {}, settings = {} }) {
                   className="object-cover opacity-40 mix-blend-luminosity transition-transform duration-700 hover:scale-105" 
                 /> */}
 
-            {/* 2. FALLBACK GRAPHIC: Abstract Competitive Programming C++ code art */}
-            <div className="from-neon-lime/10 absolute inset-0 bg-linear-to-br via-transparent to-transparent opacity-50" />
-            <pre className="pointer-events-none absolute -right-16 -bottom-12 -rotate-12 font-mono text-[10px] leading-[1.6] font-bold text-white/5 select-none sm:text-[12px]">
-              {`#include <bits/stdc++.h>
-using namespace std;
+            {/* 2. GRAPHIC: Interactive 3D Network art */}
+            <Hero3DCanvas />
 
-void solve() {
-    int n, k;
-    cin >> n >> k;
-    vector<int> a(n);
-    for(int& x : a) cin >> x;
-    
-    // Core logic begins here...
-    sort(a.begin(), a.end());
-}
-
-int main() {
-    ios_base::sync_with_stdio(0);
-    cin.tie(0);
-    int t; 
-    cin >> t;
-    while(t--) solve();
-    return 0;
+            {/* Coding overlays */}
+            <pre className="pointer-events-none absolute top-20 left-6 z-20 hidden rounded-xl border border-cyan-300/20 bg-zinc-950/40 px-3 py-2 font-mono text-[10px] leading-tight text-cyan-200/85 shadow-[0_0_30px_rgba(34,211,238,0.14)] backdrop-blur-sm xl:block">
+              {`for (const node of graph) {
+  node.rotateY(0.0015);
 }`}
             </pre>
+            <pre className="pointer-events-none absolute right-6 bottom-28 z-20 hidden rounded-xl border border-violet-300/20 bg-zinc-950/40 px-3 py-2 font-mono text-[10px] leading-tight text-violet-200/85 shadow-[0_0_30px_rgba(167,139,250,0.14)] backdrop-blur-sm xl:block">
+              {`if (drag.active) {
+  velocity *= 0.965;
+}`}
+            </pre>
+            <pre className="pointer-events-none absolute top-1/2 left-1/2 z-20 hidden -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/15 bg-zinc-950/35 px-3 py-2 font-mono text-[9px] leading-tight text-zinc-200/80 shadow-[0_0_35px_rgba(255,255,255,0.08)] backdrop-blur-sm 2xl:block">
+              {`// NEUPC runtime
+render(scene, camera);`}
+            </pre>
 
-            {/* Overlay UI elements */}
-            <div className="absolute top-6 left-6 font-mono text-[10px] font-bold tracking-[0.4em] text-zinc-400 uppercase">
-              /// NEUPC.01
+            {/* Overlay UI elements. pointer-events-none ensures we can drag the 3D globe underneath! */}
+            <div className="pointer-events-none absolute top-6 left-6 font-mono text-[10px] font-bold tracking-[0.4em] text-zinc-400 uppercase">
+              {'/// NEUPC.01'}
             </div>
-            <div className="absolute right-6 bottom-6 left-6 flex items-end justify-between text-zinc-300">
+
+            {/* Interactive Drag Hint UI */}
+            <div className="pointer-events-none absolute top-6 right-6 flex items-center gap-2 rounded-full border border-white/10 bg-zinc-900/60 px-3 py-1.5 backdrop-blur-md transition-opacity duration-700 group-hover:opacity-0">
+              <div className="bg-neon-lime h-1.5 w-1.5 animate-pulse rounded-full shadow-[0_0_10px_rgba(182,243,107,1)]" />
+              <span className="font-mono text-[9px] font-medium tracking-widest text-zinc-300 uppercase">
+                Drag to Rotate
+              </span>
+            </div>
+
+            <div className="pointer-events-none absolute right-6 bottom-6 left-6 flex items-end justify-between text-zinc-300">
               <div>
-                <div className="font-heading text-4xl leading-none font-black text-white">
+                <div className="font-heading text-4xl leading-none font-black text-white drop-shadow-lg">
                   2024
                 </div>
                 <div className="mt-1 font-mono text-[10px] tracking-[0.3em] uppercase opacity-70">
                   Est. year
                 </div>
               </div>
-              <div className="font-mono text-[10px] tracking-[0.3em] uppercase opacity-70">
+              <div className="text-right font-mono text-[10px] tracking-[0.3em] uppercase opacity-70">
                 N—22.02°
                 <br />
                 E—90.73°

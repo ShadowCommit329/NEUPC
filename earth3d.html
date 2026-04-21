@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interactive 3D Earth</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background-color: #000000;
+      }
+      canvas {
+        display: block;
+      }
+      #tooltip {
+        position: absolute;
+        pointer-events: none;
+        background: rgba(0, 0, 0, 0.75);
+        color: #ffffff;
+        font-family: sans-serif;
+        font-size: 12px;
+        border-radius: 6px;
+        padding: 6px 10px;
+        display: none;
+        z-index: 10;
+        /* Offset tooltip slightly above the cursor */
+        transform: translate(-50%, -100%);
+        margin-top: -15px;
+        white-space: nowrap;
+      }
+    </style>
+    <!-- Load Three.js r128 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Load OrbitControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  </head>
+  <body>
+    <div id="tooltip"></div>
+    <script>
+      // 1. Scene Setup
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x000000);
+
+      const camera = new THREE.PerspectiveCamera(
+        45,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        100
+      );
+      camera.position.z = 2.5;
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      document.body.appendChild(renderer.domElement);
+
+      // 2. Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); // soft ambient
+      scene.add(ambientLight);
+
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0); // simulated sunlight
+      directionalLight.position.set(5, 5, 5); // top-right
+      scene.add(directionalLight);
+
+      // 3. OrbitControls
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+
+      // 4. Earth Group (everything attached to this will rotate together)
+      const earthGroup = new THREE.Group();
+      scene.add(earthGroup);
+
+      // 5. Earth Sphere & Textures
+      const textureLoader = new THREE.TextureLoader();
+      const earthMap = textureLoader.load(
+        'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg'
+      );
+      const specMap = textureLoader.load(
+        'https://unpkg.com/three-globe/example/img/earth-water.png'
+      );
+
+      const earthGeo = new THREE.SphereGeometry(1.0, 64, 64);
+      const earthMat = new THREE.MeshPhongMaterial({
+        map: earthMap,
+        specularMap: specMap,
+        specular: new THREE.Color(0x333333),
+        shininess: 15,
+      });
+      const earthMesh = new THREE.Mesh(earthGeo, earthMat);
+      earthGroup.add(earthMesh);
+
+      // 6. Atmosphere Glow Ring
+      const atmosGeo = new THREE.SphereGeometry(1.01, 64, 64);
+      const atmosMat = new THREE.MeshPhongMaterial({
+        color: 0x4488ff,
+        transparent: true,
+        opacity: 0.08,
+        side: THREE.FrontSide,
+        depthWrite: false,
+      });
+      const atmosMesh = new THREE.Mesh(atmosGeo, atmosMat);
+      earthGroup.add(atmosMesh);
+
+      // 7. Random Nodes on the Surface
+      const nodeColors = [0xff4444, 0x44ff88, 0xffcc00, 0x44aaff, 0xff88cc];
+      const nodeMeshes = [];
+
+      // Helper: Convert Lat/Lon to 3D Cartesian coordinates
+      function latLonToVector3(lat, lon, radius) {
+        const phi = (90 - lat) * (Math.PI / 180);
+        const theta = (lon + 180) * (Math.PI / 180);
+
+        const x = -(radius * Math.sin(phi) * Math.cos(theta));
+        const z = radius * Math.sin(phi) * Math.sin(theta);
+        const y = radius * Math.cos(phi);
+
+        return new THREE.Vector3(x, y, z);
+      }
+
+      for (let i = 0; i < 20; i++) {
+        const lat = (Math.random() - 0.5) * 160; // Approx -80 to 80 degrees
+        const lon = (Math.random() - 0.5) * 360; // -180 to +180 degrees
+
+        const pos = latLonToVector3(lat, lon, 1.02);
+
+        const nodeGeo = new THREE.SphereGeometry(0.018, 16, 16);
+        const nodeMat = new THREE.MeshBasicMaterial({
+          color: nodeColors[i % nodeColors.length],
+        });
+        const nodeMesh = new THREE.Mesh(nodeGeo, nodeMat);
+
+        nodeMesh.position.copy(pos);
+
+        // Store data for the raycaster tooltip
+        nodeMesh.userData = {
+          index: i + 1,
+          lat: lat.toFixed(2),
+          lon: lon.toFixed(2),
+        };
+
+        earthGroup.add(nodeMesh);
+        nodeMeshes.push(nodeMesh);
+      }
+
+      // 8. Raycaster & Tooltip (Hover logic)
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+      const tooltip = document.getElementById('tooltip');
+
+      window.addEventListener('mousemove', (event) => {
+        // Normalize mouse coords (-1 to +1) for raycasting
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+
+        // Check intersections against ONLY the node meshes
+        const intersects = raycaster.intersectObjects(nodeMeshes);
+
+        if (intersects.length > 0) {
+          const hoveredNode = intersects[0].object;
+          const data = hoveredNode.userData;
+
+          tooltip.style.display = 'block';
+          tooltip.style.left = event.clientX + 'px';
+          tooltip.style.top = event.clientY + 'px';
+          tooltip.innerHTML = `Node ${data.index} &mdash; Lat ${data.lat}&deg; Lon ${data.lon}&deg;`;
+
+          document.body.style.cursor = 'pointer';
+        } else {
+          tooltip.style.display = 'none';
+          document.body.style.cursor = 'default';
+        }
+      });
+
+      // 9. Resize Handler
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      // 10. Auto-Rotation & Drag State Management
+      let isDragging = false;
+      controls.addEventListener('start', () => {
+        isDragging = true;
+      });
+      controls.addEventListener('end', () => {
+        isDragging = false;
+      });
+
+      // 11. Animation Loop
+      function animate() {
+        requestAnimationFrame(animate);
+
+        // Only auto-rotate if the user isn't actively dragging
+        if (!isDragging) {
+          earthGroup.rotation.y += 0.001;
+        }
+
+        controls.update(); // required for damping
+        renderer.render(scene, camera);
+      }
+
+      // Start animation
+      animate();
+    </script>
+  </body>
+</html>
