@@ -37,7 +37,7 @@ async function fetchImage(url) {
       Referer: new URL(url).origin + '/',
     },
     redirect: 'follow',
-    cache: 'no-store',
+    next: { revalidate: 604800 }, // cache upstream fetch for 7 days, matching PROXY_HEADERS
   });
   if (!res.ok) return null;
   const ct = res.headers.get('content-type') || '';
