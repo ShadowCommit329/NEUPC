@@ -7,7 +7,21 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import Hero3DCanvas from './Hero3DCanvas';
+
+const heroContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.12, delayChildren: 0.2 } },
+};
+const heroItem = {
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.25, 0.1, 0.25, 1] } },
+};
+const heroStat = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+};
 
 const DEFAULTS = {
   department: 'Dept of CSE',
@@ -53,70 +67,81 @@ function Hero({ data = {}, settings = {} }) {
 
       {/* ── Text content — left-aligned overlay ─────────────── */}
       <div className="pointer-events-none relative z-10 mx-auto w-full max-w-screen-2xl px-4 sm:px-6 xl:px-8">
-        <div className="pointer-events-auto flex max-w-xl flex-col items-start gap-8">
+        <motion.div
+          className="pointer-events-auto flex max-w-xl flex-col items-start gap-8"
+          variants={heroContainer}
+          initial="hidden"
+          animate="visible"
+        >
           {/* Eyebrow */}
-          <div className="flex items-center gap-4">
+          <motion.div variants={heroItem} className="flex items-center gap-4">
             <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
             <span className="font-mono text-[9px] font-medium tracking-[0.24em] text-zinc-400 uppercase sm:text-[10px] sm:tracking-[0.3em] md:text-[11px] md:tracking-[0.35em]">
               {department} · {university}
             </span>
-          </div>
+          </motion.div>
 
           {/* Kinetic headline */}
-          <h1 className="kinetic-headline font-heading text-[12vw] leading-none font-black text-white uppercase select-none md:text-[clamp(3.5rem,9vw,8rem)]">
+          <motion.h1
+            variants={heroItem}
+            className="kinetic-headline font-heading text-[12vw] leading-none font-black text-white uppercase select-none md:text-[clamp(3.5rem,9vw,8rem)]"
+          >
             CODE.
             <br />
             <span className="text-stroke-lime text-transparent">COMPETE.</span>
             <br />
             <span className="neon-text">CREATE.</span>
-          </h1>
+          </motion.h1>
 
           {/* Subheadline */}
-          <p className="max-w-xl font-sans text-base leading-relaxed font-light text-zinc-300 md:text-lg">
+          <motion.p variants={heroItem} className="max-w-xl font-sans text-base leading-relaxed font-light text-zinc-300 md:text-lg">
             {settings?.hero_description ||
               "Join Netrokona University's premier programming community — compete, build, and grow alongside passionate engineers."}
-          </p>
+          </motion.p>
 
           {/* CTAs */}
-          <div className="mt-2 flex flex-wrap items-center gap-4">
-            <Link
-              href="/join"
-              className="group bg-neon-lime font-heading inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full px-8 py-3.5 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.6)] transition-all hover:scale-[1.02] hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)]"
-            >
-              Join the Club
-              <span
-                aria-hidden
-                className="transition-transform group-hover:translate-x-1"
+          <motion.div variants={heroItem} className="mt-2 flex flex-wrap items-center gap-4">
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+              <Link
+                href="/join"
+                className="group bg-neon-lime font-heading inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full px-8 py-3.5 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)]"
               >
-                →
-              </span>
-            </Link>
-            <Link
-              href="/events"
-              className="font-heading hover:border-neon-lime/50 inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full border border-white/20 px-8 py-3.5 text-[11px] font-bold tracking-widest text-zinc-200 uppercase backdrop-blur-sm transition-all hover:text-white"
-            >
-              View Events
-            </Link>
-          </div>
+                Join the Club
+                <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+              </Link>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+              <Link
+                href="/events"
+                className="font-heading hover:border-neon-lime/50 inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full border border-white/20 px-8 py-3.5 text-[11px] font-bold tracking-widest text-zinc-200 uppercase backdrop-blur-sm transition-all hover:text-white"
+              >
+                View Events
+              </Link>
+            </motion.div>
+          </motion.div>
 
           {/* Stats row */}
-          <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-white/10 pt-8">
+          <motion.div
+            variants={heroItem}
+            className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-white/10 pt-8"
+          >
             {[
               ['150+', 'Members'],
               ['40+', 'Contests'],
               ['12', 'Awards'],
-            ].map(([value, label]) => (
-              <div key={label} className="flex items-baseline gap-2">
-                <span className="font-heading text-xl font-bold text-white">
-                  {value}
-                </span>
-                <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-500 uppercase">
-                  {label}
-                </span>
-              </div>
+            ].map(([value, label], i) => (
+              <motion.div
+                key={label}
+                variants={heroStat}
+                custom={i}
+                className="flex items-baseline gap-2"
+              >
+                <span className="font-heading text-xl font-bold text-white">{value}</span>
+                <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-500 uppercase">{label}</span>
+              </motion.div>
             ))}
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
 
       {/* Node detail panel — bottom-right (only visible when canvas is shown) */}

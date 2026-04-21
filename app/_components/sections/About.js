@@ -50,11 +50,11 @@ function About({ data = {}, settings = {} }) {
           )}
         >
           <div className="flex items-center justify-center gap-4">
-            <span className="dark:bg-neon-violet h-px w-10 bg-violet-500" />
-            <span className="dark:text-neon-violet font-mono text-[11px] font-bold tracking-[0.5em] text-violet-600 uppercase">
+            <span className="h-px w-10 bg-neon-violet" />
+            <span className="font-mono text-[11px] font-bold tracking-[0.5em] text-neon-violet uppercase">
               Identity / 001
             </span>
-            <span className="dark:bg-neon-violet h-px w-10 bg-violet-500" />
+            <span className="h-px w-10 bg-neon-violet" />
           </div>
           <h2 className="kinetic-headline font-heading text-5xl font-black text-slate-900 uppercase md:text-6xl lg:text-7xl dark:text-white">
             {title}
@@ -156,7 +156,7 @@ function About({ data = {}, settings = {} }) {
                   <button
                     type="button"
                     onClick={() => setIsExpanded(true)}
-                    className="font-heading dark:text-neon-lime/70 dark:hover:text-neon-lime inline-flex touch-manipulation items-center gap-2 text-[10px] font-bold tracking-widest text-violet-600 uppercase transition-colors hover:text-violet-900 sm:text-[11px]"
+                    className="font-heading inline-flex touch-manipulation items-center gap-2 text-[10px] font-bold tracking-widest text-neon-lime uppercase transition-colors hover:opacity-80 sm:text-[11px]"
                   >
                     Read More
                     <span aria-hidden className="text-base leading-none">
@@ -186,9 +186,9 @@ function About({ data = {}, settings = {} }) {
             {/* Mission / Vision */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="holographic-card group rounded-2xl p-5 sm:p-6">
-                <div className="dark:bg-neon-lime/10 mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100">
+                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-neon-lime/10">
                   <svg
-                    className="dark:text-neon-lime h-5 w-5 text-emerald-600"
+                    className="h-5 w-5 text-neon-lime"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -201,7 +201,7 @@ function About({ data = {}, settings = {} }) {
                     />
                   </svg>
                 </div>
-                <h4 className="font-heading dark:text-neon-lime mb-2 text-[11px] font-bold tracking-widest text-emerald-600 uppercase sm:text-[12px]">
+                <h4 className="font-heading mb-2 text-[11px] font-bold tracking-widest text-neon-lime uppercase sm:text-[12px]">
                   Mission
                 </h4>
                 <p className="text-sm leading-relaxed text-slate-600 dark:text-zinc-400">
@@ -211,9 +211,9 @@ function About({ data = {}, settings = {} }) {
               </div>
 
               <div className="holographic-card group rounded-2xl p-5 sm:p-6">
-                <div className="dark:bg-neon-violet/10 mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100">
+                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-neon-violet/10">
                   <svg
-                    className="dark:text-neon-violet h-5 w-5 text-violet-600"
+                    className="h-5 w-5 text-neon-violet"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -231,7 +231,7 @@ function About({ data = {}, settings = {} }) {
                     />
                   </svg>
                 </div>
-                <h4 className="font-heading dark:text-neon-violet mb-2 text-[11px] font-bold tracking-widest text-violet-600 uppercase sm:text-[12px]">
+                <h4 className="font-heading mb-2 text-[11px] font-bold tracking-widest text-neon-violet uppercase sm:text-[12px]">
                   Vision
                 </h4>
                 <p className="text-sm leading-relaxed text-slate-600 dark:text-zinc-400">
@@ -245,7 +245,7 @@ function About({ data = {}, settings = {} }) {
             <div className="pt-2">
               <Link
                 href="/about"
-                className="group font-heading dark:hover:border-neon-violet dark:hover:text-neon-violet inline-flex min-h-[44px] touch-manipulation items-center gap-2 rounded-full border border-slate-300 px-7 py-3 text-[10px] font-bold tracking-widest text-slate-700 uppercase transition-all hover:border-violet-600 hover:text-violet-600 sm:px-8 sm:py-3.5 sm:text-[11px] dark:border-white/15 dark:text-zinc-300"
+                className="group font-heading inline-flex min-h-[44px] touch-manipulation items-center gap-2 rounded-full border border-slate-300 px-7 py-3 text-[10px] font-bold tracking-widest text-slate-700 uppercase transition-all hover:border-neon-violet hover:text-neon-violet focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-violet sm:px-8 sm:py-3.5 sm:text-[11px] dark:border-white/15 dark:text-zinc-300"
               >
                 Learn More
                 <span

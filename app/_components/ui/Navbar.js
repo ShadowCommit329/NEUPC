@@ -1,8 +1,3 @@
-/**
- * @file Navbar
- * @module Navbar
- */
-
 'use client';
 
 import Link from 'next/link';
@@ -32,7 +27,6 @@ const NAV_CONFIG = {
       items: [
         { href: '/blogs', label: 'Blogs' },
         { href: '/roadmaps', label: 'Roadmaps' },
-        // { href: '/resources', label: 'Resources' },
       ],
     },
     {
@@ -56,12 +50,6 @@ const NAV_CONFIG = {
   cta: { href: '/account', label: 'Get Started' },
 };
 
-// Breakpoints:
-// < 640px   → mobile: hamburger only (CTA hidden to save space)
-// 640–899px → phablet: hamburger + CTA pill
-// 900–1099px → tablet: primary links + CTA, hamburger for dropdowns
-// ≥ 1100px  → desktop: full nav (all links + dropdowns + CTA)
-
 function isNavActive(pathname, href) {
   if (href === '/') return pathname === '/';
   return pathname === href || pathname.startsWith(href + '/');
@@ -75,12 +63,7 @@ function isDropdownActive(pathname, dropdown) {
 function UserAvatar({ user, size = 36, overlay = false }) {
   const avatarSrc = driveImageUrl(user.avatar_url || user.image || '');
   const name = user.name || 'Account';
-  const initials = name
-    .split(' ')
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase();
+  const initials = name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
   const imgEl = avatarSrc ? (
     <Image
@@ -94,7 +77,7 @@ function UserAvatar({ user, size = 36, overlay = false }) {
   ) : (
     <span
       aria-label={name}
-      className="from-primary-600 flex h-full w-full items-center justify-center rounded-full bg-linear-to-br to-violet-600 text-[11px] font-bold tracking-wide text-white select-none"
+      className="flex h-full w-full items-center justify-center rounded-full bg-linear-to-br from-neon-lime/80 to-neon-violet/80 text-[11px] font-bold tracking-wide text-black select-none"
     >
       {initials}
     </span>
@@ -102,7 +85,7 @@ function UserAvatar({ user, size = 36, overlay = false }) {
 
   return (
     <div
-      className="group/av relative shrink-0 overflow-hidden rounded-full ring-2 ring-white/10 transition-all duration-300 ease-out hover:ring-white/40 hover:shadow-[0_0_0_4px_rgba(255,255,255,0.06)]"
+      className="group/av relative shrink-0 overflow-hidden rounded-full ring-2 ring-white/10 transition-all duration-300 ease-out hover:ring-neon-lime/40 hover:shadow-[0_0_0_4px_rgba(182,243,107,0.08)]"
       style={{ width: size, height: size }}
     >
       {imgEl}
@@ -135,8 +118,8 @@ function DesktopDropdown({ dropdown, isOpen, onToggle, pathname }) {
         className={cn(
           'font-heading flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold tracking-widest uppercase transition-all duration-200 ease-out',
           active
-            ? 'bg-primary-500/10 text-primary-400'
-            : 'text-zinc-300 hover:bg-white/5 hover:text-white group-hover:text-primary-400'
+            ? 'bg-neon-lime/10 text-neon-lime'
+            : 'text-zinc-300 hover:bg-white/5 hover:text-white group-hover:text-neon-lime'
         )}
         aria-expanded={isOpen}
         aria-haspopup="true"
@@ -180,8 +163,8 @@ function DesktopDropdown({ dropdown, isOpen, onToggle, pathname }) {
               className={cn(
                 'flex items-center gap-2 rounded-xl px-3.5 py-2 font-mono text-[11px] transition-all duration-150 ease-out',
                 isNavActive(pathname, item.href)
-                  ? 'bg-primary-500/10 text-primary-400'
-                  : 'text-zinc-300 hover:translate-x-0.5 hover:bg-primary-500/8 hover:text-primary-300'
+                  ? 'bg-neon-lime/10 text-neon-lime'
+                  : 'text-zinc-300 hover:translate-x-0.5 hover:bg-neon-lime/8 hover:text-neon-lime'
               )}
             >
               {item.label}
@@ -210,7 +193,7 @@ function MobileDropdown({ dropdown, isOpen, onToggle, onNavigate, pathname, stag
         className={cn(
           'flex w-full touch-manipulation items-center justify-between rounded-xl px-5 py-3.5 text-[15px] font-medium transition-all duration-200 ease-out active:scale-[0.98]',
           active
-            ? 'bg-primary-500/10 text-primary-400'
+            ? 'bg-neon-lime/10 text-neon-lime'
             : 'text-zinc-300 hover:bg-white/5 hover:text-white'
         )}
         aria-expanded={isOpen}
@@ -238,9 +221,7 @@ function MobileDropdown({ dropdown, isOpen, onToggle, onNavigate, pathname, stag
                 key={item.href}
                 className={cn(
                   'transition-all duration-300 ease-out',
-                  isOpen
-                    ? 'translate-x-0 opacity-100'
-                    : '-translate-x-2 opacity-0'
+                  isOpen ? 'translate-x-0 opacity-100' : '-translate-x-2 opacity-0'
                 )}
                 style={{ transitionDelay: isOpen ? `${50 + i * 45}ms` : '0ms' }}
               >
@@ -250,8 +231,8 @@ function MobileDropdown({ dropdown, isOpen, onToggle, onNavigate, pathname, stag
                   className={cn(
                     'block rounded-lg px-6 py-2.5 text-[13px] transition-all duration-150 ease-out hover:bg-white/5 active:scale-[0.97]',
                     isNavActive(pathname, item.href)
-                      ? 'text-primary-400'
-                      : 'text-zinc-400 hover:text-white'
+                      ? 'text-neon-lime'
+                      : 'text-zinc-400 hover:text-neon-lime'
                   )}
                 >
                   {item.label}
@@ -322,18 +303,11 @@ export default function Navbar({ session }) {
   }, [openDropdown]);
 
   const isLoggedIn = Boolean(session?.user);
-
-  // All drawer nav items for stagger calculation
-  const allDrawerLinks = [
-    ...NAV_CONFIG.links,
-    ...NAV_CONFIG.dropdowns,
-  ];
+  const allDrawerLinks = [...NAV_CONFIG.links, ...NAV_CONFIG.dropdowns];
 
   return (
-    <nav
-      ref={navRef}
-      className="relative z-[210] flex items-center gap-2 sm:gap-3"
-    >
+    <nav ref={navRef} className="relative z-[210] flex items-center gap-2 sm:gap-3">
+
       {/* ── Desktop / Tablet nav ─────────────────────────────── */}
       <ul className="flex items-center gap-1 sm:gap-2 xl:gap-3">
 
@@ -346,10 +320,11 @@ export default function Navbar({ session }) {
                 href={link.href}
                 className={cn(
                   'font-heading relative rounded-full px-3 py-1.5 text-[11px] font-bold tracking-widest uppercase transition-all duration-200 ease-out min-[1100px]:px-4 min-[1100px]:py-2',
-                  'after:absolute after:bottom-0 after:left-1/2 after:h-[2px] after:w-0 after:-translate-x-1/2 after:rounded-full after:bg-primary-400 after:transition-all after:duration-300 after:ease-out',
+                  // Underline pip via ::after
+                  'after:absolute after:bottom-0 after:left-1/2 after:h-[2px] after:w-0 after:-translate-x-1/2 after:rounded-full after:bg-neon-lime after:transition-all after:duration-300 after:ease-out',
                   active
-                    ? 'bg-primary-500/10 text-primary-400 after:w-4'
-                    : 'text-zinc-300 hover:bg-white/5 hover:text-white hover:after:w-3'
+                    ? 'bg-neon-lime/10 text-neon-lime after:w-4'
+                    : 'text-zinc-300 hover:bg-white/5 hover:text-neon-lime hover:after:w-3'
                 )}
               >
                 {link.label}
@@ -388,7 +363,7 @@ export default function Navbar({ session }) {
                   title="Logout"
                   className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-red-500/80 backdrop-blur-sm transition-all duration-200 ease-out hover:scale-105 hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400 active:scale-95 sm:h-9 sm:w-9"
                 >
-                  <LogOut className="h-4 w-4 transition-transform duration-200 ease-out group-hover:rotate-12 sm:h-5 sm:w-5" />
+                  <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
                 </button>
               </form>
             </li>
@@ -397,7 +372,7 @@ export default function Navbar({ session }) {
           <li className="hidden min-[900px]:pl-1 min-[1100px]:pl-3 sm:block">
             <Link
               href={NAV_CONFIG.cta.href}
-              className="bg-primary-500 font-heading hover:bg-primary-400 flex items-center justify-center rounded-full px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase shadow-lg transition-all duration-200 ease-out hover:scale-105 hover:shadow-[0_0_20px_rgba(var(--color-primary-500)/0.45)] active:scale-95 active:brightness-90 sm:px-5 sm:py-2.5 sm:text-[11px]"
+              className="font-heading inline-flex items-center gap-1.5 rounded-full bg-neon-lime px-4 py-2 text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_24px_-6px_rgba(182,243,107,0.6)] transition-all duration-200 ease-out hover:scale-105 hover:shadow-[0_0_32px_-4px_rgba(182,243,107,0.8)] active:scale-95 sm:px-5 sm:py-2.5 sm:text-[11px]"
             >
               {NAV_CONFIG.cta.label}
             </Link>
@@ -409,12 +384,16 @@ export default function Navbar({ session }) {
       <div className="ml-1 flex items-center min-[1100px]:hidden sm:ml-2">
         <button
           onClick={() => setMobileMenuOpen((prev) => !prev)}
-          className="relative flex h-8 w-8 touch-manipulation items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-300 backdrop-blur-md transition-all duration-200 ease-out hover:bg-white/10 hover:text-white active:scale-90 sm:h-9 sm:w-9"
+          className={cn(
+            'relative flex h-8 w-8 touch-manipulation items-center justify-center rounded-full border backdrop-blur-md transition-all duration-200 ease-out active:scale-90 sm:h-9 sm:w-9',
+            mobileMenuOpen
+              ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+              : 'border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white'
+          )}
           aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={mobileMenuOpen}
           aria-controls="mobile-nav-drawer"
         >
-          {/* Menu / X with rotation transition */}
           <span
             className={cn(
               'absolute transition-all duration-300 ease-out',
@@ -451,7 +430,7 @@ export default function Navbar({ session }) {
       <div
         id="mobile-nav-drawer"
         className={cn(
-          'bg-surface-2/95 fixed inset-x-0 z-[206] border-t border-white/5 backdrop-blur-2xl transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] min-[1100px]:hidden',
+          'bg-surface-2/95 fixed inset-x-0 z-[206] border-t border-neon-lime/10 backdrop-blur-2xl transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] min-[1100px]:hidden',
           mobileMenuOpen
             ? 'visible translate-y-0 opacity-100'
             : 'pointer-events-none invisible -translate-y-6 opacity-0'
@@ -463,15 +442,13 @@ export default function Navbar({ session }) {
       >
         <ul className="pb-safe mx-auto flex h-full max-w-lg flex-col gap-1 overflow-y-auto overscroll-contain p-4 sm:p-6 md:grid md:max-w-3xl md:grid-cols-2 md:content-start md:gap-2 md:p-8">
 
-          {/* Primary links — hidden at ≥900px (already in header) */}
+          {/* Primary links */}
           {NAV_CONFIG.links.map((link, i) => (
             <li
               key={link.href}
               className={cn(
                 'min-[900px]:hidden transition-all duration-300 ease-out',
-                mobileMenuOpen
-                  ? 'translate-x-0 opacity-100'
-                  : '-translate-x-4 opacity-0'
+                mobileMenuOpen ? 'translate-x-0 opacity-100' : '-translate-x-4 opacity-0'
               )}
               style={{ transitionDelay: mobileMenuOpen ? `${i * 55}ms` : '0ms' }}
             >
@@ -481,8 +458,8 @@ export default function Navbar({ session }) {
                 className={cn(
                   'block touch-manipulation rounded-xl px-5 py-3.5 text-[15px] font-medium transition-all duration-150 ease-out active:scale-[0.98]',
                   isNavActive(pathname, link.href)
-                    ? 'bg-primary-500/10 text-primary-400'
-                    : 'text-zinc-300 hover:bg-white/5 hover:text-white'
+                    ? 'bg-neon-lime/10 text-neon-lime'
+                    : 'text-zinc-300 hover:bg-white/5 hover:text-neon-lime'
                 )}
               >
                 {link.label}
@@ -490,7 +467,7 @@ export default function Navbar({ session }) {
             </li>
           ))}
 
-          {/* Dropdowns — staggered after primary links */}
+          {/* Dropdowns */}
           {NAV_CONFIG.dropdowns.map((dropdown, i) => (
             <MobileDropdown
               key={dropdown.id}
@@ -504,16 +481,13 @@ export default function Navbar({ session }) {
             />
           ))}
 
+          {/* Divider */}
           <li
             className={cn(
-              'my-3 border-t border-white/10 transition-opacity duration-300 ease-out md:col-span-2',
+              'my-3 border-t border-neon-lime/10 transition-opacity duration-300 ease-out md:col-span-2',
               mobileMenuOpen ? 'opacity-100' : 'opacity-0'
             )}
-            style={{
-              transitionDelay: mobileMenuOpen
-                ? `${allDrawerLinks.length * 55}ms`
-                : '0ms',
-            }}
+            style={{ transitionDelay: mobileMenuOpen ? `${allDrawerLinks.length * 55}ms` : '0ms' }}
           />
 
           {isLoggedIn ? (
@@ -521,20 +495,14 @@ export default function Navbar({ session }) {
               <li
                 className={cn(
                   'min-[900px]:hidden md:col-span-1 transition-all duration-300 ease-out',
-                  mobileMenuOpen
-                    ? 'translate-y-0 opacity-100'
-                    : 'translate-y-3 opacity-0'
+                  mobileMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
                 )}
-                style={{
-                  transitionDelay: mobileMenuOpen
-                    ? `${(allDrawerLinks.length + 1) * 55}ms`
-                    : '0ms',
-                }}
+                style={{ transitionDelay: mobileMenuOpen ? `${(allDrawerLinks.length + 1) * 55}ms` : '0ms' }}
               >
                 <Link
                   href="/account"
                   onClick={closeMobileMenu}
-                  className="flex w-full touch-manipulation items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 transition-all duration-150 ease-out hover:border-white/20 hover:bg-white/8 hover:text-white active:scale-[0.98]"
+                  className="flex w-full touch-manipulation items-center justify-center gap-3 rounded-xl border border-neon-lime/15 bg-neon-lime/5 px-5 py-3.5 transition-all duration-150 ease-out hover:border-neon-lime/30 hover:bg-neon-lime/10 active:scale-[0.98]"
                 >
                   <UserAvatar user={session.user} size={24} />
                   <span className="truncate text-[15px] font-semibold text-zinc-300">
@@ -545,15 +513,9 @@ export default function Navbar({ session }) {
               <li
                 className={cn(
                   'mt-1 min-[900px]:hidden md:col-span-1 md:mt-0 transition-all duration-300 ease-out',
-                  mobileMenuOpen
-                    ? 'translate-y-0 opacity-100'
-                    : 'translate-y-3 opacity-0'
+                  mobileMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
                 )}
-                style={{
-                  transitionDelay: mobileMenuOpen
-                    ? `${(allDrawerLinks.length + 2) * 55}ms`
-                    : '0ms',
-                }}
+                style={{ transitionDelay: mobileMenuOpen ? `${(allDrawerLinks.length + 2) * 55}ms` : '0ms' }}
               >
                 <form action={signOutAction} className="h-full w-full">
                   <button
@@ -561,7 +523,7 @@ export default function Navbar({ session }) {
                     onClick={closeMobileMenu}
                     className="flex h-full w-full touch-manipulation items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-5 py-3.5 text-[15px] font-semibold text-red-400 transition-all duration-150 ease-out hover:bg-red-500/10 hover:text-red-300 active:scale-[0.98]"
                   >
-                    <LogOut className="h-5 w-5 transition-transform duration-200 ease-out group-hover:rotate-12" />
+                    <LogOut className="h-5 w-5" />
                     Logout
                   </button>
                 </form>
@@ -571,20 +533,14 @@ export default function Navbar({ session }) {
             <li
               className={cn(
                 'mt-2 sm:hidden md:col-span-2 transition-all duration-300 ease-out',
-                mobileMenuOpen
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-3 opacity-0'
+                mobileMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
               )}
-              style={{
-                transitionDelay: mobileMenuOpen
-                  ? `${(allDrawerLinks.length + 1) * 55}ms`
-                  : '0ms',
-              }}
+              style={{ transitionDelay: mobileMenuOpen ? `${(allDrawerLinks.length + 1) * 55}ms` : '0ms' }}
             >
               <Link
                 href={NAV_CONFIG.cta.href}
                 onClick={closeMobileMenu}
-                className="bg-primary-500 hover:bg-primary-400 block touch-manipulation rounded-xl px-5 py-3.5 text-center text-[15px] font-bold text-white shadow-lg transition-all duration-150 ease-out hover:scale-[1.02] hover:shadow-[0_0_24px_rgba(var(--color-primary-500)/0.4)] active:scale-[0.98]"
+                className="block touch-manipulation rounded-xl bg-neon-lime px-5 py-3.5 text-center text-[15px] font-bold text-black shadow-[0_0_32px_-8px_rgba(182,243,107,0.5)] transition-all duration-150 ease-out hover:scale-[1.02] hover:shadow-[0_0_40px_-6px_rgba(182,243,107,0.7)] active:scale-[0.98]"
               >
                 {NAV_CONFIG.cta.label}
               </Link>
