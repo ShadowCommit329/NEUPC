@@ -1,8 +1,5 @@
 /**
  * @file Event detail server page.
- * Synced with homepage design system: neon-lime / neon-violet palette,
- * holographic-card components, kinetic-headline typography, grid-overlay ambients.
- *
  * @module EventDetailPage
  */
 
@@ -21,79 +18,41 @@ import { auth } from '@/app/_lib/auth';
 import EventGalleryViewer from './EventGalleryViewer';
 import EventRegistrationCard from './EventRegistrationCard';
 
-/* ──────────────────── Helpers ──────────────────── */
+/* ──────────────── Helpers ──────────────────────────────────────────────── */
 
 function formatDate(dateString) {
   if (!dateString) return '';
   return new Date(dateString).toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
 }
 
 function formatTime(dateString) {
   if (!dateString) return '';
   return new Date(dateString).toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
+    hour: 'numeric', minute: '2-digit',
   });
 }
 
 function formatDateShort(dateString) {
   if (!dateString) return '';
   return new Date(dateString)
-    .toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })
+    .toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     .toUpperCase();
-}
-
-function formatShortDate(dateString) {
-  if (!dateString) return { month: '', day: '' };
-  const d = new Date(dateString);
-  return {
-    month: d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-    day: d.getDate(),
-  };
 }
 
 function getStatusConfig(status) {
   const map = {
-    upcoming: {
-      label: 'Upcoming',
-      dot: 'bg-neon-lime animate-pulse',
-      text: 'text-neon-lime',
-    },
-    ongoing: {
-      label: 'Live Now',
-      dot: 'bg-neon-violet animate-pulse',
-      text: 'text-neon-violet',
-    },
-    completed: {
-      label: 'Completed',
-      dot: 'bg-zinc-600',
-      text: 'text-zinc-500',
-    },
-    cancelled: {
-      label: 'Cancelled',
-      dot: 'bg-red-500',
-      text: 'text-red-400',
-    },
+    upcoming:  { label: 'Upcoming',  dot: 'bg-neon-lime animate-pulse',   text: 'text-neon-lime',   badge: 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime' },
+    ongoing:   { label: 'Live Now',  dot: 'bg-neon-violet animate-pulse', text: 'text-neon-violet', badge: 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet' },
+    completed: { label: 'Completed', dot: 'bg-zinc-600',                  text: 'text-zinc-500',    badge: 'border-white/10 bg-white/5 text-zinc-400' },
+    cancelled: { label: 'Cancelled', dot: 'bg-red-500',                   text: 'text-red-400',     badge: 'border-red-500/20 bg-red-500/10 text-red-400' },
   };
   return map[status] || map.upcoming;
 }
 
 function getVenueLabel(type) {
-  const map = {
-    online: 'Online',
-    offline: 'In-Person',
-    hybrid: 'Hybrid',
-  };
-  return map[type] || '';
+  return { online: 'Online', offline: 'In-Person', hybrid: 'Hybrid' }[type] || '';
 }
 
 function getDuration(start, end) {
@@ -101,18 +60,14 @@ function getDuration(start, end) {
   const ms = new Date(end) - new Date(start);
   const hours = Math.floor(ms / 3600000);
   const minutes = Math.floor((ms % 3600000) / 60000);
-  if (hours > 24) {
-    const days = Math.ceil(hours / 24);
-    return `${days} Day${days > 1 ? 's' : ''}`;
-  }
+  if (hours > 24) { const days = Math.ceil(hours / 24); return `${days} Day${days > 1 ? 's' : ''}`; }
   if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
   if (hours > 0) return `${hours} Hour${hours > 1 ? 's' : ''}`;
   return `${minutes} Min`;
 }
 
-/* ──────────────────── Metadata ──────────────────── */
+/* ──────────────── Metadata ─────────────────────────────────────────────── */
 
-/** @param {{ params: Promise<{ eventId: string }> }} props */
 export async function generateMetadata({ params }) {
   const { eventId } = await params;
   const event = await getPublicEventById(eventId);
@@ -120,17 +75,9 @@ export async function generateMetadata({ params }) {
   return buildEventMetadata(event, `/events/${eventId}`);
 }
 
-/* ──────────────────── SVG Icons ──────────────────── */
+/* ──────────────── SVG Icons ────────────────────────────────────────────── */
 
-function IconBolt({ className = 'w-5 h-5' }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-    </svg>
-  );
-}
-
-function IconGroups({ className = 'w-5 h-5' }) {
+function IconGroups({ className = 'w-4 h-4' }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -138,7 +85,7 @@ function IconGroups({ className = 'w-5 h-5' }) {
   );
 }
 
-function IconShield({ className = 'w-5 h-5' }) {
+function IconShield({ className = 'w-4 h-4' }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -146,7 +93,7 @@ function IconShield({ className = 'w-5 h-5' }) {
   );
 }
 
-function IconLocation({ className = 'w-5 h-5' }) {
+function IconLocation({ className = 'w-4 h-4' }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -155,7 +102,7 @@ function IconLocation({ className = 'w-5 h-5' }) {
   );
 }
 
-function IconGlobe({ className = 'w-5 h-5' }) {
+function IconGlobe({ className = 'w-4 h-4' }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
@@ -171,7 +118,7 @@ function IconCheck({ className = 'w-4 h-4' }) {
   );
 }
 
-function IconExternal({ className = 'w-5 h-5' }) {
+function IconExternal({ className = 'w-4 h-4' }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -179,7 +126,7 @@ function IconExternal({ className = 'w-5 h-5' }) {
   );
 }
 
-function IconCamera({ className = 'w-5 h-5' }) {
+function IconCamera({ className = 'w-4 h-4' }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
@@ -188,7 +135,7 @@ function IconCamera({ className = 'w-5 h-5' }) {
   );
 }
 
-function IconSync({ className = 'w-5 h-5' }) {
+function IconSync({ className = 'w-4 h-4' }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -196,7 +143,7 @@ function IconSync({ className = 'w-5 h-5' }) {
   );
 }
 
-function IconTag({ className = 'w-5 h-5' }) {
+function IconTag({ className = 'w-4 h-4' }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -204,17 +151,28 @@ function IconTag({ className = 'w-5 h-5' }) {
   );
 }
 
-/* ──────────────────── Sub-components ──────────────────── */
+/* ──────────────── Sub-components ───────────────────────────────────────── */
 
 function TagBadge({ children }) {
   return (
-    <span className="border-neon-violet/20 bg-neon-violet/10 text-neon-violet inline-block rounded-full border px-3 py-1 text-[10px] font-mono font-bold uppercase tracking-widest">
+    <span className="inline-block rounded-full border border-neon-violet/20 bg-neon-violet/10 px-3 py-1 font-mono text-[10px] font-bold tracking-widest text-neon-violet uppercase">
       #{children}
     </span>
   );
 }
 
-/* ──────────────────── Page Component ──────────────────── */
+function SidebarRow({ label, value, highlight }) {
+  return (
+    <li className="flex items-start justify-between gap-4 border-b border-white/5 py-3 last:border-0 last:pb-0">
+      <span className="shrink-0 font-mono text-[9px] tracking-widest text-zinc-600 uppercase sm:text-[10px]">{label}</span>
+      <span className={`text-right font-heading text-sm font-bold leading-snug ${highlight || 'text-white'}`}>
+        {value}
+      </span>
+    </li>
+  );
+}
+
+/* ──────────────── Page ─────────────────────────────────────────────────── */
 
 async function EventDetailPage({ params }) {
   const { eventId } = await params;
@@ -226,11 +184,12 @@ async function EventDetailPage({ params }) {
 
   const galleryItems = await getPublicEventGallery(event.id);
 
-  const heroImage = driveImageUrl(event.cover_image || event.image);
-  const statusCfg = getStatusConfig(event.status);
-  const duration = getDuration(event.start_date, event.end_date);
-  const venueLabel = getVenueLabel(event.venue_type);
-  const tags = event.tags || [];
+  const heroImage   = driveImageUrl(event.cover_image || event.image);
+  const statusCfg   = getStatusConfig(event.status);
+  const duration    = getDuration(event.start_date, event.end_date);
+  const venueLabel  = getVenueLabel(event.venue_type);
+  const tags        = event.tags || [];
+  const isActive    = ['upcoming', 'ongoing'].includes(event.status);
 
   return (
     <main className="relative min-h-screen">
@@ -243,120 +202,110 @@ async function EventDetailPage({ params }) {
         ]}
       />
 
-      {/* ── Hero Section ── */}
-      <section className="relative flex min-h-[85vh] flex-col justify-center overflow-hidden pt-20 pb-16">
-        {/* Background image */}
+      {/* ── Hero ──────────────────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden pt-20 pb-10 sm:pt-24 sm:pb-14 lg:pb-16">
+        {/* Background image – subtle, grayscale */}
         {heroImage && (
           <div className="absolute inset-0 z-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              className="h-full w-full object-cover opacity-15 grayscale"
               src={heroImage}
-              alt={event.title}
+              alt=""
+              aria-hidden
+              className="h-full w-full object-cover opacity-10 grayscale"
             />
-            <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-[#05060B] via-transparent to-[#05060B]" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#05060B]/70 via-[#05060B]/40 to-[#05060B]" />
           </div>
         )}
 
-        {/* Ambient orbs */}
+        {/* Ambient */}
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="grid-overlay absolute inset-0 opacity-20" />
-          <div className="bg-neon-violet/10 absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full blur-[140px]" />
-          <div className="bg-neon-lime/8 absolute top-1/3 -right-40 h-[400px] w-[400px] rounded-full blur-[140px]" />
+          <div className="grid-overlay absolute inset-0 opacity-15" />
+          <div className="bg-neon-violet/8 absolute -top-32 -left-32 h-[400px] w-[400px] rounded-full blur-[120px]" />
+          <div className="bg-neon-lime/6 absolute top-1/2 -right-32 h-[350px] w-[350px] rounded-full blur-[120px]" />
         </div>
 
         <div className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-          {/* Breadcrumb */}
-          <nav className="mb-8 flex items-center gap-3">
+          {/* Back link */}
+          <nav className="mb-6 sm:mb-8">
             <Link
               href="/events"
-              className="group font-heading inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/3 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400 backdrop-blur-sm transition-all hover:border-neon-lime/30 hover:text-neon-lime"
+              className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/3 px-4 py-2 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase backdrop-blur-sm transition-all hover:border-neon-lime/30 hover:text-neon-lime sm:text-[11px]"
             >
-              <svg
-                className="h-3 w-3 transition-transform group-hover:-translate-x-0.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
+              <svg className="h-3 w-3 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
               All Events
             </Link>
           </nav>
 
-          {/* Eyebrow */}
-          <div className="mb-6 flex items-center gap-4">
-            <span className={`pulse-dot inline-block h-1.5 w-1.5 rounded-full ${statusCfg.dot}`} />
-            <span className={`font-mono text-[10px] font-bold tracking-[0.3em] uppercase sm:text-[11px] ${statusCfg.text}`}>
+          {/* Status + category eyebrow */}
+          <div className="mb-4 flex flex-wrap items-center gap-2.5 sm:mb-5">
+            <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:text-[10px] ${statusCfg.badge}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot}`} />
               {statusCfg.label}
-              {event.category ? ` · ${event.category}` : ''}
             </span>
+            {event.category && (
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[9px] tracking-widest text-zinc-400 uppercase sm:text-[10px]">
+                {event.category}
+              </span>
+            )}
           </div>
 
-          {/* Kinetic headline */}
-          <h1 className="kinetic-headline font-heading max-w-4xl text-[clamp(2.5rem,8vw,7rem)] font-black text-white uppercase">
+          {/* Headline */}
+          <h1 className="kinetic-headline font-heading text-[clamp(2rem,7vw,5.5rem)] font-black leading-[1.05] text-white uppercase max-w-4xl">
             {event.title}
           </h1>
 
-          {/* Quick meta row */}
-          <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-white/10 pt-8">
+          {/* Quick-info chips */}
+          <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-white/8 pt-6 sm:mt-8 sm:gap-x-8 sm:pt-8">
             {event.start_date && (
-              <div className="flex items-baseline gap-2">
-                <span className="font-heading text-lg font-bold text-white sm:text-xl">
+              <div className="flex flex-col gap-0.5">
+                <span className="font-mono text-[9px] tracking-[0.25em] text-zinc-600 uppercase sm:text-[10px]">Date &amp; Time</span>
+                <span className="font-heading text-sm font-bold text-white sm:text-base">
                   {formatDateShort(event.start_date)}
-                </span>
-                <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-500 uppercase">
-                  Date
-                </span>
-              </div>
-            )}
-            {event.start_date && (
-              <div className="flex items-baseline gap-2">
-                <span className="font-heading text-lg font-bold text-white sm:text-xl">
-                  {formatTime(event.start_date)}
-                </span>
-                <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-500 uppercase">
-                  Time
+                  {formatTime(event.start_date) ? ` · ${formatTime(event.start_date)}` : ''}
                 </span>
               </div>
             )}
             {event.location && (
-              <div className="flex items-baseline gap-2">
-                <span className="font-heading text-lg font-bold text-white sm:text-xl">
-                  {event.location}
-                </span>
-                <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-500 uppercase">
-                  Venue
-                </span>
+              <div className="flex flex-col gap-0.5">
+                <span className="font-mono text-[9px] tracking-[0.25em] text-zinc-600 uppercase sm:text-[10px]">Venue</span>
+                <span className="font-heading text-sm font-bold text-white sm:text-base">{event.location}</span>
               </div>
             )}
             {duration && (
-              <div className="flex items-baseline gap-2">
-                <span className="font-heading text-lg font-bold text-white sm:text-xl">
-                  {duration}
-                </span>
-                <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-500 uppercase">
-                  Duration
+              <div className="flex flex-col gap-0.5">
+                <span className="font-mono text-[9px] tracking-[0.25em] text-zinc-600 uppercase sm:text-[10px]">Duration</span>
+                <span className="font-heading text-sm font-bold text-white sm:text-base">{duration}</span>
+              </div>
+            )}
+            {event.participation_type && (
+              <div className="flex flex-col gap-0.5">
+                <span className="font-mono text-[9px] tracking-[0.25em] text-zinc-600 uppercase sm:text-[10px]">Format</span>
+                <span className="font-heading text-sm font-bold text-white sm:text-base">
+                  {event.participation_type === 'team'
+                    ? `Team${event.team_size ? ` of ${event.team_size}` : ''}`
+                    : 'Individual'}
                 </span>
               </div>
             )}
           </div>
 
-          {/* Action buttons */}
-          <div className="mt-8 flex flex-wrap items-center gap-4">
-            {event.status !== 'completed' && event.registration_required && (
+          {/* CTA buttons */}
+          <div className="mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
+            {isActive && event.registration_required && (
               <a
                 href="#register"
-                className="group bg-neon-lime font-heading inline-flex items-center gap-2 rounded-full px-8 py-3.5 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)]"
+                className="group inline-flex items-center gap-2 rounded-full bg-neon-lime px-6 py-3 font-heading text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.8)] sm:px-8 sm:py-3.5 sm:text-[11px]"
               >
                 Register Now
-                <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
               </a>
             )}
             <a
               href="#about"
-              className="font-heading inline-flex items-center gap-2 rounded-full border border-white/20 px-8 py-3.5 text-[11px] font-bold tracking-widest text-zinc-200 uppercase backdrop-blur-sm transition-all hover:border-neon-lime/50 hover:text-white"
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 font-heading text-[10px] font-bold tracking-widest text-zinc-300 uppercase backdrop-blur-sm transition-all hover:border-neon-lime/40 hover:text-white sm:px-8 sm:py-3.5 sm:text-[11px]"
             >
               View Details
             </a>
@@ -364,46 +313,29 @@ async function EventDetailPage({ params }) {
         </div>
       </section>
 
-      {/* ── About & Info Bento Grid ── */}
-      <section id="about" className="relative overflow-hidden py-20 sm:py-28">
-        {/* Top divider */}
-        <div className="dark:via-neon-violet/20 absolute top-0 left-1/2 h-px w-full -translate-x-1/2 bg-linear-to-r from-transparent via-slate-200 to-transparent" />
-
-        {/* Ambient */}
+      {/* ── About & Sidebar ───────────────────────────────────────────────── */}
+      <section id="about" className="relative overflow-hidden py-14 sm:py-20 lg:py-24">
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="bg-neon-violet/5 absolute -top-20 left-1/2 h-[600px] w-[800px] -translate-x-1/2 rounded-full blur-[160px]" />
-          <div className="bg-neon-lime/4 absolute right-0 bottom-0 h-[400px] w-[500px] rounded-full blur-[140px]" />
-          <div className="grid-overlay absolute inset-0 opacity-20" />
+          <div className="bg-neon-violet/5 absolute -top-10 left-1/2 h-[500px] w-[700px] -translate-x-1/2 rounded-full blur-[150px]" />
+          <div className="grid-overlay absolute inset-0 opacity-15" />
         </div>
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          {/* Section header */}
-          <div className="mb-14 space-y-5 text-center sm:mb-18">
-            <div className="flex items-center justify-center gap-4">
-              <span className="bg-neon-violet h-px w-10" />
-              <span className="text-neon-violet font-mono text-[11px] font-bold tracking-[0.5em] uppercase">
-                Event Detail
-              </span>
-              <span className="bg-neon-violet h-px w-10" />
-            </div>
-            <h2 className="kinetic-headline font-heading text-[clamp(1.85rem,8vw,4.5rem)] font-black text-white uppercase">
-              About This Event
-            </h2>
-          </div>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start lg:gap-12 xl:gap-16">
 
-          <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-12 lg:gap-14">
-            {/* ── Left: About content ── */}
-            <div className="space-y-8 lg:col-span-8">
-              {/* Description */}
+            {/* ── Main content column ── */}
+            <div className="space-y-6 lg:col-span-8 sm:space-y-8">
+
+              {/* Description + rich content */}
               {(event.description || event.content) && (
-                <div className="holographic-card rounded-2xl p-6 sm:rounded-3xl sm:p-10">
+                <div className="holographic-card rounded-2xl p-5 sm:p-8">
                   {event.description && (
-                    <p className="text-base leading-[1.9] font-light text-zinc-400 sm:text-lg">
+                    <p className="text-sm leading-[1.85] text-zinc-400 sm:text-base lg:text-lg">
                       {event.description}
                     </p>
                   )}
                   {event.content && (
-                    <div className="mt-6 border-t border-white/5 pt-6">
+                    <div className="mt-5 border-t border-white/5 pt-5 sm:mt-6 sm:pt-6">
                       <div
                         className="blog-content leading-relaxed text-zinc-300"
                         dangerouslySetInnerHTML={{ __html: event.content }}
@@ -413,94 +345,73 @@ async function EventDetailPage({ params }) {
                 </div>
               )}
 
-              {/* Event Highlights Grid */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Info tiles grid */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4">
                 {event.category && (
-                  <div className="holographic-card group rounded-2xl p-5 sm:p-6">
-                    <div className="bg-neon-lime/10 mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl">
-                      <IconTag className="text-neon-lime h-5 w-5" />
+                  <div className="holographic-card rounded-xl p-4 sm:rounded-2xl sm:p-5">
+                    <div className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-neon-lime/10 sm:h-9 sm:w-9">
+                      <IconTag className="h-4 w-4 text-neon-lime" />
                     </div>
-                    <h4 className="font-heading text-neon-lime mb-2 text-[11px] font-bold tracking-widest uppercase sm:text-[12px]">
-                      Category
-                    </h4>
-                    <p className="text-sm leading-relaxed text-zinc-400">
-                      {event.category}
-                    </p>
+                    <h4 className="mb-1 font-heading text-[10px] font-bold tracking-widest text-neon-lime uppercase sm:text-[11px]">Category</h4>
+                    <p className="text-xs leading-relaxed text-zinc-400 sm:text-sm">{event.category}</p>
                   </div>
                 )}
-                <div className="holographic-card group rounded-2xl p-5 sm:p-6">
-                  <div className="bg-neon-violet/10 mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl">
-                    <IconGroups className="text-neon-violet h-5 w-5" />
+                <div className="holographic-card rounded-xl p-4 sm:rounded-2xl sm:p-5">
+                  <div className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-neon-violet/10 sm:h-9 sm:w-9">
+                    <IconGroups className="h-4 w-4 text-neon-violet" />
                   </div>
-                  <h4 className="font-heading text-neon-violet mb-2 text-[11px] font-bold tracking-widest uppercase sm:text-[12px]">
-                    Participation
-                  </h4>
-                  <p className="text-sm leading-relaxed text-zinc-400">
+                  <h4 className="mb-1 font-heading text-[10px] font-bold tracking-widest text-neon-violet uppercase sm:text-[11px]">Format</h4>
+                  <p className="text-xs leading-relaxed text-zinc-400 sm:text-sm">
                     {event.participation_type === 'team'
-                      ? `Team${event.team_size ? ` (${event.team_size} members)` : ''}`
+                      ? `Team${event.team_size ? ` · ${event.team_size} members` : ''}`
                       : 'Individual'}
                   </p>
                 </div>
                 {event.eligibility && (
-                  <div className="holographic-card group rounded-2xl p-5 sm:p-6">
-                    <div className="bg-neon-lime/10 mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl">
-                      <IconShield className="text-neon-lime h-5 w-5" />
+                  <div className="holographic-card rounded-xl p-4 sm:rounded-2xl sm:p-5">
+                    <div className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-neon-lime/10 sm:h-9 sm:w-9">
+                      <IconShield className="h-4 w-4 text-neon-lime" />
                     </div>
-                    <h4 className="font-heading text-neon-lime mb-2 text-[11px] font-bold tracking-widest uppercase sm:text-[12px]">
-                      Eligibility
-                    </h4>
-                    <p className="text-sm leading-relaxed text-zinc-400">
-                      {event.eligibility}
-                    </p>
+                    <h4 className="mb-1 font-heading text-[10px] font-bold tracking-widest text-neon-lime uppercase sm:text-[11px]">Eligibility</h4>
+                    <p className="text-xs leading-relaxed text-zinc-400 sm:text-sm">{event.eligibility}</p>
                   </div>
                 )}
                 {venueLabel && (
-                  <div className="holographic-card group rounded-2xl p-5 sm:p-6">
-                    <div className="bg-neon-violet/10 mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl">
-                      {event.venue_type === 'online' ? (
-                        <IconGlobe className="text-neon-violet h-5 w-5" />
-                      ) : event.venue_type === 'hybrid' ? (
-                        <IconSync className="text-neon-violet h-5 w-5" />
-                      ) : (
-                        <IconLocation className="text-neon-violet h-5 w-5" />
-                      )}
+                  <div className="holographic-card rounded-xl p-4 sm:rounded-2xl sm:p-5">
+                    <div className="mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-neon-violet/10 sm:h-9 sm:w-9">
+                      {event.venue_type === 'online'
+                        ? <IconGlobe className="h-4 w-4 text-neon-violet" />
+                        : event.venue_type === 'hybrid'
+                        ? <IconSync className="h-4 w-4 text-neon-violet" />
+                        : <IconLocation className="h-4 w-4 text-neon-violet" />}
                     </div>
-                    <h4 className="font-heading text-neon-violet mb-2 text-[11px] font-bold tracking-widest uppercase sm:text-[12px]">
-                      Venue Type
-                    </h4>
-                    <p className="text-sm leading-relaxed text-zinc-400">
-                      {venueLabel}
-                    </p>
+                    <h4 className="mb-1 font-heading text-[10px] font-bold tracking-widest text-neon-violet uppercase sm:text-[11px]">Venue</h4>
+                    <p className="text-xs leading-relaxed text-zinc-400 sm:text-sm">{venueLabel}</p>
                   </div>
                 )}
               </div>
 
               {/* Prerequisites */}
               {event.prerequisites && (
-                <div className="holographic-card rounded-2xl p-6 sm:rounded-3xl sm:p-10">
-                  <div className="flex items-center gap-3 mb-6">
-                    <span className="bg-neon-lime h-px w-8" />
-                    <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px]">
+                <div className="holographic-card rounded-2xl p-5 sm:p-8">
+                  <div className="mb-5 flex items-center gap-3">
+                    <span className="bg-neon-lime h-px w-6" />
+                    <span className="font-mono text-[10px] font-bold tracking-[0.4em] text-neon-lime uppercase sm:text-[11px]">
                       Requirements
                     </span>
                   </div>
-                  <div className="space-y-3">
-                    {event.prerequisites
-                      .split('\n')
-                      .filter(Boolean)
-                      .map((line, i) => (
-                        <div
-                          key={i}
-                          className="group flex gap-4 border-l-2 border-neon-lime/25 py-3 pl-5 transition-all hover:border-neon-lime/60 hover:bg-neon-lime/5"
-                        >
-                          <span className="text-neon-lime font-mono text-[10px] font-bold tracking-widest">
-                            {String(i + 1).padStart(2, '0')}
-                          </span>
-                          <p className="text-sm leading-relaxed text-zinc-400">
-                            {line.trim()}
-                          </p>
-                        </div>
-                      ))}
+                  <div className="space-y-2">
+                    {event.prerequisites.split('\n').filter(Boolean).map((line, i) => (
+                      <div
+                        key={i}
+                        className="flex gap-3 rounded-lg border-l-2 border-neon-lime/20 py-2.5 pl-4 transition-all hover:border-neon-lime/50 hover:bg-neon-lime/5"
+                      >
+                        <span className="shrink-0 font-mono text-[9px] font-bold tracking-widest text-neon-lime/70 sm:text-[10px]">
+                          {String(i + 1).padStart(2, '0')}
+                        </span>
+                        <p className="text-xs leading-relaxed text-zinc-400 sm:text-sm">{line.trim()}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -508,103 +419,88 @@ async function EventDetailPage({ params }) {
               {/* Tags */}
               {tags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <TagBadge key={tag}>{tag}</TagBadge>
-                  ))}
+                  {tags.map(tag => <TagBadge key={tag}>{tag}</TagBadge>)}
                 </div>
               )}
             </div>
 
-            {/* ── Right: Sidebar ── */}
-            <div className="space-y-6 lg:col-span-4">
-              <div className="sticky top-24 space-y-6">
-                {/* Event Details Panel */}
-                <div className="holographic-card rounded-2xl p-6 sm:p-8">
-                  <div className="flex items-center gap-3 mb-6">
-                    <span className="bg-neon-lime h-px w-6" />
-                    <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.4em] uppercase">
-                      Details
-                    </span>
-                  </div>
+            {/* ── Sidebar ── */}
+            <div className="lg:col-span-4">
+              <div className="sticky top-20 space-y-4 sm:space-y-5">
 
-                  <ul className="space-y-4">
+                {/* Key details card */}
+                <div className="holographic-card rounded-2xl p-5 sm:p-6">
+                  <div className="mb-4 flex items-center gap-3">
+                    <span className="bg-neon-lime h-px w-5" />
+                    <span className="font-mono text-[10px] font-bold tracking-[0.4em] text-neon-lime uppercase">Details</span>
+                  </div>
+                  <ul className="space-y-0">
                     {event.start_date && (
-                      <li className="flex justify-between border-b border-white/5 pb-4">
-                        <span className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase">Date</span>
-                        <span className="font-heading text-sm font-bold text-white">{formatDateShort(event.start_date)}</span>
-                      </li>
+                      <SidebarRow label="Date" value={formatDateShort(event.start_date)} />
                     )}
-                    {event.start_date && (
-                      <li className="flex justify-between border-b border-white/5 pb-4">
-                        <span className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase">Time</span>
-                        <span className="font-heading text-sm font-bold text-white">{formatTime(event.start_date)}</span>
-                      </li>
+                    {event.start_date && formatTime(event.start_date) && (
+                      <SidebarRow label="Time" value={formatTime(event.start_date)} />
+                    )}
+                    {event.end_date && (
+                      <SidebarRow label="Ends" value={formatDateShort(event.end_date)} />
                     )}
                     {event.location && (
-                      <li className="flex justify-between border-b border-white/5 pb-4">
-                        <span className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase">Venue</span>
-                        <span className="font-heading text-sm font-bold text-right text-white">{event.location}</span>
-                      </li>
+                      <SidebarRow label="Venue" value={event.location} />
                     )}
                     {duration && (
-                      <li className="flex justify-between border-b border-white/5 pb-4">
-                        <span className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase">Duration</span>
-                        <span className="font-heading text-sm font-bold text-white">{duration}</span>
-                      </li>
+                      <SidebarRow label="Duration" value={duration} />
                     )}
-                    <li className="flex justify-between border-b border-white/5 pb-4">
-                      <span className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase">Type</span>
-                      <span className="font-heading text-sm font-bold text-white">
-                        {event.participation_type === 'team'
+                    <SidebarRow
+                      label="Format"
+                      value={
+                        event.participation_type === 'team'
                           ? `Team${event.team_size ? ` (${event.team_size})` : ''}`
-                          : 'Solo'}
-                      </span>
-                    </li>
-                    <li className="flex justify-between pb-3">
-                      <span className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase">Status</span>
-                      <span className={`flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-widest uppercase ${statusCfg.text}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${statusCfg.dot}`} />
-                        {statusCfg.label}
-                      </span>
-                    </li>
+                          : 'Individual'
+                      }
+                    />
+                    <SidebarRow
+                      label="Status"
+                      value={statusCfg.label}
+                      highlight={statusCfg.text}
+                    />
                     {event.registration_required && event.registration_deadline && (
-                      <li className="flex justify-between border-t border-white/5 pt-4">
-                        <span className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase">Deadline</span>
-                        <span className="font-heading text-sm font-bold text-amber-400">{formatDateShort(event.registration_deadline)}</span>
-                      </li>
+                      <SidebarRow
+                        label="Deadline"
+                        value={formatDateShort(event.registration_deadline)}
+                        highlight="text-amber-400"
+                      />
                     )}
                     {event.max_participants && (
-                      <li className="flex justify-between border-t border-white/5 pt-4">
-                        <span className="font-mono text-[10px] tracking-widest text-zinc-600 uppercase">Capacity</span>
-                        <span className="font-heading text-sm font-bold text-white">{event.max_participants} spots</span>
-                      </li>
+                      <SidebarRow label="Capacity" value={`${event.max_participants} spots`} />
                     )}
                   </ul>
                 </div>
 
-                {/* Registration Card */}
+                {/* Registration area */}
                 <div id="register">
                   {event.status === 'completed' ? (
-                    <div className="holographic-card rounded-2xl p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <IconCheck className="text-neon-lime h-5 w-5" />
+                    <div className="holographic-card rounded-2xl p-5 sm:p-6">
+                      <div className="mb-3 flex items-center gap-3">
+                        <IconCheck className="h-4 w-4 text-neon-lime" />
                         <div>
                           <h3 className="font-heading text-sm font-bold text-white uppercase">Event Concluded</h3>
-                          <p className="font-mono text-[10px] text-zinc-500">{formatDateShort(event.end_date || event.start_date)}</p>
+                          <p className="font-mono text-[9px] text-zinc-600 sm:text-[10px]">
+                            {formatDateShort(event.end_date || event.start_date)}
+                          </p>
                         </div>
                       </div>
 
                       {/* Mini gallery strip */}
                       {galleryItems.length > 0 && (
                         <div className="mb-4">
-                          <div className="flex gap-1.5 overflow-hidden rounded-xl">
+                          <div className="flex gap-1 overflow-hidden rounded-xl">
                             {galleryItems.slice(0, 3).map((gItem, gi) => (
-                              <div key={gItem.id} className="relative h-16 flex-1 overflow-hidden rounded-lg bg-[#0c0e16]">
+                              <div key={gItem.id} className="relative h-14 flex-1 overflow-hidden rounded-lg bg-white/3">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                   src={driveImageUrl(gItem.url)}
                                   alt={gItem.caption || `Photo ${gi + 1}`}
-                                  className="h-full w-full object-cover opacity-70 hover:opacity-100 transition-opacity"
+                                  className="h-full w-full object-cover opacity-60 transition-opacity hover:opacity-100"
                                 />
                                 {gi === 2 && galleryItems.length > 3 && (
                                   <div className="absolute inset-0 flex items-center justify-center bg-black/60">
@@ -616,7 +512,7 @@ async function EventDetailPage({ params }) {
                           </div>
                           <a
                             href="#event-gallery"
-                            className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-neon-violet/25 bg-neon-violet/10 px-4 py-2.5 font-mono text-[10px] font-bold tracking-widest text-neon-violet uppercase transition-colors hover:bg-neon-violet/20"
+                            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-neon-violet/20 bg-neon-violet/8 px-4 py-2.5 font-mono text-[9px] font-bold tracking-widest text-neon-violet uppercase transition-colors hover:bg-neon-violet/16 sm:text-[10px]"
                           >
                             <IconCamera className="h-3.5 w-3.5" />
                             View {galleryItems.length} Photos
@@ -624,12 +520,12 @@ async function EventDetailPage({ params }) {
                         </div>
                       )}
 
-                      <p className="mb-4 text-xs leading-relaxed font-light text-zinc-500">
+                      <p className="mb-4 text-xs leading-relaxed text-zinc-600">
                         This event has concluded. Explore our upcoming events!
                       </p>
                       <Link
                         href="/events"
-                        className="font-heading flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 text-[10px] font-bold tracking-widest text-zinc-300 uppercase transition-all hover:border-neon-lime/30 hover:text-neon-lime"
+                        className="flex w-full items-center justify-center rounded-full border border-white/10 bg-white/4 px-5 py-2.5 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-all hover:border-neon-lime/30 hover:text-neon-lime"
                       >
                         Browse Events →
                       </Link>
@@ -639,46 +535,42 @@ async function EventDetailPage({ params }) {
                   )}
                 </div>
 
-                {/* Contact */}
+                {/* Contact widget */}
                 <div className="holographic-card rounded-2xl p-5">
-                  <div className="mb-3 flex items-center gap-2">
-                    <span className="text-base">💬</span>
-                    <h3 className="font-heading text-[11px] font-bold tracking-widest text-white uppercase">
-                      Need Help?
-                    </h3>
+                  <div className="mb-2 flex items-center gap-2">
+                    <svg className="h-4 w-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    <h3 className="font-heading text-[11px] font-bold tracking-widest text-white uppercase">Need Help?</h3>
                   </div>
-                  <p className="mb-4 text-xs leading-relaxed font-light text-zinc-500">
-                    Have questions about this event? We&apos;re here to help.
+                  <p className="mb-3 text-xs leading-relaxed text-zinc-600">
+                    Have questions about this event? Reach out to us.
                   </p>
                   <Link
                     href="/contact"
-                    className="group font-heading text-neon-lime inline-flex items-center gap-2 text-[10px] font-bold tracking-widest uppercase transition-colors hover:opacity-80"
+                    className="group inline-flex items-center gap-1.5 font-heading text-[10px] font-bold tracking-widest text-neon-lime uppercase transition-opacity hover:opacity-75"
                   >
                     Contact Us
-                    <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                    <span className="transition-transform group-hover:translate-x-0.5">→</span>
                   </Link>
                 </div>
 
-                {/* External Link */}
+                {/* External event website */}
                 {event.external_url && (
                   <a
                     href={event.external_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="holographic-card group flex items-center gap-4 rounded-2xl p-5 transition-all"
+                    className="holographic-card group flex items-center gap-3 rounded-2xl p-4 transition-all sm:p-5"
                   >
-                    <div className="bg-neon-violet/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-                      <IconExternal className="text-neon-violet h-5 w-5" />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neon-violet/10">
+                      <IconExternal className="h-4 w-4 text-neon-violet" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-heading text-[11px] font-bold tracking-widest text-white uppercase">
-                        Event Website
-                      </p>
-                      <p className="truncate font-mono text-[10px] text-zinc-500">
-                        {event.external_url}
-                      </p>
+                      <p className="font-heading text-[11px] font-bold tracking-widest text-white uppercase">Event Website</p>
+                      <p className="truncate font-mono text-[9px] text-zinc-600 sm:text-[10px]">{event.external_url}</p>
                     </div>
-                    <svg className="h-3.5 w-3.5 shrink-0 text-zinc-500 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <svg className="h-3 w-3 shrink-0 text-zinc-600 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
                   </a>
@@ -689,65 +581,95 @@ async function EventDetailPage({ params }) {
         </div>
       </section>
 
-      {/* ── Schedule Timeline ── */}
+      {/* ── Schedule ──────────────────────────────────────────────────────── */}
       {event.end_date && event.start_date && (
-        <section className="relative overflow-hidden py-20 sm:py-28">
-          <div className="dark:via-neon-lime/20 absolute top-0 left-1/2 h-px w-full -translate-x-1/2 bg-linear-to-r from-transparent via-slate-200 to-transparent" />
+        <section className="relative overflow-hidden py-14 sm:py-20">
           <div className="pointer-events-none absolute inset-0 z-0">
-            <div className="bg-neon-lime/5 absolute top-1/3 left-1/2 h-[300px] w-[600px] -translate-x-1/2 rounded-full blur-[120px]" />
+            <div className="bg-neon-lime/4 absolute top-1/3 left-1/2 h-[300px] w-[500px] -translate-x-1/2 rounded-full blur-[120px]" />
           </div>
+          <div className="absolute top-0 left-1/2 h-px w-full -translate-x-1/2 bg-gradient-to-r from-transparent via-white/8 to-transparent" />
 
-          <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-            {/* Section header */}
-            <div className="mb-14 space-y-5 text-center">
-              <div className="flex items-center justify-center gap-4">
-                <span className="bg-neon-lime h-px w-10" />
-                <span className="text-neon-lime font-mono text-[11px] font-bold tracking-[0.5em] uppercase">
-                  Timeline
-                </span>
-                <span className="bg-neon-lime h-px w-10" />
+          <div className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+            <div className="mb-10 sm:mb-12">
+              <div className="flex items-center gap-3">
+                <span className="bg-neon-lime h-px w-7" />
+                <span className="font-mono text-[10px] font-bold tracking-[0.4em] text-neon-lime uppercase sm:text-[11px]">Timeline</span>
               </div>
-              <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl">
+              <h2 className="kinetic-headline mt-2 font-heading text-3xl font-black text-white uppercase sm:text-4xl">
                 Event Schedule
               </h2>
             </div>
 
-            <div className="relative space-y-12">
-              {/* Timeline line */}
-              <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-[2px] bg-neon-lime/10 -translate-x-1/2 hidden md:block" />
+            {/* Two-column timeline on desktop, stacked on mobile */}
+            <div className="relative">
+              {/* Center spine – desktop only */}
+              <div className="absolute top-4 bottom-4 left-1/2 hidden w-px -translate-x-1/2 bg-gradient-to-b from-neon-lime/30 via-neon-lime/10 to-neon-violet/20 md:block" />
 
-              {/* Start */}
-              <div className="relative flex flex-col md:flex-row items-center justify-between gap-6 md:gap-0">
-                <div className="md:w-5/12 text-right hidden md:block">
-                  <p className="font-heading text-lg font-bold text-neon-lime uppercase">
-                    {formatDateShort(event.start_date)} · {formatTime(event.start_date)}
-                  </p>
-                  <p className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase mt-1">Event Begins</p>
+              <div className="space-y-6 sm:space-y-8">
+                {/* Start */}
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-0">
+                  {/* Left date – desktop */}
+                  <div className="hidden md:flex md:w-5/12 md:flex-col md:items-end md:pr-8">
+                    <span className="font-heading text-base font-bold text-neon-lime">
+                      {formatDateShort(event.start_date)}
+                    </span>
+                    <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
+                      {formatTime(event.start_date)}
+                    </span>
+                  </div>
+                  {/* Node */}
+                  <div className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#05060B] bg-neon-lime shadow-[0_0_12px_rgba(182,243,107,0.5)] md:mx-auto">
+                    <div className="h-2 w-2 rounded-full bg-black/50" />
+                  </div>
+                  {/* Card */}
+                  <div className="holographic-card rounded-xl p-4 md:w-5/12 md:pl-8">
+                    {/* Mobile date */}
+                    <div className="mb-2 flex items-center gap-2 md:hidden">
+                      <span className="font-mono text-[9px] tracking-widest text-neon-lime uppercase">{formatDateShort(event.start_date)}</span>
+                      {formatTime(event.start_date) && (
+                        <span className="font-mono text-[9px] text-zinc-600">· {formatTime(event.start_date)}</span>
+                      )}
+                    </div>
+                    <h4 className="font-heading text-[10px] font-bold tracking-widest text-neon-lime uppercase sm:text-[11px]">
+                      Event Opens
+                    </h4>
+                    <p className="mt-1 text-xs leading-relaxed text-zinc-500 sm:text-sm">
+                      Registration closes and activities begin.
+                    </p>
+                  </div>
                 </div>
-                <div className="z-10 w-8 h-8 rounded-full border-4 border-[#05060B] bg-neon-lime shadow-[0_0_15px_rgba(182,243,107,0.6)]" />
-                <div className="md:w-5/12 holographic-card rounded-2xl p-5">
-                  <h4 className="font-heading text-[11px] font-bold tracking-widest text-neon-lime uppercase mb-2">Opening</h4>
-                  <p className="text-sm leading-relaxed font-light text-zinc-400">
-                    Event kickoff and start of activities.
-                  </p>
-                </div>
-              </div>
 
-              {/* End */}
-              <div className="relative flex flex-col md:flex-row-reverse items-center justify-between gap-6 md:gap-0">
-                <div className="md:w-5/12 text-left hidden md:block">
-                  <p className="font-heading text-lg font-bold text-neon-violet uppercase">
-                    {formatDateShort(event.end_date)} · {formatTime(event.end_date)}
-                  </p>
-                  <p className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase mt-1">Event Ends</p>
-                </div>
-                <div className="z-10 w-8 h-8 rounded-full border-4 border-[#05060B] bg-neon-violet shadow-[0_0_15px_rgba(124,92,255,0.6)]" />
-                <div className="md:w-5/12 holographic-card rounded-2xl p-5">
-                  <h4 className="font-heading text-[11px] font-bold tracking-widest text-neon-violet uppercase mb-2">Closing</h4>
-                  <p className="text-sm leading-relaxed font-light text-zinc-400">
-                    Final wrap-up and conclusion.
-                    {duration ? ` Total duration: ${duration}.` : ''}
-                  </p>
+                {/* End */}
+                <div className="flex flex-col gap-4 md:flex-row-reverse md:items-center md:gap-0">
+                  {/* Right date – desktop */}
+                  <div className="hidden md:flex md:w-5/12 md:flex-col md:items-start md:pl-8">
+                    <span className="font-heading text-base font-bold text-neon-violet">
+                      {formatDateShort(event.end_date)}
+                    </span>
+                    <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
+                      {formatTime(event.end_date)}
+                    </span>
+                  </div>
+                  {/* Node */}
+                  <div className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#05060B] bg-neon-violet shadow-[0_0_12px_rgba(124,92,255,0.5)] md:mx-auto">
+                    <div className="h-2 w-2 rounded-full bg-black/50" />
+                  </div>
+                  {/* Card */}
+                  <div className="holographic-card rounded-xl p-4 md:w-5/12 md:pr-8">
+                    {/* Mobile date */}
+                    <div className="mb-2 flex items-center gap-2 md:hidden">
+                      <span className="font-mono text-[9px] tracking-widest text-neon-violet uppercase">{formatDateShort(event.end_date)}</span>
+                      {formatTime(event.end_date) && (
+                        <span className="font-mono text-[9px] text-zinc-600">· {formatTime(event.end_date)}</span>
+                      )}
+                    </div>
+                    <h4 className="font-heading text-[10px] font-bold tracking-widest text-neon-violet uppercase sm:text-[11px]">
+                      Event Closes
+                    </h4>
+                    <p className="mt-1 text-xs leading-relaxed text-zinc-500 sm:text-sm">
+                      Wrap-up and conclusion.{duration ? ` Total duration: ${duration}.` : ''}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -755,35 +677,34 @@ async function EventDetailPage({ params }) {
         </section>
       )}
 
-      {/* ── Event Gallery ── */}
+      {/* ── Gallery ───────────────────────────────────────────────────────── */}
       {galleryItems.length > 0 && (
-        <section id="event-gallery" className="relative overflow-hidden py-20 sm:py-28">
-          <div className="dark:via-neon-violet/20 absolute top-0 left-1/2 h-px w-full -translate-x-1/2 bg-linear-to-r from-transparent via-slate-200 to-transparent" />
+        <section id="event-gallery" className="relative overflow-hidden py-14 sm:py-20">
+          <div className="absolute top-0 left-1/2 h-px w-full -translate-x-1/2 bg-gradient-to-r from-transparent via-white/8 to-transparent" />
           <div className="pointer-events-none absolute inset-0 z-0">
-            <div className="bg-neon-violet/5 absolute top-1/4 right-0 h-[400px] w-[400px] rounded-full blur-[140px]" />
+            <div className="bg-neon-violet/4 absolute top-1/4 right-0 h-[350px] w-[350px] rounded-full blur-[130px]" />
           </div>
 
           <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            {/* Section header */}
-            <div className="mb-12 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
-              <div className="space-y-4">
+            {/* Header */}
+            <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
+              <div>
                 <div className="flex items-center gap-3">
-                  <span className="bg-neon-violet h-px w-8 sm:w-10" />
-                  <span className="text-neon-violet font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px]">
+                  <span className="bg-neon-violet h-px w-7" />
+                  <span className="font-mono text-[10px] font-bold tracking-[0.4em] text-neon-violet uppercase sm:text-[11px]">
                     Gallery
                   </span>
                 </div>
-                <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl">
+                <h2 className="kinetic-headline mt-2 font-heading text-3xl font-black text-white uppercase sm:text-4xl">
                   {event.status === 'completed' ? 'Relive the Moments' : 'Event Gallery'}
                 </h2>
-                <p className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
-                  {galleryItems.length} photo{galleryItems.length !== 1 ? 's' : ''}{' '}
-                  {event.status === 'completed' ? 'archived' : 'from this event'}
+                <p className="mt-1 font-mono text-[9px] tracking-widest text-zinc-600 uppercase sm:text-[10px]">
+                  {galleryItems.length} photo{galleryItems.length !== 1 ? 's' : ''}
                 </p>
               </div>
               <Link
                 href="/events"
-                className="font-heading w-fit shrink-0 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors hover:border-neon-violet hover:text-neon-violet sm:px-8 sm:py-3.5 sm:text-[11px]"
+                className="w-fit shrink-0 rounded-full border border-white/10 bg-white/4 px-5 py-2.5 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors hover:border-neon-violet/40 hover:text-neon-violet sm:px-7 sm:py-3 sm:text-[11px]"
               >
                 All Events →
               </Link>
@@ -791,72 +712,51 @@ async function EventDetailPage({ params }) {
 
             <EventGalleryViewer items={galleryItems} eventTitle={event.title} />
 
-            {/* Bottom bar */}
-            <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/5 bg-white/2 px-5 py-3.5 backdrop-blur-sm">
-              <div className="flex items-center gap-2 font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
-                <IconCheck className="text-neon-lime h-4 w-4" />
+            <div className="mt-3 flex items-center justify-between rounded-xl border border-white/5 bg-white/2 px-4 py-3 backdrop-blur-sm">
+              <div className="flex items-center gap-2 font-mono text-[9px] tracking-widest text-zinc-600 uppercase sm:text-[10px]">
+                <IconCheck className="h-3.5 w-3.5 text-neon-lime" />
                 {galleryItems.length} photo{galleryItems.length !== 1 ? 's' : ''} archived
               </div>
-              <span className="hidden font-mono text-[10px] tracking-widest text-zinc-600 uppercase sm:inline">
-                Click to view full size
+              <span className="hidden font-mono text-[9px] tracking-widest text-zinc-700 uppercase sm:inline sm:text-[10px]">
+                Tap to view full size
               </span>
             </div>
           </div>
         </section>
       )}
 
-      {/* ── CTA Section ── */}
-      <section className="relative overflow-hidden py-20 sm:py-24 lg:py-32">
+      {/* ── CTA ───────────────────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden py-14 sm:py-20 lg:py-28">
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
-          <div className="grid-overlay absolute inset-0 opacity-20" />
-          <div className="bg-neon-lime/5 absolute top-1/2 left-1/2 h-[500px] w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 rounded-full blur-[140px]" />
+          <div className="grid-overlay absolute inset-0 opacity-15" />
+          <div className="bg-neon-lime/4 absolute top-1/2 left-1/2 h-[400px] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-full blur-[130px]" />
         </div>
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          {/* Section header */}
-          <div className="mx-auto mb-12 max-w-3xl text-center sm:mb-16">
-            <div className="mb-5 flex items-center justify-center gap-4">
-              <span className="bg-neon-lime h-px w-10" />
-              <span className="text-neon-lime font-mono text-[11px] font-bold tracking-[0.5em] uppercase">
-                Community
-              </span>
-              <span className="bg-neon-lime h-px w-10" />
-            </div>
-            <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl">
-              Interested in More <span className="neon-text">Events?</span>
-            </h2>
-            <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed font-light text-zinc-400 sm:mt-6 sm:text-base">
-              Join NEUPC to get notified about upcoming events, workshops, and
-              contests. Be part of a thriving community of passionate
-              programmers.
-            </p>
-          </div>
-
-          {/* CTA block */}
-          <div className="border-neon-lime/20 from-neon-lime/5 to-neon-violet/5 relative overflow-hidden rounded-2xl border bg-linear-to-br via-transparent p-6 sm:rounded-3xl sm:p-10 md:p-14 lg:p-16">
-            <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-3">
+          <div className="rounded-2xl border border-neon-lime/15 bg-gradient-to-br from-neon-lime/5 via-transparent to-neon-violet/5 p-6 sm:rounded-3xl sm:p-10 lg:p-14">
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-3 md:items-center">
               <div className="md:col-span-2">
-                <p className="text-neon-lime mb-2 font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:mb-3">
-                  /// Next Steps
+                <p className="mb-2 font-mono text-[10px] font-bold tracking-[0.4em] text-neon-lime uppercase sm:text-[11px]">
+                  /// Join the Community
                 </p>
-                <h3 className="font-heading text-2xl leading-tight font-black text-white uppercase sm:text-3xl md:text-4xl">
-                  Ready to be part of the community?
-                </h3>
-                <p className="mt-3 max-w-xl text-sm leading-relaxed font-light text-zinc-400 sm:mt-4">
-                  Join the club or explore more events to find your next challenge.
+                <h2 className="font-heading text-2xl font-black leading-tight text-white uppercase sm:text-3xl lg:text-4xl">
+                  Stay ahead of every event
+                </h2>
+                <p className="mt-3 max-w-lg text-sm leading-relaxed text-zinc-400 sm:mt-4">
+                  Join NEUPC to get early access to events, workshops, and contests — and be part of a thriving community of programmers.
                 </p>
               </div>
-              <div className="flex flex-row flex-wrap items-center gap-3 md:flex-col md:items-end md:gap-3">
+              <div className="flex flex-wrap items-center gap-3 md:flex-col md:items-end">
                 <JoinButton
                   href="/join"
-                  className="group bg-neon-lime font-heading inline-flex items-center gap-2 rounded-full px-6 py-3 text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)] sm:px-8 sm:py-3.5 sm:text-[11px]"
+                  className="group inline-flex items-center gap-2 rounded-full bg-neon-lime px-6 py-3 font-heading text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.7)] sm:px-8 sm:py-3.5 sm:text-[11px]"
                 >
                   Join the Club
-                  <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                  <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
                 </JoinButton>
                 <Link
                   href="/events"
-                  className="font-mono text-[10px] tracking-[0.3em] text-zinc-500 uppercase underline-offset-4 transition-colors hover:text-white hover:underline sm:text-[11px]"
+                  className="font-mono text-[10px] tracking-[0.25em] text-zinc-500 uppercase underline-offset-4 transition-colors hover:text-zinc-200 hover:underline sm:text-[11px]"
                 >
                   Browse Events →
                 </Link>

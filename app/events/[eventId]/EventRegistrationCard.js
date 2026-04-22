@@ -327,22 +327,20 @@ export default function EventRegistrationCard({ event, session }) {
 
   if (isCancelled) {
     return (
-      <div className="from-primary-500 to-primary-600 relative overflow-hidden rounded-2xl bg-linear-to-br p-6 text-white shadow-xl">
-        <div className="from-secondary-500/20 absolute -top-12 -right-12 h-40 w-40 rounded-full bg-linear-to-br to-transparent blur-2xl" />
-        <div className="absolute -bottom-8 -left-8 h-28 w-28 rounded-full bg-white/3 blur-2xl" />
+      <div className="holographic-card relative overflow-hidden rounded-2xl border border-red-500/20 p-6 text-white">
         <div className="relative">
-          <div className="mb-1 flex items-center gap-2">
-            <span className="text-2xl">🎟️</span>
-            <h3 className="text-lg font-bold">Event Cancelled</h3>
+          <div className="mb-1 flex items-center gap-3">
+            <span className="bg-red-500 h-px w-5" />
+            <h3 className="font-heading text-[11px] font-bold tracking-[0.4em] text-red-400 uppercase">Event Cancelled</h3>
           </div>
-          <p className="mb-5 text-sm leading-relaxed text-white/70">
-            This event has been cancelled.
+          <p className="mt-3 mb-5 text-sm leading-relaxed text-zinc-500">
+            This event has been cancelled. Check out our other upcoming events.
           </p>
           <Link
             href="/events"
-            className="mt-3 flex w-full items-center justify-center rounded-xl border border-white/15 bg-white/8 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/15"
+            className="flex w-full items-center justify-center rounded-full border border-white/10 bg-white/5 px-5 py-2.5 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-all hover:border-neon-lime/30 hover:text-neon-lime"
           >
-            View All Events
+            Browse Events →
           </Link>
         </div>
       </div>
@@ -691,18 +689,17 @@ export default function EventRegistrationCard({ event, session }) {
   const canRegister = isActive && !isDeadlinePassed;
 
   return (
-    <div className="from-primary-500 to-primary-600 relative overflow-hidden rounded-2xl bg-linear-to-br p-6 text-white shadow-xl">
-      <div className="from-secondary-500/20 absolute -top-12 -right-12 h-40 w-40 rounded-full bg-linear-to-br to-transparent blur-2xl" />
-      <div className="absolute -bottom-8 -left-8 h-28 w-28 rounded-full bg-white/3 blur-2xl" />
+    <div className="holographic-card relative overflow-hidden rounded-2xl border border-neon-lime/15 p-6 text-white">
+      <div className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full bg-neon-lime/5 blur-2xl" />
 
       <div className="relative">
-        <div className="mb-1 flex items-center gap-2">
-          <span className="text-2xl">🎟️</span>
-          <h3 className="text-lg font-bold">
-            {isTeamEvent ? 'Register Your Team' : 'Register Now'}
+        <div className="mb-1 flex items-center gap-3">
+          <span className="bg-neon-lime h-px w-5" />
+          <h3 className="font-heading text-[11px] font-bold tracking-[0.4em] text-neon-lime uppercase">
+            {isTeamEvent ? 'Team Registration' : 'Registration'}
           </h3>
         </div>
-        <p className="mb-4 text-sm leading-relaxed text-white/70">
+        <p className="mt-3 mb-5 text-sm leading-relaxed text-zinc-400">
           {isDeadlinePassed
             ? 'Registration deadline has passed.'
             : isTeamEvent
@@ -712,49 +709,48 @@ export default function EventRegistrationCard({ event, session }) {
 
         {/* Participation type badge */}
         {isTeamEvent && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs">
+          <div className="mb-4 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 font-mono text-[10px] tracking-widest text-zinc-400 uppercase">
             <span>👥</span>
-            <span>
-              Team Event
-              {event.team_size ? ` · ${event.team_size} members per team` : ''}
-            </span>
+            Team Event{event.team_size ? ` · ${event.team_size} members` : ''}
           </div>
         )}
 
         {/* Success message */}
         {success && (
-          <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/15 p-3 text-sm text-emerald-300">
+          <div className="mb-4 rounded-xl border border-neon-lime/30 bg-neon-lime/10 p-3 font-mono text-[11px] tracking-wide text-neon-lime">
             ✓ Registration successful!
           </div>
         )}
 
         {/* Error message */}
         {error && (
-          <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/15 p-3 text-sm text-red-300">
+          <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
             {error}
           </div>
         )}
 
         {canRegister && (
           <>
-            {/* Not logged in: blurred register button with login prompt */}
+            {/* Not logged in */}
             {!isLoggedIn ? (
-              <div className="relative">
-                <div className="pointer-events-none blur-[3px] select-none">
-                  <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-gray-900">
-                    {isTeamEvent ? 'Register Team' : 'Register for Event'}
+              <div className="space-y-3">
+                <div className="relative">
+                  <div className="pointer-events-none blur-[3px] select-none">
+                    <div className="flex w-full items-center justify-center gap-2 rounded-full bg-neon-lime px-5 py-3 font-heading text-[11px] font-bold tracking-widest text-black uppercase">
+                      {isTeamEvent ? 'Register Team' : 'Register Now'}
+                    </div>
                   </div>
-                </div>
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                  <p className="text-sm font-semibold text-white drop-shadow-lg">
-                    Sign in to register
-                  </p>
-                  <Link
-                    href="/login"
-                    className="rounded-lg bg-white/90 px-4 py-1.5 text-xs font-bold text-gray-900 shadow-lg transition-all hover:bg-white"
-                  >
-                    Sign In
-                  </Link>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                    <p className="font-heading text-xs font-bold text-white drop-shadow-lg">
+                      Sign in to register
+                    </p>
+                    <Link
+                      href="/login"
+                      className="rounded-full bg-neon-lime px-5 py-1.5 font-heading text-[10px] font-bold tracking-widest text-black uppercase shadow-lg transition-all hover:opacity-90"
+                    >
+                      Sign In
+                    </Link>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -763,7 +759,7 @@ export default function EventRegistrationCard({ event, session }) {
                 {isTeamEvent && (
                   <div className="mb-4 space-y-3">
                     <div>
-                      <label className="mb-1 block text-xs font-semibold text-white/60">
+                      <label className="mb-1.5 block font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
                         Team Name
                       </label>
                       <input
@@ -771,12 +767,12 @@ export default function EventRegistrationCard({ event, session }) {
                         value={teamName}
                         onChange={(e) => setTeamName(e.target.value)}
                         placeholder="Enter team name"
-                        className="w-full rounded-xl border border-white/15 bg-white/8 px-4 py-2.5 text-sm text-white placeholder-white/40 transition-all outline-none focus:border-blue-400/50 focus:ring-1 focus:ring-blue-400/30"
+                        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-zinc-600 transition-all outline-none focus:border-neon-lime/40"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-xs font-semibold text-white/60">
+                      <label className="mb-1.5 block font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
                         Team Members
                       </label>
                       <TeamMemberSearch
@@ -803,10 +799,10 @@ export default function EventRegistrationCard({ event, session }) {
                       event.team_size &&
                       teamMembers.length !== event.team_size - 1)
                   }
-                  className="group flex w-full items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-gray-900 shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl disabled:opacity-50 disabled:hover:scale-100"
+                  className="group flex w-full items-center justify-center gap-2 rounded-full bg-neon-lime px-5 py-3 font-heading text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] transition-all hover:shadow-[0_0_40px_-5px_rgba(182,243,107,0.7)] disabled:opacity-50"
                 >
                   {isPending || loadingReg ? (
-                    <Spinner className="h-4 w-4 text-gray-700" />
+                    <Spinner className="h-4 w-4 text-black" />
                   ) : (
                     <>
                       {isTeamEvent ? 'Register Team' : 'Register for Event'}
@@ -825,15 +821,15 @@ export default function EventRegistrationCard({ event, session }) {
             href={event.registration_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/8 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/15"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2.5 font-heading text-[10px] font-bold tracking-widest text-zinc-300 uppercase transition-all hover:border-neon-lime/30 hover:text-neon-lime"
           >
-            External Registration Form ↗
+            External Registration ↗
           </a>
         )}
 
         <Link
           href="/events"
-          className="mt-3 flex w-full items-center justify-center rounded-xl border border-white/15 bg-white/8 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/15"
+          className="mt-3 flex w-full items-center justify-center rounded-full border border-white/10 bg-white/3 px-5 py-2.5 font-heading text-[10px] font-bold tracking-widest text-zinc-500 uppercase transition-all hover:border-white/20 hover:text-zinc-300"
         >
           View All Events
         </Link>
