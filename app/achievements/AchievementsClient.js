@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { cn } from '../_lib/utils';
+import InlinePagination from '../_components/ui/InlinePagination';
 
 const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
   ssr: false,
@@ -42,26 +43,74 @@ function SectionEyebrow({ tag, title, accent, description }) {
       initial="hidden"
       whileInView="visible"
       viewport={viewport}
-      className="mb-16 space-y-6 text-center sm:mb-20"
+      className="mb-12 space-y-4 text-center sm:mb-16 sm:space-y-5"
     >
-      <span className="text-neon-emerald font-mono text-[10px] font-bold tracking-[0.5em] uppercase">
-        {tag}
-      </span>
-      <h2 className="kinetic-headline font-heading text-5xl font-black tracking-tighter text-white uppercase sm:text-6xl md:text-7xl">
+      <div className="flex items-center justify-center gap-3">
+        <span className="bg-neon-lime h-px w-8 sm:w-10" />
+        <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px] sm:tracking-[0.5em]">
+          {tag}
+        </span>
+        <span className="bg-neon-lime h-px w-8 sm:w-10" />
+      </div>
+      <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl">
         {title}
         {accent && (
           <>
             {' '}
-            <span className="text-neon-violet italic">{accent}</span>
+            <span className="neon-text">{accent}</span>
           </>
         )}
       </h2>
       {description && (
-        <p className="mx-auto max-w-xl text-sm leading-relaxed text-zinc-500">
+        <p className="mx-auto max-w-sm px-4 text-sm leading-relaxed font-light text-zinc-400 sm:max-w-md sm:px-0">
           {description}
         </p>
       )}
     </motion.div>
+  );
+}
+
+function EmptyState({ icon, title, description, onClear }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={viewport}
+      className="flex flex-col items-center gap-3 rounded-2xl py-16 text-center sm:py-24"
+    >
+      <div className="text-3xl">{icon}</div>
+      <p className="font-heading text-base font-bold text-white sm:text-lg">{title}</p>
+      <p className="font-mono text-[10px] tracking-[0.2em] text-zinc-600 uppercase">{description}</p>
+      {onClear && (
+        <button
+          onClick={onClear}
+          className="mt-2 rounded-full border border-white/10 px-4 py-2 font-mono text-[10px] tracking-widest text-zinc-500 uppercase transition-colors hover:border-neon-lime/30 hover:text-neon-lime"
+        >
+          Clear filters
+        </button>
+      )}
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Stat tile — same as events page
+// ---------------------------------------------------------------------------
+
+function StatTile({ value, label, mobileLabel, accent = false }) {
+  return (
+    <div className="flex flex-col items-center gap-0.5 text-center sm:items-start sm:text-left">
+      <span className={cn(
+        'font-heading text-2xl font-black tabular-nums sm:text-3xl lg:text-4xl',
+        accent ? 'text-neon-lime' : 'text-white'
+      )}>
+        {value}
+      </span>
+      <span className="font-mono text-[8px] tracking-[0.22em] text-zinc-500 uppercase sm:text-[9px] lg:text-[10px]">
+        <span className="sm:hidden">{mobileLabel || label}</span>
+        <span className="hidden sm:inline">{label}</span>
+      </span>
+    </div>
   );
 }
 
@@ -78,24 +127,8 @@ const DEFAULT_CATEGORIES = [
   { name: 'Individual', icon: '⭐' },
 ];
 
-const DEFAULT_TIMELINE = [
-  { year: '2019', event: 'Club Founded', icon: '🎯' },
-  { year: '2021', event: 'First Intra Contest', icon: '🏁' },
-  { year: '2023', event: 'First ICPC Participation', icon: '🌏' },
-  { year: '2025', event: 'National Level Recognition', icon: '🏆' },
-  { year: '2026', event: 'Regional Champions', icon: '👑' },
-];
-
 const ACHIEVEMENT_PAGE_SIZE = 9;
 const PARTICIPATION_PAGE_SIZE = 9;
-
-function getPageNumbers(current, total) {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  if (current <= 3) return [1, 2, 3, 4, '…', total];
-  if (current >= total - 2)
-    return [1, '…', total - 3, total - 2, total - 1, total];
-  return [1, '…', current - 1, current, current + 1, '…', total];
-}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -204,78 +237,6 @@ const PARTICIPATION_CATEGORY_EMOJI = {
 // ---------------------------------------------------------------------------
 // (Hero is rendered inline in the main component below)
 
-// ---------------------------------------------------------------------------
-// Reusable Pagination Controls
-// ---------------------------------------------------------------------------
-
-function PaginationControls({ currentPage, totalPages, onPageChange }) {
-  if (totalPages <= 1) return null;
-  return (
-    <div className="flex flex-col items-center gap-3 pt-6 sm:flex-row sm:justify-between">
-      <p className="text-xs text-slate-500">
-        Page {currentPage} of {totalPages}
-      </p>
-      <div className="flex flex-wrap items-center justify-center gap-1">
-        {/* First / Prev — hidden on xs to save space */}
-        <button
-          onClick={() => onPageChange(1)}
-          disabled={currentPage <= 1}
-          className="hidden rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-slate-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-30 sm:inline-flex"
-          title="First page"
-        >
-          ««
-        </button>
-        <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage <= 1}
-          className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-30"
-        >
-          ‹ Prev
-        </button>
-        {getPageNumbers(currentPage, totalPages).map((p, i) =>
-          p === '…' ? (
-            <span
-              key={`e${i}`}
-              className="hidden px-1.5 text-xs text-slate-600 sm:inline"
-            >
-              …
-            </span>
-          ) : (
-            <button
-              key={p}
-              onClick={() => onPageChange(p)}
-              className={cn(
-                'min-w-8 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors',
-                p === currentPage
-                  ? 'bg-neon-violet text-white shadow-sm'
-                  : 'hidden border border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white sm:inline-flex',
-                // always show current ±1 on mobile
-                Math.abs(p - currentPage) <= 1 ? 'inline-flex!' : ''
-              )}
-            >
-              {p}
-            </button>
-          )
-        )}
-        <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage >= totalPages}
-          className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-30"
-        >
-          Next ›
-        </button>
-        <button
-          onClick={() => onPageChange(totalPages)}
-          disabled={currentPage >= totalPages}
-          className="hidden rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-slate-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-30 sm:inline-flex"
-          title="Last page"
-        >
-          »»
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Featured Achievements Carousel
@@ -663,7 +624,7 @@ function AchievementDetailModal({ achievement, onClose }) {
                       src={img.url}
                       alt={img.name ?? `Photo ${i + 1}`}
                       fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
                       sizes="120px"
                       unoptimized
                     />
@@ -1025,7 +986,7 @@ function ParticipationDetailModal({ record, onClose }) {
                       src={img.url}
                       alt={img.name ?? `Photo ${i + 1}`}
                       fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
                       sizes="120px"
                       unoptimized
                     />
@@ -1156,10 +1117,10 @@ function AchievementCard({ achievement, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="group hover:border-neon-violet relative flex h-full cursor-pointer flex-col overflow-hidden rounded-[2rem] border border-[#27272A] bg-[#050505] transition-all duration-500"
+      className="group hover:border-neon-lime/40 relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#05060B] transition-all duration-300"
     >
       {/* Cover image */}
-      <div className="relative h-44 w-full shrink-0 overflow-hidden rounded-t-[2rem]">
+      <div className="relative h-44 w-full shrink-0 overflow-hidden rounded-t-2xl">
         <Image
           src={achievement.featured_photo?.url ?? '/placeholder-event.png'}
           alt={achievement.featured_photo?.name ?? achievement.title}
@@ -1175,7 +1136,7 @@ function AchievementCard({ achievement, onClick }) {
           </div>
         )}
         {achievement.is_featured && (
-          <div className="border-neon-violet/30 bg-neon-violet/10 text-neon-violet absolute top-3 left-3 rounded-full border px-2.5 py-1 font-mono text-[10px] font-bold">
+          <div className="border-neon-lime/30 bg-neon-lime/10 text-neon-lime absolute top-3 left-3 rounded-full border px-2.5 py-1 font-mono text-[10px] font-bold">
             ★ Featured
           </div>
         )}
@@ -1184,7 +1145,7 @@ function AchievementCard({ achievement, onClick }) {
       {/* Body */}
       <div className="flex flex-1 flex-col p-6">
         <div className="mb-4 flex items-start justify-between gap-2">
-          <h3 className="font-heading group-hover:text-neon-violet line-clamp-2 text-xl font-black tracking-tight text-white uppercase transition-colors">
+          <h3 className="font-heading group-hover:text-neon-lime line-clamp-2 text-xl font-black tracking-tight text-white uppercase transition-colors">
             {achievement.title}
           </h3>
           {rs && <span className="mt-0.5 shrink-0 text-lg">{rs.emoji}</span>}
@@ -1210,13 +1171,13 @@ function AchievementCard({ achievement, onClick }) {
             {categories.slice(0, 2).map((cat) => (
               <span
                 key={cat}
-                className="border-neon-violet/30 text-neon-violet rounded-full border px-3 py-0.5 font-mono text-[9px] font-bold uppercase"
+                className="border-neon-lime/30 text-neon-lime rounded-full border px-3 py-0.5 font-mono text-[9px] font-bold uppercase"
               >
                 {cat}
               </span>
             ))}
             {rs && (
-              <span className="border-neon-emerald/30 text-neon-emerald rounded-full border px-3 py-0.5 font-mono text-[9px] font-bold uppercase">
+              <span className="border-neon-lime/30 text-neon-lime rounded-full border px-3 py-0.5 font-mono text-[9px] font-bold uppercase">
                 <ResultText text={achievement.result} />
               </span>
             )}
@@ -1224,7 +1185,7 @@ function AchievementCard({ achievement, onClick }) {
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t border-[#27272A] pt-4">
+        <div className="flex items-center justify-between border-t border-white/8 pt-4">
           <div className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-600">
             {achievement.is_team ? (
               <>
@@ -1242,7 +1203,7 @@ function AchievementCard({ achievement, onClick }) {
               </>
             ) : null}
           </div>
-          <span className="text-neon-emerald font-mono text-[10px] font-bold uppercase transition-transform group-hover:translate-x-1">
+          <span className="text-neon-lime font-mono text-[10px] font-bold uppercase transition-transform group-hover:translate-x-1">
             View →
           </span>
         </div>
@@ -1264,10 +1225,10 @@ function ParticipationRecordCard({ record, onClick }) {
   return (
     <div
       onClick={onClick}
-      className="group hover:border-neon-emerald relative flex h-full cursor-pointer flex-col overflow-hidden rounded-[2rem] border border-[#27272A] bg-[#050505] transition-all duration-500"
+      className="group hover:border-neon-lime/40 relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#05060B] transition-all duration-300"
     >
       {/* Cover */}
-      <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-t-[2rem]">
+      <div className="relative h-40 w-full shrink-0 overflow-hidden rounded-t-2xl">
         <Image
           src={record.featured_photo?.url ?? '/placeholder-event.png'}
           alt={record.featured_photo?.name ?? record.contest_name}
@@ -1281,12 +1242,12 @@ function ParticipationRecordCard({ record, onClick }) {
           {record.year}
         </div>
         {record.is_team && (
-          <div className="border-neon-violet/30 bg-neon-violet/10 text-neon-violet absolute top-2.5 left-2.5 rounded-full border px-2.5 py-1 font-mono text-[10px] font-bold">
+          <div className="border-neon-lime/30 bg-neon-lime/10 text-neon-lime absolute top-2.5 left-2.5 rounded-full border px-2.5 py-1 font-mono text-[10px] font-bold">
             👥 Team
           </div>
         )}
         {rs && (
-          <div className="border-neon-emerald/30 bg-neon-emerald/10 text-neon-emerald absolute right-2.5 bottom-2.5 rounded-full border px-2.5 py-1 font-mono text-[10px] font-bold">
+          <div className="border-neon-lime/30 bg-neon-lime/10 text-neon-lime absolute right-2.5 bottom-2.5 rounded-full border px-2.5 py-1 font-mono text-[10px] font-bold">
             {rs.emoji} <ResultText text={record.result} />
           </div>
         )}
@@ -1294,16 +1255,16 @@ function ParticipationRecordCard({ record, onClick }) {
 
       {/* Body */}
       <div className="flex flex-1 flex-col p-6">
-        <div className="text-neon-emerald mb-1 font-mono text-[10px] font-bold tracking-[0.3em] uppercase">
+        <div className="text-neon-lime mb-1 font-mono text-[10px] font-bold tracking-[0.3em] uppercase">
           {catEmoji} {record.category ?? 'Contest'}
         </div>
-        <h4 className="font-heading group-hover:text-neon-emerald mb-3 line-clamp-2 text-lg font-black tracking-tight text-white uppercase transition-colors">
+        <h4 className="font-heading group-hover:text-neon-lime mb-3 line-clamp-2 text-lg font-black tracking-tight text-white uppercase transition-colors">
           {record.contest_name}
         </h4>
 
         {record.achievements && (
           <div className="mb-3">
-            <span className="border-neon-violet/20 bg-neon-violet/8 text-neon-violet inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-bold uppercase">
+            <span className="border-neon-lime/20 bg-neon-lime/8 text-neon-lime inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-mono text-[9px] font-bold uppercase">
               🏆 {record.achievements.title}
             </span>
           </div>
@@ -1312,10 +1273,10 @@ function ParticipationRecordCard({ record, onClick }) {
         <div className="mt-auto" />
 
         {/* Lead member */}
-        <div className="border-t border-[#27272A] pt-4">
+        <div className="border-t border-white/8 pt-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="bg-neon-violet/20 ring-neon-violet/30 relative h-7 w-7 shrink-0 overflow-hidden rounded-full ring-1">
+              <div className="bg-neon-lime/15 ring-neon-lime/20 relative h-7 w-7 shrink-0 overflow-hidden rounded-full ring-1">
                 {record.users?.avatar_url ? (
                   <Image
                     src={record.users.avatar_url}
@@ -1325,7 +1286,7 @@ function ParticipationRecordCard({ record, onClick }) {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <div className="text-neon-violet flex h-full w-full items-center justify-center font-mono text-xs font-bold">
+                  <div className="text-neon-lime flex h-full w-full items-center justify-center font-mono text-xs font-bold">
                     {(
                       record.users?.full_name?.[0] ??
                       members[0]?.name?.[0] ??
@@ -1338,7 +1299,7 @@ function ParticipationRecordCard({ record, onClick }) {
                 {record.users?.full_name ?? members[0]?.name ?? 'Unknown'}
               </p>
             </div>
-            <span className="text-neon-emerald font-mono text-[10px] font-bold uppercase transition-transform group-hover:translate-x-1">
+            <span className="text-neon-lime font-mono text-[10px] font-bold uppercase transition-transform group-hover:translate-x-1">
               View →
             </span>
           </div>
@@ -1349,13 +1310,13 @@ function ParticipationRecordCard({ record, onClick }) {
               {members.slice(0, 3).map((m, i) => (
                 <span
                   key={i}
-                  className="rounded-full border border-[#27272A] px-2 py-0.5 font-mono text-[9px] text-zinc-500"
+                  className="rounded-full border border-white/8 px-2 py-0.5 font-mono text-[9px] text-zinc-500"
                 >
                   {m.name}
                 </span>
               ))}
               {members.length > 3 && (
-                <span className="rounded-full border border-[#27272A] px-2 py-0.5 font-mono text-[9px] text-zinc-600">
+                <span className="rounded-full border border-[#1A1D28] px-2 py-0.5 font-mono text-[9px] text-zinc-600">
                   +{members.length - 3}
                 </span>
               )}
@@ -1367,7 +1328,7 @@ function ParticipationRecordCard({ record, onClick }) {
               {photos.slice(0, 3).map((p) => (
                 <div
                   key={p.id}
-                  className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-[#27272A]"
+                  className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-[#1A1D28]"
                 >
                   <Image
                     src={p.url}
@@ -1380,7 +1341,7 @@ function ParticipationRecordCard({ record, onClick }) {
                 </div>
               ))}
               {photos.length > 3 && (
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#27272A] font-mono text-[9px] text-zinc-600">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#1A1D28] font-mono text-[9px] text-zinc-600">
                   +{photos.length - 3}
                 </div>
               )}
@@ -1393,221 +1354,12 @@ function ParticipationRecordCard({ record, onClick }) {
 }
 
 // ---------------------------------------------------------------------------
-// Timeline Item
-// ---------------------------------------------------------------------------
-
-function TimelineItem({ item, index, total }) {
-  const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
-  const isEven = index % 2 === 0;
-  const isLast = index === total - 1;
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (typeof IntersectionObserver === 'undefined') {
-      const t = setTimeout(() => setVisible(true), 0);
-      return () => clearTimeout(t);
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.unobserve(el);
-        }
-      },
-      { threshold: 0.25, rootMargin: '0px 0px -60px 0px' }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div ref={ref} className="group relative">
-      {/* ═══════════════════════════════ MOBILE ════════════════════════════════ */}
-      <div
-        className={cn(
-          'relative flex gap-4 md:hidden',
-          !isLast ? 'pb-10' : 'pb-0'
-        )}
-      >
-        {/* Spine + Node */}
-        <div className="relative flex shrink-0 flex-col items-center">
-          {/* Glow halo */}
-          <span className="from-neon-violet/15 to-neon-emerald/10 absolute z-0 h-10 w-10 rounded-full bg-gradient-to-br opacity-0 blur-md transition-opacity duration-500 group-hover:opacity-100" />
-          {/* Node — scale pops in */}
-          <div
-            className={cn(
-              'from-neon-violet to-neon-emerald relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br shadow-lg ring-2 shadow-black/60 ring-[#050505] transition-all duration-500 group-hover:scale-110',
-              visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
-            )}
-            style={{ transitionDelay: visible ? '200ms' : '0ms' }}
-          >
-            <span className="text-sm leading-none">{item.icon}</span>
-          </div>
-          {/* Animated connector — grows downward */}
-          {!isLast && (
-            <div className="relative mt-2 w-px flex-1 overflow-hidden">
-              <div
-                className={cn(
-                  'from-neon-violet/35 absolute top-0 left-0 w-full bg-gradient-to-b to-transparent transition-[height] duration-700 ease-out',
-                  visible ? 'h-full' : 'h-0'
-                )}
-                style={{ transitionDelay: visible ? '500ms' : '0ms' }}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Card — slides in from right */}
-        <div
-          className={cn(
-            'min-w-0 flex-1 pt-0.5 transition-all duration-600 ease-out',
-            visible ? 'translate-x-0 opacity-100' : 'translate-x-8 opacity-0'
-          )}
-          style={{ transitionDelay: visible ? '100ms' : '0ms' }}
-        >
-          {/* Year + step label */}
-          <div className="mb-2 flex items-center gap-2">
-            <span className="border-neon-violet/20 bg-neon-violet/10 text-neon-violet inline-flex rounded-full border px-2.5 py-0.5 font-mono text-[11px] font-bold tabular-nums">
-              {item.year}
-            </span>
-            <span className="text-[9px] font-bold tracking-[0.2em] text-gray-700 uppercase">
-              {String(index + 1).padStart(2, '0')}
-            </span>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm transition-all duration-300 group-hover:border-white/16 group-hover:bg-white/7 group-hover:shadow-xl group-hover:shadow-black/25">
-            <h3 className="mb-1 text-sm leading-snug font-bold text-white">
-              {item.event}
-            </h3>
-            {item.description && (
-              <p className="mt-1.5 text-xs leading-relaxed text-gray-500">
-                {item.description}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ═══════════════════════════════ DESKTOP ════════════════════════════════ */}
-      <div
-        className={cn(
-          'relative hidden md:flex md:items-center',
-          isEven ? 'md:flex-row' : 'md:flex-row-reverse',
-          !isLast ? 'mb-14' : ''
-        )}
-      >
-        {/* ── Card column — slides in from its side ── */}
-        <div
-          className={cn(
-            'flex w-[45%]',
-            isEven ? 'justify-end pr-10' : 'justify-start pl-10'
-          )}
-        >
-          <div
-            className={cn(
-              'w-full max-w-sm rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-md transition-all duration-700 ease-out group-hover:border-white/18 group-hover:bg-white/8 group-hover:shadow-2xl group-hover:shadow-black/30',
-              isEven ? 'text-right' : 'text-left',
-              visible
-                ? 'translate-x-0 opacity-100'
-                : isEven
-                  ? '-translate-x-12 opacity-0'
-                  : 'translate-x-12 opacity-0'
-            )}
-            style={{ transitionDelay: visible ? '100ms' : '0ms' }}
-          >
-            {/* Step label */}
-            <p className="mb-3 text-[10px] font-bold tracking-[0.25em] text-gray-600 uppercase">
-              Milestone {String(index + 1).padStart(2, '0')}
-            </p>
-            {/* Icon — large decorative, fades up */}
-            <div
-              className={cn(
-                'mb-3 text-4xl leading-none transition-all duration-500',
-                visible
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-3 opacity-0'
-              )}
-              style={{ transitionDelay: visible ? '250ms' : '0ms' }}
-            >
-              {item.icon}
-            </div>
-            {/* Title */}
-            <h3 className="group-hover:text-neon-violet font-heading mb-2 text-xl font-black tracking-tight text-white uppercase transition-colors">
-              {item.event}
-            </h3>
-            {/* Description */}
-            {item.description && (
-              <p className="text-sm leading-relaxed text-gray-400">
-                {item.description}
-              </p>
-            )}
-            {/* Year accent line */}
-            <div
-              className={cn(
-                'mt-5 flex items-center gap-2',
-                isEven ? 'justify-end' : 'justify-start'
-              )}
-            >
-              <div
-                className={cn(
-                  'h-px w-8',
-                  isEven
-                    ? 'to-neon-violet/50 bg-gradient-to-r from-transparent'
-                    : 'from-neon-violet/50 bg-gradient-to-r to-transparent'
-                )}
-              />
-              <span className="text-neon-violet font-mono text-[11px] font-bold tabular-nums">
-                {item.year}
-              </span>
-              {!isEven && (
-                <div className="from-primary-500/50 h-px w-8 bg-linear-to-l to-transparent" />
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Center node column ── */}
-        <div className="relative flex w-[10%] flex-col items-center justify-center">
-          {/* Glow halo */}
-          <span className="from-neon-violet/15 to-neon-emerald/10 absolute h-20 w-20 rounded-full bg-gradient-to-br opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100" />
-          {/* Node — scale pops in after card */}
-          <div
-            className={cn(
-              'from-neon-violet to-neon-emerald relative z-10 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br shadow-2xl ring-4 shadow-black/60 ring-[#050505] transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-110',
-              visible ? 'scale-100 opacity-100' : 'scale-0 opacity-0'
-            )}
-            style={{ transitionDelay: visible ? '350ms' : '0ms' }}
-          >
-            <span className="text-xl leading-none">{item.icon}</span>
-          </div>
-          {/* Year pill — slides up after node */}
-          <div
-            className={cn(
-              'border-neon-violet/20 bg-neon-violet/10 text-neon-violet relative z-10 mt-2.5 rounded-full border px-2.5 py-0.5 font-mono text-[11px] font-bold whitespace-nowrap tabular-nums transition-all duration-400',
-              visible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
-            )}
-            style={{ transitionDelay: visible ? '480ms' : '0ms' }}
-          >
-            {item.year}
-          </div>
-        </div>
-
-        {/* ── Mirror column ── */}
-        <div className="w-[45%]" />
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------------
 
 export default function AchievementsClient({
   achievements: propAchievements = [],
   participations: propParticipations = [],
-  timeline: propTimeline = [],
   settings = {},
 }) {
   // ── Achievement state ────────────────────────────────────────────────────
@@ -1642,8 +1394,6 @@ export default function AchievementsClient({
     ].sort((a, b) => b - a);
     return ['All', ...years.map(String)];
   }, [propAchievements]);
-
-  const timeline = propTimeline.length > 0 ? propTimeline : DEFAULT_TIMELINE;
 
   // Build dynamic category list
   const categorySet = new Set(
@@ -1764,206 +1514,115 @@ export default function AchievementsClient({
   );
 
   return (
-    <main className="relative min-h-screen overflow-x-clip bg-[#050505] text-white">
+    <main className="relative min-h-screen overflow-x-clip bg-[#05060B] text-white">
+
       {/* ══════════════════════ HERO ══════════════════════ */}
-      <section className="relative flex min-h-screen items-center justify-center overflow-hidden pt-20">
-        {/* Radial glow */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.08),transparent_70%)]" />
-          <div className="grid-overlay absolute inset-0 opacity-10" />
-          <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-[#050505] to-transparent" />
+      <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
+
+        {/* Ambient background */}
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="grid-overlay absolute inset-0 opacity-25" />
+          <div className="absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-neon-violet/12 blur-[120px] sm:h-[500px] sm:w-[500px]" />
+          <div className="absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full bg-neon-lime/8 blur-[120px] sm:h-[400px] sm:w-[400px]" />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#05060b] to-transparent" />
         </div>
 
         <motion.div
           variants={stagger}
           initial="hidden"
           animate="visible"
-          className="relative z-10 mx-auto w-full max-w-screen-xl px-6 lg:px-10"
+          className="mx-auto w-full max-w-screen-xl"
         >
-          {/* Top-right metadata */}
-          <motion.div variants={fadeUp} className="mb-12 flex justify-end">
-            <div className="space-y-1 text-right">
-              <p className="text-neon-violet font-mono text-[10px] font-bold tracking-[0.4em] uppercase">
-                Hall of Achievements
-              </p>
-              <p className="font-mono text-[10px] tracking-[0.4em] text-zinc-600 uppercase">
-                {settings?.achievements_page_badge || 'Operational Excellence'}
-              </p>
-            </div>
-          </motion.div>
+          <div className="max-w-2xl space-y-6 sm:max-w-3xl sm:space-y-8">
 
-          {/* Headline */}
-          <motion.h1
-            variants={fadeUp}
-            className="kinetic-headline font-heading text-[clamp(3.5rem,12vw,9rem)] leading-[0.85] font-black tracking-tighter text-white uppercase select-none"
-          >
-            HALL OF
-            <br />
-            <span
-              className="text-transparent"
-              style={{ WebkitTextStroke: '1.5px #8B5CF6' }}
+            {/* Eyebrow */}
+            <motion.div variants={fadeUp} className="flex items-center gap-3">
+              <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
+              <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-400 uppercase sm:text-[11px]">
+                {settings?.achievements_page_badge || 'Achievements · NEUPC'}
+              </span>
+            </motion.div>
+
+            {/* Headline */}
+            <motion.h1
+              variants={fadeUp}
+              className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] font-black leading-none text-white uppercase select-none"
             >
-              ACHIEVEMENTS
-            </span>
-          </motion.h1>
+              Hall of
+              <br />
+              <span className="neon-text">Achievements</span>
+            </motion.h1>
 
-          {/* Divider + tagline */}
-          <motion.div
-            variants={fadeUp}
-            className="mt-10 flex items-center gap-6"
-          >
-            <div className="bg-neon-emerald h-[2px] w-20" />
-            <p className="font-mono text-xs tracking-[0.3em] text-zinc-500 uppercase">
+            {/* Description */}
+            <motion.p
+              variants={fadeUp}
+              className="max-w-lg text-sm leading-relaxed text-zinc-400 sm:max-w-xl sm:text-base lg:text-lg"
+            >
               {settings?.achievements_page_description ||
-                'A technical lineage of digital excellence.'}
-            </p>
-          </motion.div>
+                'Every trophy, ranking, and milestone earned by NEUPC members — a record of excellence in competitive programming.'}
+            </motion.p>
 
-          {/* Stats row */}
-          {/* <motion.div variants={fadeUp} className="mt-16 grid grid-cols-2 gap-8 border-t border-[#27272A] pt-12 sm:grid-cols-4">
-            {[
-              { value: String(propAchievements.length), label: 'Achievements', color: 'text-neon-violet' },
-              { value: String(medalistCount), label: 'Medalists', color: 'text-neon-emerald' },
-              { value: String(propParticipations.length), label: 'Participations', color: 'text-white' },
-              { value: yearsActive > 0 ? `${yearsActive}+` : '—', label: 'Years Active', color: 'text-neon-violet' },
-            ].map((stat) => (
-              <div key={stat.label} className="group space-y-3 text-center">
-                <div className={cn('font-heading text-6xl font-black tracking-tighter transition-transform duration-300 group-hover:scale-110', stat.color)}>
-                  {stat.value}
+            {/* Status pill */}
+            <motion.div
+              variants={fadeUp}
+              className="inline-flex items-center gap-2.5 rounded-full border border-neon-lime/20 bg-neon-lime/8 px-4 py-2 font-mono text-[10px] tracking-[0.18em] text-neon-lime uppercase sm:px-5 sm:py-2.5 sm:text-[11px]"
+            >
+              <span className="pulse-dot bg-neon-lime h-1.5 w-1.5 rounded-full" />
+              {propAchievements.length > 0
+                ? `${propAchievements.length} Achievements on Record`
+                : 'Building our legacy'}
+            </motion.div>
+
+            {/* Stats row */}
+            <motion.div variants={fadeUp} className="border-t border-white/8 pt-6 sm:pt-8">
+              <div className="grid grid-cols-4 divide-x divide-white/8">
+                <div className="pr-3 sm:pr-6 lg:pr-8">
+                  <StatTile value={`${propAchievements.length}+`} label="Achievements" mobileLabel="Total" />
                 </div>
-                <div className="font-mono text-[9px] font-bold uppercase tracking-[0.4em] text-zinc-600">
-                  {stat.label}
+                <div className="px-3 sm:px-6 lg:px-8">
+                  <StatTile value={`${medalistCount}+`} label="Medalists" accent />
+                </div>
+                <div className="px-3 sm:px-6 lg:px-8">
+                  <StatTile value={`${propParticipations.length}+`} label="Participations" mobileLabel="Events" />
+                </div>
+                <div className="pl-3 sm:pl-6 lg:pl-8">
+                  <StatTile value={yearsActive > 0 ? `${yearsActive}+` : '5+'} label="Years Active" mobileLabel="Years" />
                 </div>
               </div>
-            ))}
-          </motion.div> */}
-        </motion.div>
+            </motion.div>
 
-        {/* Bottom-left glass panel */}
-        <motion.div
-          variants={fadeUp}
-          initial="hidden"
-          animate="visible"
-          className="absolute bottom-16 left-6 hidden max-w-xs lg:block"
-          style={{
-            background: 'rgba(20,20,22,0.7)',
-            backdropFilter: 'blur(40px)',
-            border: '1px solid rgba(139,92,246,0.1)',
-            boxShadow: '0 0 60px 0 rgba(139,92,246,0.1)',
-          }}
-        >
-          <div className="p-8">
-            <div className="text-neon-violet mb-6 text-3xl">★</div>
-            <p className="font-mono text-[11px] leading-relaxed tracking-wider text-zinc-400 uppercase">
-              Documenting the highest standards of computational triumph within
-              the NEUPC ecosystem.
-            </p>
           </div>
         </motion.div>
 
-        {/* Scroll cue */}
-        <div className="absolute bottom-8 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 lg:flex">
-          <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">
-            Scroll
-          </span>
-          <div className="h-8 w-px bg-gradient-to-b from-zinc-600 to-transparent" />
-        </div>
-      </section>
-
-      {/* ══════════════════════ STATS BAND ══════════════════════ */}
-      <section className="bg-[#131315] py-20">
-        <div className="mx-auto max-w-7xl px-6 lg:px-10">
-          <div className="grid grid-cols-2 gap-12 lg:grid-cols-4">
-            {[
-              {
-                value: `${propAchievements.length}+`,
-                label: 'Total Achievements',
-                color: 'text-neon-violet',
-              },
-              {
-                value: `${medalistCount}+`,
-                label: 'Medalists',
-                color: 'text-neon-emerald',
-              },
-              {
-                value: `${propParticipations.length}+`,
-                label: 'Participations',
-                color: 'text-white',
-              },
-              {
-                value: yearsActive > 0 ? `${yearsActive}+` : '5+',
-                label: 'Years Active',
-                color: 'text-neon-violet',
-              },
-            ].map((s) => (
-              <div key={s.label} className="group space-y-3 text-center">
-                <div
-                  className={cn(
-                    'font-heading text-6xl font-black tracking-tighter transition-transform group-hover:scale-110',
-                    s.color
-                  )}
-                >
-                  {s.value}
-                </div>
-                <div className="font-mono text-[9px] font-bold tracking-[0.4em] text-zinc-500 uppercase">
-                  {s.label}
-                </div>
-              </div>
-            ))}
-          </div>
+        {/* Scroll cue – desktop only */}
+        <div className="pointer-events-none absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-1.5 lg:flex">
+          <span className="font-mono text-[9px] tracking-[0.4em] text-zinc-700 uppercase">Scroll</span>
+          <div className="h-7 w-px bg-gradient-to-b from-zinc-600 to-transparent" />
         </div>
       </section>
 
       {/* ══════════════════════ FEATURED CAROUSEL ══════════════════════ */}
       {featuredAchievements.length > 0 && (
-        <section className="relative overflow-hidden bg-[#050505] px-6 py-32 lg:px-10">
-          <div className="mx-auto max-w-7xl">
-            <motion.div
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="visible"
-              viewport={viewport}
-              className="mb-20 space-y-4 text-center"
-            >
-              <span className="text-neon-emerald font-mono text-[10px] font-bold tracking-[0.5em] uppercase">
-                Legacy Unit 01
-              </span>
-              <h2 className="font-heading text-6xl font-black tracking-tighter text-white uppercase sm:text-7xl">
-                Featured{' '}
-                <span className="text-neon-violet italic">Victory</span>
-              </h2>
-            </motion.div>
+        <section className="bg-[#05060B] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+          <div className="mx-auto max-w-screen-xl">
+            <SectionEyebrow
+              tag="Recognition / 001"
+              title="Featured"
+              accent="Victory"
+            />
             <FeaturedAchievementsCarousel items={featuredAchievements} />
           </div>
         </section>
       )}
 
       {/* ══════════════════════ VICTORY LOG (Achievements) ══════════════════════ */}
-      <section id="achievements" className="bg-[#131315] px-6 py-32 lg:px-10">
-        <div className="mx-auto max-w-7xl space-y-16">
-          {/* Header */}
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewport}
-            className="flex flex-col items-start justify-between gap-8 border-b border-[#27272A] pb-12 md:flex-row md:items-end"
-          >
-            <div className="space-y-3">
-              <span className="text-neon-emerald font-mono text-[10px] font-bold tracking-[0.5em] uppercase">
-                Operations Log
-              </span>
-              <h2 className="font-heading text-6xl font-black tracking-tighter text-white uppercase">
-                Victory Log
-              </h2>
-            </div>
-            <div className="font-mono text-[10px] font-bold tracking-[0.3em] text-zinc-500 uppercase">
-              {achievementYears[1] &&
-              achievementYears[achievementYears.length - 1]
-                ? `${achievementYears[achievementYears.length - 1]}–${achievementYears[1]} Cycle`
-                : 'All Time'}
-            </div>
-          </motion.div>
+      <section id="achievements" className="bg-[#05060B] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+        <div className="mx-auto max-w-screen-xl space-y-10 sm:space-y-12">
+          <SectionEyebrow
+            tag="Operations Log / 002"
+            title="Victory"
+            accent="Log"
+          />
 
           {/* Filter bar */}
           <motion.div
@@ -1971,36 +1630,36 @@ export default function AchievementsClient({
             initial="hidden"
             whileInView="visible"
             viewport={viewport}
-            className="overflow-hidden rounded-2xl border border-[#27272A] bg-[#050505]"
+            className="glass-panel space-y-3 rounded-2xl p-3 sm:p-4"
           >
-            <div className="px-5 pt-4 pb-3">
-              <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] sm:flex-wrap [&::-webkit-scrollbar]:hidden">
-                {categories.map((category) => {
-                  const isActive = activeFilter === category.name;
-                  return (
-                    <button
-                      key={category.name}
-                      onClick={() => {
-                        setActiveFilter(category.name);
-                        setAchPage(1);
-                      }}
-                      className={cn(
-                        'flex shrink-0 items-center gap-1.5 rounded-full px-4 py-1.5 font-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200',
-                        isActive
-                          ? 'bg-neon-violet text-white'
-                          : 'hover:border-neon-violet/40 hover:text-neon-violet border border-[#27272A] text-zinc-500'
-                      )}
-                    >
-                      <span>{category.icon}</span>
-                      <span>{category.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
+            {/* Category tabs */}
+            <div className="-mx-1 flex flex-1 gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap">
+              {categories.map((category) => {
+                const isActive = activeFilter === category.name;
+                return (
+                  <button
+                    key={category.name}
+                    onClick={() => {
+                      setActiveFilter(category.name);
+                      setAchPage(1);
+                    }}
+                    className={cn(
+                      'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
+                      isActive
+                        ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
+                        : 'border border-white/10 text-zinc-500 hover:border-neon-lime/30 hover:text-neon-lime'
+                    )}
+                  >
+                    <span>{category.icon}</span>
+                    <span>{category.name}</span>
+                  </button>
+                );
+              })}
             </div>
-            <div className="flex flex-wrap items-center gap-2 border-t border-[#27272A] px-5 py-3">
+            {/* Year + type row */}
+            <div className="flex flex-wrap items-center gap-2 border-t border-white/8 pt-3">
               {achievementYears.length > 2 && (
-                <div className="flex items-center gap-0.5 overflow-x-auto rounded-lg border border-[#27272A] p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex items-center gap-0.5 overflow-x-auto rounded-xl border border-white/8 p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {achievementYears.map((yr) => (
                     <button
                       key={yr}
@@ -2009,9 +1668,9 @@ export default function AchievementsClient({
                         setAchPage(1);
                       }}
                       className={cn(
-                        'shrink-0 rounded-md px-3 py-1 font-mono text-[10px] font-bold uppercase transition-all',
+                        'shrink-0 rounded-lg px-3 py-1 font-mono text-[10px] font-bold uppercase transition-all',
                         achYearFilter === yr
-                          ? 'bg-neon-violet/15 text-neon-violet'
+                          ? 'bg-neon-lime/15 text-neon-lime'
                           : 'text-zinc-600 hover:text-zinc-300'
                       )}
                     >
@@ -2020,7 +1679,7 @@ export default function AchievementsClient({
                   ))}
                 </div>
               )}
-              <div className="flex items-center gap-0.5 rounded-lg border border-[#27272A] p-0.5">
+              <div className="flex items-center gap-0.5 rounded-xl border border-white/8 p-0.5">
                 {[
                   { key: 'All', label: 'All' },
                   { key: 'Team', label: 'Team' },
@@ -2033,9 +1692,9 @@ export default function AchievementsClient({
                       setAchPage(1);
                     }}
                     className={cn(
-                      'shrink-0 rounded-md px-3 py-1 font-mono text-[10px] font-bold uppercase transition-all',
+                      'shrink-0 rounded-lg px-3 py-1 font-mono text-[10px] font-bold uppercase transition-all',
                       achTypeFilter === key
-                        ? 'bg-white/10 text-white'
+                        ? 'bg-neon-lime/15 text-neon-lime'
                         : 'text-zinc-600 hover:text-zinc-300'
                     )}
                   >
@@ -2047,15 +1706,16 @@ export default function AchievementsClient({
                 {hasActiveAchievementFilters && (
                   <button
                     onClick={resetAchievementFilters}
-                    className="hover:text-neon-violet font-mono text-[10px] font-bold tracking-widest text-zinc-600 uppercase underline underline-offset-2 transition-colors"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-neon-lime/25 bg-neon-lime/8 px-3 py-1.5 font-mono text-[9px] font-bold tracking-wider text-neon-lime uppercase transition-colors hover:bg-neon-lime/15"
                   >
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                     Clear
                   </button>
                 )}
                 <span className="font-mono text-[10px] text-zinc-600 tabular-nums">
-                  <span className="text-neon-emerald font-bold">
-                    {filteredAchievements.length}
-                  </span>{' '}
+                  <span className="text-neon-lime font-bold">{filteredAchievements.length}</span>{' '}
                   result{filteredAchievements.length !== 1 ? 's' : ''}
                 </span>
               </div>
@@ -2067,7 +1727,8 @@ export default function AchievementsClient({
             <EmptyState
               icon="🔍"
               title="No Achievements Found"
-              description="Try adjusting the filters above"
+              description="Try different filters or clear your selection"
+              onClear={hasActiveAchievementFilters ? resetAchievementFilters : undefined}
             />
           ) : (
             <>
@@ -2076,7 +1737,7 @@ export default function AchievementsClient({
                 initial="hidden"
                 whileInView="visible"
                 viewport={viewport}
-                className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
+                className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3"
               >
                 {paginatedAchievements.map((achievement) => (
                   <motion.div
@@ -2091,10 +1752,13 @@ export default function AchievementsClient({
                   </motion.div>
                 ))}
               </motion.div>
-              <PaginationControls
+              <InlinePagination
                 currentPage={achCurrentPage}
                 totalPages={achTotalPages}
+                total={filteredAchievements.length}
+                perPage={ACHIEVEMENT_PAGE_SIZE}
                 onPageChange={setAchPage}
+                itemLabel="achievement"
               />
             </>
           )}
@@ -2105,25 +1769,14 @@ export default function AchievementsClient({
       {propParticipations.length > 0 && (
         <section
           id="participation"
-          className="bg-[#050505] px-6 py-32 lg:px-10"
+          className="bg-[#05060B] px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
         >
-          <div className="mx-auto max-w-7xl space-y-16">
-            {/* Header */}
-            <motion.div
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="visible"
-              viewport={viewport}
-              className="flex flex-col items-start gap-6 md:flex-row md:items-center"
-            >
-              <h2 className="font-heading shrink-0 text-5xl font-black tracking-tighter text-white uppercase italic">
-                Participation Log
-              </h2>
-              <div className="h-px flex-grow bg-[#27272A]" />
-              <span className="text-neon-emerald shrink-0 font-mono text-[10px] font-bold tracking-widest uppercase">
-                Recent Missions
-              </span>
-            </motion.div>
+          <div className="mx-auto max-w-screen-xl space-y-10 sm:space-y-12">
+            <SectionEyebrow
+              tag="Contest Records / 003"
+              title="Participation"
+              accent="History"
+            />
 
             {/* Filter bar */}
             <motion.div
@@ -2131,40 +1784,37 @@ export default function AchievementsClient({
               initial="hidden"
               whileInView="visible"
               viewport={viewport}
-              className="overflow-hidden rounded-2xl border border-[#27272A] bg-[#131315]"
+              className="glass-panel space-y-3 rounded-2xl p-3 sm:p-4"
             >
-              <div className="px-5 pt-4 pb-3">
-                <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] sm:flex-wrap [&::-webkit-scrollbar]:hidden">
-                  {participationCategories.map((cat) => {
-                    const isActive = participCatFilter === cat;
-                    const emoji =
-                      cat !== 'All'
-                        ? (PARTICIPATION_CATEGORY_EMOJI[cat] ?? '🎯')
-                        : '✦';
-                    return (
-                      <button
-                        key={cat}
-                        onClick={() => {
-                          setParticipatCatFilter(cat);
-                          setParticipatPage(1);
-                        }}
-                        className={cn(
-                          'flex shrink-0 items-center gap-1.5 rounded-full px-4 py-1.5 font-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200',
-                          isActive
-                            ? 'bg-neon-emerald text-black'
-                            : 'hover:border-neon-emerald/40 hover:text-neon-emerald border border-[#27272A] text-zinc-500'
-                        )}
-                      >
-                        <span>{emoji}</span>
-                        <span>{cat}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+              {/* Category tabs */}
+              <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap">
+                {participationCategories.map((cat) => {
+                  const isActive = participCatFilter === cat;
+                  const emoji = cat !== 'All' ? (PARTICIPATION_CATEGORY_EMOJI[cat] ?? '🎯') : '✦';
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => {
+                        setParticipatCatFilter(cat);
+                        setParticipatPage(1);
+                      }}
+                      className={cn(
+                        'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 font-mono text-[10px] font-bold tracking-wider uppercase transition-all',
+                        isActive
+                          ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
+                          : 'border border-white/10 text-zinc-500 hover:border-neon-lime/30 hover:text-neon-lime'
+                      )}
+                    >
+                      <span>{emoji}</span>
+                      <span>{cat}</span>
+                    </button>
+                  );
+                })}
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#27272A] px-5 py-3">
-                {participationYears.length > 2 ? (
-                  <div className="flex items-center gap-0.5 overflow-x-auto rounded-lg border border-[#27272A] p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {/* Year row */}
+              {participationYears.length > 2 && (
+                <div className="flex flex-wrap items-center gap-2 border-t border-white/8 pt-3">
+                  <div className="flex items-center gap-0.5 overflow-x-auto rounded-xl border border-white/8 p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {participationYears.map((yr) => (
                       <button
                         key={yr}
@@ -2173,9 +1823,9 @@ export default function AchievementsClient({
                           setParticipatPage(1);
                         }}
                         className={cn(
-                          'shrink-0 rounded-md px-3 py-1 font-mono text-[10px] font-bold uppercase transition-all',
+                          'shrink-0 rounded-lg px-3 py-1 font-mono text-[10px] font-bold uppercase transition-all',
                           participYearFilter === yr
-                            ? 'bg-neon-emerald/15 text-neon-emerald'
+                            ? 'bg-neon-lime/15 text-neon-lime'
                             : 'text-zinc-600 hover:text-zinc-300'
                         )}
                       >
@@ -2183,26 +1833,25 @@ export default function AchievementsClient({
                       </button>
                     ))}
                   </div>
-                ) : (
-                  <div />
-                )}
-                <div className="flex items-center gap-3">
-                  {hasActiveParticipationFilters && (
-                    <button
-                      onClick={resetParticipationFilters}
-                      className="hover:text-neon-emerald font-mono text-[10px] font-bold text-zinc-600 uppercase underline transition-colors"
-                    >
-                      Clear
-                    </button>
-                  )}
-                  <span className="font-mono text-[10px] text-zinc-600">
-                    <span className="text-neon-emerald font-bold">
-                      {filteredParticipations.length}
-                    </span>{' '}
-                    record{filteredParticipations.length !== 1 ? 's' : ''}
-                  </span>
+                  <div className="ml-auto flex items-center gap-3">
+                    {hasActiveParticipationFilters && (
+                      <button
+                        onClick={resetParticipationFilters}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-neon-lime/25 bg-neon-lime/8 px-3 py-1.5 font-mono text-[9px] font-bold tracking-wider text-neon-lime uppercase transition-colors hover:bg-neon-lime/15"
+                      >
+                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Clear
+                      </button>
+                    )}
+                    <span className="font-mono text-[10px] text-zinc-600 tabular-nums">
+                      <span className="text-neon-lime font-bold">{filteredParticipations.length}</span>{' '}
+                      record{filteredParticipations.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
             </motion.div>
 
             {/* Grid */}
@@ -2210,7 +1859,8 @@ export default function AchievementsClient({
               <EmptyState
                 icon="🔍"
                 title="No Records Found"
-                description="Try adjusting the filters above"
+                description="Try different filters or clear your selection"
+                onClear={hasActiveParticipationFilters ? resetParticipationFilters : undefined}
               />
             ) : (
               <>
@@ -2219,7 +1869,7 @@ export default function AchievementsClient({
                   initial="hidden"
                   whileInView="visible"
                   viewport={viewport}
-                  className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3"
+                  className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3"
                 >
                   {paginatedParticipations.map((record) => (
                     <motion.div
@@ -2234,10 +1884,13 @@ export default function AchievementsClient({
                     </motion.div>
                   ))}
                 </motion.div>
-                <PaginationControls
+                <InlinePagination
                   currentPage={participCurrentPage}
                   totalPages={participTotalPages}
+                  total={filteredParticipations.length}
+                  perPage={PARTICIPATION_PAGE_SIZE}
                   onPageChange={setParticipatPage}
+                  itemLabel="record"
                 />
               </>
             )}
@@ -2245,70 +1898,82 @@ export default function AchievementsClient({
         </section>
       )}
 
-      {/* ══════════════════════ JOURNEY TIMELINE ══════════════════════ */}
-      <section id="journey" className="bg-[#131315] px-6 py-32 lg:px-10">
-        <div className="mx-auto max-w-7xl space-y-20">
-          <SectionEyebrow
-            tag="Our Story / 003"
-            title="The"
-            accent="Journey"
-            description="From a small programming club to a nationally recognized team — every milestone shaped who we are today."
-          />
-          <div className="mx-auto max-w-5xl">
-            <div className="relative">
-              <div className="from-neon-violet/40 via-neon-emerald/20 absolute top-0 left-1/2 hidden h-full w-px -translate-x-1/2 bg-gradient-to-b to-transparent md:block" />
-              {timeline.map((item, index) => (
-                <TimelineItem
-                  key={index}
-                  item={item}
-                  index={index}
-                  total={timeline.length}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ══════════════════════ CTA ══════════════════════ */}
-      <section className="relative overflow-hidden bg-[#050505] px-6 py-40 lg:px-10">
-        <div className="bg-neon-violet/10 pointer-events-none absolute top-1/2 left-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px]" />
-        <motion.div
-          variants={stagger}
-          initial="hidden"
-          whileInView="visible"
-          viewport={viewport}
-          className="relative z-10 mx-auto max-w-4xl space-y-16 text-center"
-        >
-          <motion.h2
-            variants={fadeUp}
-            className="font-heading text-6xl leading-none font-black tracking-tighter text-white uppercase italic sm:text-7xl md:text-8xl lg:text-9xl"
-          >
-            {settings?.achievements_page_cta_title || (
-              <>
-                WANT TO BE OUR NEXT{' '}
-                <span className="text-neon-violet">CHAMPION?</span>
-              </>
-            )}
-          </motion.h2>
+      <section className="relative overflow-hidden bg-[#05060B] py-20 sm:py-24 lg:py-32">
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+          <div className="grid-overlay absolute inset-0 opacity-20" />
+          <div className="bg-neon-lime/5 absolute top-1/2 left-1/2 h-[300px] w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] sm:h-[500px] sm:blur-[140px]" />
+        </div>
+        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <motion.div
             variants={fadeUp}
-            className="flex flex-col items-center justify-center gap-6 sm:flex-row"
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            className="mx-auto mb-12 max-w-3xl text-center sm:mb-16"
           >
-            <Link
-              href="/join"
-              className="bg-neon-violet font-heading rounded-full px-14 py-5 text-sm font-black tracking-[0.3em] text-white uppercase italic transition-all hover:bg-white hover:text-black"
-            >
-              Join the Elite
-            </Link>
-            <Link
-              href="#achievements"
-              className="font-heading hover:border-neon-emerald hover:text-neon-emerald rounded-full border-2 border-[#3F3F46] px-14 py-5 text-sm font-black tracking-[0.3em] text-zinc-400 uppercase italic transition-all"
-            >
-              Explore Victories
-            </Link>
+            <div className="mb-4 flex items-center justify-center gap-3 sm:mb-5 sm:gap-4">
+              <span className="bg-neon-lime h-px w-8 sm:w-10" />
+              <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px] sm:tracking-[0.5em]">
+                Membership
+              </span>
+              <span className="bg-neon-lime h-px w-8 sm:w-10" />
+            </div>
+            <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl">
+              {settings?.achievements_page_cta_title || (
+                <>
+                  Ready to Write Your <span className="neon-text">Legacy?</span>
+                </>
+              )}
+            </h2>
+            <p className="mx-auto mt-5 max-w-xl px-2 text-sm leading-relaxed font-light text-zinc-400 sm:mt-6 sm:px-0">
+              {settings?.achievements_page_cta_subtitle ||
+                'Join NEUPC and compete alongside the best problem solvers in the country.'}
+            </p>
           </motion.div>
-        </motion.div>
+
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            className="border-neon-lime/20 from-neon-lime/5 to-neon-violet/5 relative overflow-hidden rounded-2xl border bg-gradient-to-br via-transparent p-6 sm:rounded-3xl sm:p-10 md:p-14"
+          >
+            <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-3">
+              <div className="md:col-span-2">
+                <p className="text-neon-lime mb-2 font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:mb-3">
+                  /// Next cohort
+                </p>
+                <h3 className="font-heading text-2xl leading-tight font-black text-white uppercase sm:text-3xl md:text-4xl">
+                  Ready to compete at the highest level?
+                </h3>
+                <p className="mt-3 max-w-xl text-sm leading-relaxed font-light text-zinc-400 sm:mt-4">
+                  Applications are open. Submit once, and our committee reviews
+                  within a week.
+                </p>
+              </div>
+              <div className="flex flex-row flex-wrap items-center gap-3 md:flex-col md:items-end md:gap-3">
+                <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+                  <Link
+                    href="/account"
+                    className="group bg-neon-lime font-heading focus-visible:ring-neon-lime inline-flex items-center gap-2 rounded-full px-6 py-3 text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)] focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px]"
+                  >
+                    Apply now
+                    <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                  </Link>
+                </motion.div>
+                <motion.div whileHover={{ x: 2 }}>
+                  <Link
+                    href="/contact"
+                    className="font-mono text-[10px] tracking-[0.3em] text-zinc-500 uppercase underline-offset-4 transition-colors hover:text-white hover:underline focus-visible:outline-none sm:text-[11px]"
+                  >
+                    Or talk to us →
+                  </Link>
+                </motion.div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
       </section>
 
       <ScrollToTop />
