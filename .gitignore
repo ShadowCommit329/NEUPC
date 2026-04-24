@@ -17,6 +17,8 @@
 /.next/
 /out/
 
+/.claude/
+
 # next.js / tooling caches
 .next/cache/
 .swc/

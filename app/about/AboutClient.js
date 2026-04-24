@@ -1,376 +1,266 @@
-/**
- * @file About page — Professional redesign.
- *
- * Sections: Hero ▸ Introduction ▸ Stats ▸ Mission & Vision ▸ What We Do
- * ▸ Core Values ▸ Org Structure ▸ Impact ▸ Growth & Inclusivity ▸ CTA
- *
- * All content is admin-controllable via DB settings with local fallbacks.
- *
- * @module AboutClient
- */
-
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { useDelayedLoad } from '../_lib/hooks';
-import CTASection from '../_components/ui/CTASection';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { motion } from 'framer-motion';
+import { cn } from '../_lib/utils';
+import CTASection from '../_components/ui/CTASection';
+import {
+  Rocket,
+  Eye,
+  Terminal,
+  GraduationCap,
+  Trophy,
+  Users,
+  Network,
+  Layers,
+  ShieldCheck,
+  Globe,
+  Award,
+  ChevronLeft,
+  ChevronRight,
+  Briefcase,
+  Star,
+  Target,
+  Lightbulb,
+  Code,
+  Heart,
+  Zap,
+} from 'lucide-react';
+
 const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
   ssr: false,
 });
-import PageBackground from '../_components/ui/PageBackground';
-import PageShell from '../_components/ui/PageShell';
-import PageHero from '../_components/ui/PageHero';
-import MotionSection from '../_components/motion/MotionSection';
-import MotionFadeIn from '../_components/motion/MotionFadeIn';
-import MotionStagger from '../_components/motion/MotionStagger';
-import { cn } from '../_lib/utils';
-import {
-  Code,
-  GraduationCap,
-  Users,
-  Trophy,
-  BookOpen,
-  Lightbulb,
-  Award,
-  Briefcase,
-  Globe,
-  Heart,
-  Target,
-  Zap,
-  Star,
-  Rocket,
-  Shield,
-  Cpu,
-  Monitor,
-  Terminal,
-  CheckCircle,
-  ChevronLeft,
-  ChevronRight,
-  ArrowRight,
-  Sparkles,
-  TrendingUp,
-} from 'lucide-react';
 
-/* ========================================================================= */
-/* Icon helpers                                                              */
-/* ========================================================================= */
+/* ─── Motion variants (synced with events / achievements pages) ─────────── */
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24, filter: 'blur(6px)' },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
+  },
+};
+const stagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.06 } },
+};
+const cardReveal = {
+  hidden: { opacity: 0, y: 16 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+  },
+};
+const viewport = { once: true, margin: '-40px 0px' };
+
+/* ─── Icon map ─────────────────────────────────────────────────────────── */
 
 const ICON_MAP = {
-  Code,
+  hub: Network,
+  groups: Users,
+  architecture: Layers,
+  rocket_launch: Rocket,
+  visibility: Eye,
+  terminal: Terminal,
+  school: GraduationCap,
+  emoji_events: Trophy,
+  diversity_3: Users,
+  verified_user: ShieldCheck,
+  public: Globe,
+  work: Briefcase,
+  star: Star,
+  code: Code,
+  target: Target,
+  heart: Heart,
+  zap: Zap,
+  award: Award,
+  network: Network,
+  layers: Layers,
+  shieldcheck: ShieldCheck,
+  Rocket,
+  Eye,
+  Terminal,
   GraduationCap,
-  Users,
   Trophy,
-  BookOpen,
-  Lightbulb,
+  Users,
+  Network,
+  Layers,
+  ShieldCheck,
+  Globe,
   Award,
   Briefcase,
-  Globe,
-  Heart,
-  Target,
-  Zap,
   Star,
-  Rocket,
-  Shield,
-  Cpu,
-  Monitor,
-  Terminal,
-  Sparkles,
-  TrendingUp,
+  Code,
+  Target,
+  Heart,
+  Zap,
 };
 
-/** Return a Lucide **component** from a string name or pass-through a component. */
-function resolveIconComponent(value) {
-  if (!value) return Lightbulb;
-  if (typeof value === 'string') return ICON_MAP[value] || Lightbulb;
-  return value;
-}
-
-/** Return a rendered icon **element** from a string, emoji, or component. */
-function resolveIcon(value, size = 28) {
+function resolveIcon(value, size = 20) {
   if (!value) return <Lightbulb size={size} />;
+  if (typeof value !== 'string') {
+    const C = value;
+    return <C size={size} />;
+  }
   if (/^\p{Emoji}/u.test(value) && !/^[A-Za-z]/.test(value))
-    return <span style={{ fontSize: size * 1.1 }}>{value}</span>;
-  const Comp = ICON_MAP[value];
-  if (Comp) return <Comp size={size} />;
-  return <span style={{ fontSize: size * 1.1 }}>{value}</span>;
+    return (
+      <span style={{ fontSize: size * 1.15, lineHeight: 1 }}>{value}</span>
+    );
+  const C = ICON_MAP[value];
+  return C ? <C size={size} /> : <Lightbulb size={size} />;
 }
 
-/* ========================================================================= */
-/* Default fallback data                                                     */
-/* ========================================================================= */
+/* ─── Fallback data ─────────────────────────────────────────────────────── */
 
-const DEFAULT_MISSION_ITEMS = [
-  'To enhance programming skills among students',
-  'To introduce various branches of Computer Science beyond academic coursework',
-  'To prepare students for competitive programming contests (ICPC, NCPC, etc.)',
-  'To organize workshops, seminars, bootcamps, and internal contests',
-  'To build a strong programming community within the university',
+const DEFAULT_MISSION = [
+  'Enhance programming skills through consistent practice and peer learning',
+  'Introduce branches of CS beyond the academic coursework',
+  'Prepare students for competitive contests — ICPC, NCPC, and beyond',
+  'Organize workshops, bootcamps, and internal hack sessions',
+  'Build a thriving programming community within the university',
 ];
-
-const DEFAULT_ACTIVITY_CARDS = [
-  {
-    emoji: '💻',
-    title: 'Competitive Programming Training',
-    color: 'primary',
-    items: [
-      'Weekly practice sessions',
-      'Algorithm & data structure workshops',
-      'Internal mock contests',
-    ],
-  },
-  {
-    emoji: '🎓',
-    title: 'Academic & Career Development',
-    color: 'secondary',
-    items: [
-      'Career guidance sessions',
-      'Research discussions',
-      'Industry-oriented workshops',
-    ],
-  },
-  {
-    emoji: '🏆',
-    title: 'Contest Participation',
-    color: 'primary',
-    items: [
-      'ICPC preparation',
-      'National programming contests',
-      'Inter-university competitions',
-    ],
-  },
-  {
-    emoji: '👩‍💻',
-    title: 'Women in Engineering (WIE)',
-    color: 'secondary',
-    items: [
-      'Special programming sessions',
-      'Leadership development',
-      'Inclusive community building',
-    ],
-  },
+const DEFAULT_VISION = [
+  'To become a leading university programming community nurturing skilled, ethical, and innovative engineers capable of competing at national and international levels.',
 ];
-
-const CORE_VALUES = [
-  { label: 'Discipline & Professionalism', icon: Shield },
-  { label: 'Ethical Conduct', icon: Heart },
-  { label: 'Zero Tolerance for Discrimination', icon: Users },
-  { label: 'Transparency in Finances', icon: BookOpen },
-  { label: 'Non-political Structure', icon: Globe },
-  { label: 'Non-profit Organization', icon: Award },
+const DEFAULT_PRINCIPLES = [
+  { label: 'Algorithmic Excellence', icon: Network, color: 'lime' },
+  { label: 'Collaborative Growth', icon: Users, color: 'violet' },
+  { label: 'Technical Superiority', icon: Layers, color: 'lime' },
+  { label: 'Ethical Conduct', icon: ShieldCheck, color: 'violet' },
+  { label: 'Radical Transparency', icon: Eye, color: 'lime' },
+  { label: 'Non-profit Mission', icon: Globe, color: 'violet' },
 ];
-
-const ORG_STRUCTURE = [
+const DEFAULT_ORG = [
   {
     title: 'Faculty Advisors',
-    description: 'Lecturers from the Department of CSE',
+    desc: 'Lecturers from the Department of CSE',
     icon: GraduationCap,
-    color: 'primary',
+    color: 'lime',
   },
   {
     title: 'Executive Committee',
-    description: 'President, Vice President, Secretary, and other officers',
+    desc: 'President, VP, Secretary, and officers',
     icon: Briefcase,
-    color: 'secondary',
+    color: 'violet',
   },
   {
     title: 'Mentors',
-    description: 'Senior students and alumni',
+    desc: 'Senior students and alumni guiding newer members',
     icon: Star,
-    color: 'primary',
+    color: 'lime',
   },
   {
     title: 'Members',
-    description: 'Active student participants',
+    desc: 'Active student participants driving the club forward',
     icon: Users,
-    color: 'secondary',
+    color: 'violet',
+  },
+];
+const DEFAULT_WHAT_WE_DO = [
+  {
+    icon: Terminal,
+    title: 'Competitive Programming',
+    desc: 'Weekly sessions, algorithm workshops, and mock contests.',
+  },
+  {
+    icon: GraduationCap,
+    title: 'Academic Development',
+    desc: 'Career guidance, research talks, and industry workshops.',
+  },
+  {
+    icon: Trophy,
+    title: 'Contest Participation',
+    desc: 'ICPC preparation, national and inter-university competitions.',
+  },
+  {
+    icon: Users,
+    title: 'Women in Engineering',
+    desc: 'Focused sessions, leadership programs, inclusive community.',
   },
 ];
 
-const SKILLS = [
-  { icon: Target, label: 'Logical reasoning' },
-  { icon: Cpu, label: 'Structured thinking' },
-  { icon: Monitor, label: 'Analytical problem solving' },
-  { icon: Globe, label: 'Real-world solution building' },
-];
+/* ─── Shared section eyebrow (matches AchievementsClient exactly) ──────── */
 
-const MENTORSHIP_AREAS = [
-  'Competitive programming strategies',
-  'Academic development',
-  'Career direction',
-  'Project building',
-];
-
-/* ========================================================================= */
-/* Shared primitives                                                         */
-/* ========================================================================= */
-
-/** Glass-morphism card wrapper with optional accent colour. */
-function GlassCard({ children, className, accent = 'primary', ...props }) {
+function SectionEyebrow({ tag, title, accent, description, color = 'lime' }) {
   return (
-    <div
-      className={cn(
-        'group relative overflow-hidden rounded-2xl border border-white/6 bg-white/3 backdrop-blur-xl transition-all duration-500',
-        'hover:border-white/12 hover:bg-white/6 hover:shadow-2xl',
-        accent === 'primary'
-          ? 'hover:shadow-primary-500/6'
-          : 'hover:shadow-secondary-500/6',
-        className
-      )}
-      {...props}
+    <motion.div
+      variants={fadeUp}
+      initial="hidden"
+      whileInView="visible"
+      viewport={viewport}
+      className="mb-12 space-y-4 text-center sm:mb-16 sm:space-y-5"
     >
-      {/* top highlight line */}
-      <div
-        className={cn(
-          'absolute inset-x-0 top-0 h-px bg-linear-to-r to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100',
-          accent === 'primary'
-            ? 'from-primary-500/50 via-primary-400/20'
-            : 'from-secondary-500/50 via-secondary-400/20'
-        )}
-      />
-      {children}
-    </div>
-  );
-}
-
-/** Accent-coloured icon container. */
-function IconBox({ icon: Icon, size = 18, accent = 'primary', className }) {
-  return (
-    <div
-      className={cn(
-        'flex shrink-0 items-center justify-center rounded-xl border border-white/10 transition-transform duration-300 group-hover:scale-110',
-        accent === 'primary'
-          ? 'bg-primary-500/10 text-primary-400'
-          : 'bg-secondary-500/10 text-secondary-400',
-        className
-      )}
-    >
-      <Icon size={size} />
-    </div>
-  );
-}
-
-/** Section badge + heading + subtitle. Animation is handled by parent MotionSection. */
-function SectionHeader({
-  badge,
-  title,
-  subtitle,
-  icon: BadgeIcon = Sparkles,
-}) {
-  return (
-    <div className="mb-14 text-center md:mb-20">
-      {badge && (
-        <span className="from-primary-500/20 to-secondary-500/20 text-primary-300 mb-5 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-linear-to-r px-4 py-1.5 text-[11px] font-semibold tracking-[.15em] uppercase backdrop-blur-sm">
-          <BadgeIcon size={12} className="text-primary-400" />
-          {badge}
+      <div className="flex items-center justify-center gap-3">
+        <span
+          className={cn(
+            'h-px w-8 sm:w-10',
+            color === 'lime' ? 'bg-neon-lime' : 'bg-neon-violet'
+          )}
+        />
+        <span
+          className={cn(
+            'font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px] sm:tracking-[0.5em]',
+            color === 'lime' ? 'text-neon-lime' : 'text-neon-violet'
+          )}
+        >
+          {tag}
         </span>
-      )}
-      <h2 className="mb-4 text-3xl font-extrabold tracking-tight text-white md:text-4xl lg:text-5xl">
-        {title}
-      </h2>
-      {subtitle && (
-        <p className="mx-auto max-w-2xl text-base leading-relaxed text-gray-400 md:text-lg">
-          {subtitle}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/* ========================================================================= */
-/* Sub-components                                                            */
-/* ========================================================================= */
-
-function ActivityCard({ card, index }) {
-  const accent = card.color || (index % 2 === 0 ? 'primary' : 'secondary');
-  const iconValue = card.emoji || card.icon || null;
-  const items = Array.isArray(card.items) ? card.items : [];
-  const description =
-    !items.length && typeof card.description === 'string'
-      ? card.description
-      : '';
-
-  return (
-    <GlassCard accent={accent} className="flex h-full flex-col p-6 md:p-7">
-      <div
-        className={cn(
-          'mb-5 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 transition-transform duration-300 group-hover:scale-110',
-          accent === 'primary'
-            ? 'bg-primary-500/10 text-primary-400'
-            : 'bg-secondary-500/10 text-secondary-400'
-        )}
-      >
-        {resolveIcon(iconValue, 22)}
+        <span
+          className={cn(
+            'h-px w-8 sm:w-10',
+            color === 'lime' ? 'bg-neon-lime' : 'bg-neon-violet'
+          )}
+        />
       </div>
-
-      <h3 className="mb-3 text-lg font-bold text-white">{card.title}</h3>
-
+      <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl">
+        {title}
+        {accent && (
+          <>
+            {' '}
+            <span className="neon-text">{accent}</span>
+          </>
+        )}
+      </h2>
       {description && (
-        <p className="mt-auto text-sm leading-relaxed text-gray-400">
+        <p className="mx-auto max-w-sm px-4 text-sm leading-relaxed font-light text-zinc-400 sm:max-w-md sm:px-0">
           {description}
         </p>
       )}
-
-      {items.length > 0 && (
-        <ul className="mt-auto space-y-2.5 text-sm text-gray-400">
-          {items.map((item) => (
-            <li key={item} className="flex items-start gap-2.5">
-              <ChevronRight
-                size={14}
-                className={cn(
-                  'mt-0.5 shrink-0',
-                  accent === 'primary'
-                    ? 'text-primary-500'
-                    : 'text-secondary-500'
-                )}
-              />
-              <span className="leading-relaxed">{item}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </GlassCard>
+    </motion.div>
   );
 }
 
-function StatCard({ stat, index }) {
-  const accent = index % 2 === 0 ? 'primary' : 'secondary';
+/* ─── Icon box (shared) ─────────────────────────────────────────────────── */
+
+function IconBox({ icon, size = 20, accent = 'lime', className }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-white/6 bg-white/3 p-6 text-center backdrop-blur-xl transition-all duration-500 hover:border-white/12 hover:bg-white/6">
-      <div
-        className={cn(
-          'mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 transition-transform duration-300 group-hover:scale-110',
-          accent === 'primary'
-            ? 'bg-primary-500/10 text-primary-400'
-            : 'bg-secondary-500/10 text-secondary-400'
-        )}
-      >
-        {resolveIcon(stat.icon, 20)}
-      </div>
-      <div
-        className={cn(
-          'mb-0.5 text-3xl font-extrabold tracking-tight md:text-4xl',
-          accent === 'primary' ? 'text-primary-400' : 'text-secondary-400'
-        )}
-      >
-        {stat.value}
-      </div>
-      <div className="text-sm font-medium text-gray-400">{stat.label}</div>
+    <div
+      className={cn(
+        'flex shrink-0 items-center justify-center rounded-xl border border-white/8 transition-transform duration-300',
+        accent === 'lime'
+          ? 'bg-neon-lime/10 text-neon-lime'
+          : 'bg-neon-violet/10 text-neon-violet',
+        className
+      )}
+    >
+      {resolveIcon(icon, size)}
     </div>
   );
 }
 
-/* ========================================================================= */
-/* Activity Image Slider                                                     */
-/* ========================================================================= */
+/* ─── Gallery slider ────────────────────────────────────────────────────── */
 
-function ActivityImageSlider({ images = [] }) {
+function GallerySlider({ images }) {
   const [current, setCurrent] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const timerRef = useRef(null);
+  const [paused, setPaused] = useState(false);
+  const timer = useRef(null);
   const total = images.length;
-
   const next = useCallback(() => setCurrent((p) => (p + 1) % total), [total]);
   const prev = useCallback(
     () => setCurrent((p) => (p - 1 + total) % total),
@@ -378,31 +268,33 @@ function ActivityImageSlider({ images = [] }) {
   );
 
   useEffect(() => {
-    if (isPaused || total <= 1) return;
-    timerRef.current = setInterval(next, 4000);
-    return () => clearInterval(timerRef.current);
-  }, [isPaused, next, total]);
+    if (paused || total <= 1) return;
+    timer.current = setInterval(next, 4000);
+    return () => clearInterval(timer.current);
+  }, [paused, next, total]);
 
   if (!total) return null;
 
   return (
     <div
-      className="group/slider relative mt-12 overflow-hidden rounded-2xl border border-white/6 bg-white/3 backdrop-blur-xl"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
+      className="group/slider relative mt-12 overflow-hidden rounded-2xl border border-white/8"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
     >
-      {/* Image area */}
-      <div className="relative aspect-21/9 w-full overflow-hidden sm:aspect-[2.4/1]">
+      <div
+        className="relative w-full overflow-hidden"
+        style={{ aspectRatio: '21/9' }}
+      >
         {images.map((img, i) => (
           <div
             key={img.id || i}
             className={cn(
               'absolute inset-0 transition-all duration-700 ease-in-out',
               i === current
-                ? 'scale-100 opacity-100'
+                ? 'translate-x-0 opacity-100'
                 : i === (current - 1 + total) % total
-                  ? '-translate-x-full scale-95 opacity-0'
-                  : 'translate-x-full scale-95 opacity-0'
+                  ? '-translate-x-full opacity-0'
+                  : 'translate-x-full opacity-0'
             )}
           >
             <Image
@@ -410,56 +302,49 @@ function ActivityImageSlider({ images = [] }) {
               alt={img.caption || `Activity photo ${i + 1}`}
               fill
               className="object-cover"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1100px"
+              sizes="(max-width:768px) 100vw, 80vw"
               priority={i === 0}
             />
-            {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-linear-to-t from-gray-950/80 via-transparent to-gray-950/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#05060b]/70 via-transparent to-transparent" />
+            {img.caption && (
+              <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6">
+                <p className="font-mono text-[10px] tracking-widest text-white/70 uppercase">
+                  {img.caption}
+                </p>
+              </div>
+            )}
           </div>
         ))}
-
-        {/* Caption */}
-        {images[current]?.caption && (
-          <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6">
-            <p className="text-sm font-medium text-white/90 drop-shadow-lg md:text-base">
-              {images[current].caption}
-            </p>
-          </div>
-        )}
-
-        {/* Prev / Next arrows — visible on hover */}
         {total > 1 && (
           <>
             <button
               onClick={prev}
               aria-label="Previous image"
-              className="absolute top-1/2 left-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-gray-950/50 text-white/70 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover/slider:opacity-100 hover:bg-gray-950/70 hover:text-white"
+              className="absolute top-1/2 left-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#05060b]/60 text-white/60 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover/slider:opacity-100 hover:text-white"
             >
               <ChevronLeft size={18} />
             </button>
             <button
               onClick={next}
               aria-label="Next image"
-              className="absolute top-1/2 right-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-gray-950/50 text-white/70 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover/slider:opacity-100 hover:bg-gray-950/70 hover:text-white"
+              className="absolute top-1/2 right-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#05060b]/60 text-white/60 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover/slider:opacity-100 hover:text-white"
             >
               <ChevronRight size={18} />
             </button>
           </>
         )}
       </div>
-
-      {/* Dot indicators */}
       {total > 1 && (
         <div className="flex items-center justify-center gap-2 py-3">
           {images.map((_, i) => (
             <button
               key={i}
               onClick={() => setCurrent(i)}
-              aria-label={`Go to image ${i + 1}`}
+              aria-label={`Go to slide ${i + 1}`}
               className={cn(
                 'h-1.5 rounded-full transition-all duration-300',
                 i === current
-                  ? 'bg-primary-400 w-6'
+                  ? 'bg-neon-lime w-6'
                   : 'w-1.5 bg-white/20 hover:bg-white/40'
               )}
             />
@@ -470,133 +355,63 @@ function ActivityImageSlider({ images = [] }) {
   );
 }
 
-/* ========================================================================= */
-/* Committee Image Slider                                                    */
-/* ========================================================================= */
+/* ─── Committee card ────────────────────────────────────────────────────── */
 
-function CommitteeSlider({ members = [] }) {
-  const [current, setCurrent] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const timerRef = useRef(null);
-  const total = members.length;
-
-  const next = useCallback(() => setCurrent((p) => (p + 1) % total), [total]);
-  const prev = useCallback(
-    () => setCurrent((p) => (p - 1 + total) % total),
-    [total]
-  );
-
-  useEffect(() => {
-    if (isPaused || total <= 1) return;
-    timerRef.current = setInterval(next, 3500);
-    return () => clearInterval(timerRef.current);
-  }, [isPaused, next, total]);
-
-  if (!total) return null;
-
+function CommitteeCard({ member, accent = 'lime' }) {
+  const name = member.users?.full_name || 'Member';
+  const position = member.committee_positions?.title || '';
+  const avatar = member.users?.avatar_url;
   return (
-    <div
-      className="group/slider relative overflow-hidden rounded-2xl border border-white/6 bg-white/3 backdrop-blur-xl"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
+    <motion.div
+      variants={cardReveal}
+      whileHover={{ y: -4 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
     >
-      {/* Image area */}
-      <div className="relative aspect-video w-full overflow-hidden sm:aspect-[2.2/1]">
-        {members.map((m, i) => {
-          const name = m.users?.full_name || 'Member';
-          const position = m.committee_positions?.title || '';
-          const avatar = m.users?.avatar_url;
-
-          return (
-            <div
-              key={m.id || i}
-              className={cn(
-                'absolute inset-0 transition-all duration-700 ease-in-out',
-                i === current
-                  ? 'scale-100 opacity-100'
-                  : i === (current - 1 + total) % total
-                    ? '-translate-x-full scale-95 opacity-0'
-                    : 'translate-x-full scale-95 opacity-0'
-              )}
-            >
-              {avatar ? (
-                <Image
-                  src={avatar}
-                  alt={name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 800px"
-                  priority={i === 0}
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gray-900">
-                  <Users size={64} className="text-gray-700" />
-                </div>
-              )}
-              {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-linear-to-t from-gray-950/90 via-gray-950/30 to-transparent" />
-
-              {/* Name & position badge */}
-              <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6">
-                <p className="text-base font-semibold text-white drop-shadow-lg md:text-lg">
-                  {name}
-                </p>
-                {position && (
-                  <p className="text-primary-300 mt-0.5 text-sm font-medium drop-shadow-lg">
-                    {position}
-                  </p>
-                )}
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Prev / Next arrows */}
-        {total > 1 && (
-          <>
-            <button
-              onClick={prev}
-              aria-label="Previous member"
-              className="absolute top-1/2 left-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-gray-950/50 text-white/70 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover/slider:opacity-100 hover:bg-gray-950/70 hover:text-white"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              onClick={next}
-              aria-label="Next member"
-              className="absolute top-1/2 right-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-gray-950/50 text-white/70 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover/slider:opacity-100 hover:bg-gray-950/70 hover:text-white"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </>
+      <div
+        className={cn(
+          'group holographic-card no-lift overflow-hidden rounded-2xl',
+          accent === 'lime'
+            ? 'hover:border-neon-lime/30'
+            : 'hover:border-neon-violet/30'
         )}
-      </div>
-
-      {/* Dot indicators */}
-      {total > 1 && (
-        <div className="flex items-center justify-center gap-2 py-3">
-          {members.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrent(i)}
-              aria-label={`Go to member ${i + 1}`}
-              className={cn(
-                'h-1.5 rounded-full transition-all duration-300',
-                i === current
-                  ? 'bg-primary-400 w-6'
-                  : 'w-1.5 bg-white/20 hover:bg-white/40'
-              )}
+      >
+        <div className="relative aspect-square overflow-hidden">
+          {avatar ? (
+            <Image
+              src={avatar}
+              alt={name}
+              fill
+              className="object-cover grayscale transition-all duration-700 group-hover:grayscale-0"
+              sizes="(max-width:640px) 50vw, (max-width:1024px) 33vw, 25vw"
             />
-          ))}
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-white/3">
+              <Users size={48} className="text-zinc-700" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#05060b]/90 via-transparent to-transparent" />
         </div>
-      )}
-    </div>
+        <div className="p-5">
+          <h3 className="font-heading text-base font-black text-white">
+            {name}
+          </h3>
+          {position && (
+            <p
+              className={cn(
+                'mt-1 font-mono text-[9px] font-bold tracking-widest uppercase',
+                accent === 'lime' ? 'text-neon-lime' : 'text-neon-violet'
+              )}
+            >
+              {position}
+            </p>
+          )}
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
-/* ========================================================================= */
-/* Main export                                                               */
-/* ========================================================================= */
+/* ─── Main export ───────────────────────────────────────────────────────── */
 
 export default function AboutClient({
   data = {},
@@ -604,9 +419,7 @@ export default function AboutClient({
   galleryImages = [],
   committeeMembers = [],
 }) {
-  const isLoaded = useDelayedLoad();
-
-  /* ── Destructure with defaults ─────────────────────────────────────── */
+  const [missionExpanded, setMissionExpanded] = useState(false);
 
   const {
     description1 = '',
@@ -614,582 +427,652 @@ export default function AboutClient({
     mission = [],
     vision = [],
     whatWeDo = [],
-    stats = [],
     coreValues = [],
     orgStructure = [],
-    skills = [],
-    skillsDescription = '',
     wieTitle = '',
     wieDescription = '',
     mentorshipTitle = '',
     mentorshipDescription = '',
     mentorshipAreas = [],
-    orgFinancialNote = '',
   } = data;
 
-  /* ── Resolved display arrays ───────────────────────────────────────── */
+  const missionItems = mission?.length ? mission : DEFAULT_MISSION;
+  const visionItems = vision?.length
+    ? vision
+    : typeof vision === 'string' && vision
+      ? [vision]
+      : DEFAULT_VISION;
+  const principles = coreValues?.length ? coreValues : DEFAULT_PRINCIPLES;
+  const orgItems = orgStructure?.length ? orgStructure : DEFAULT_ORG;
+  const activities = whatWeDo?.length ? whatWeDo : DEFAULT_WHAT_WE_DO;
 
-  const missionItems =
-    Array.isArray(mission) && mission.length > 0
-      ? mission
-      : DEFAULT_MISSION_ITEMS;
-
-  const activityCards =
-    Array.isArray(whatWeDo) && whatWeDo.length > 0
-      ? whatWeDo
-      : DEFAULT_ACTIVITY_CARDS;
-
-  const visionItems =
-    Array.isArray(vision) && vision.length > 0
-      ? vision
-      : typeof vision === 'string' && vision
-        ? [vision]
-        : [
-            'To become a leading university programming community that nurtures skilled, ethical, and innovative programmers capable of competing at national and international levels.',
-          ];
-
-  const displayStats = Array.isArray(stats) && stats.length > 0 ? stats : [];
-
-  const displayCoreValues =
-    Array.isArray(coreValues) && coreValues.length > 0
-      ? coreValues
-      : CORE_VALUES;
-
-  const displayOrgStructure =
-    Array.isArray(orgStructure) && orgStructure.length > 0
-      ? orgStructure
-      : ORG_STRUCTURE;
-
-  const displaySkills =
-    Array.isArray(skills) && skills.length > 0 ? skills : SKILLS;
-
-  const displaySkillsDescription =
-    skillsDescription ||
-    'Through consistent practice and mentorship, the Programming Club helps students transform from beginners into confident programmers ready for competitive and professional challenges.';
+  const coreExecutive = committeeMembers
+    .filter((m) => m.committee_positions?.rank === 2)
+    .sort(
+      (a, b) =>
+        (a.committee_positions?.display_order ?? 999) -
+        (b.committee_positions?.display_order ?? 999)
+    );
 
   const displayWieTitle = wieTitle || 'Women in Engineering';
-  const displayWieDescription =
+  const displayWieDesc =
     wieDescription ||
-    'The Programming Club runs a dedicated Women in Engineering (WIE) branch to encourage female participation in programming and leadership roles. This branch organizes focused sessions, mentoring programs, and awareness initiatives to create an inclusive technical environment.';
-
-  const displayMentorshipTitle = mentorshipTitle || 'Mentorship & Guidance';
-  const displayMentorshipDescription =
+    'The Programming Club runs a dedicated WIE branch to encourage female participation in programming and leadership, with focused sessions, mentoring programs, and awareness initiatives.';
+  const displayMentorTitle = mentorshipTitle || 'Mentorship & Guidance';
+  const displayMentorDesc =
     mentorshipDescription ||
-    'The club is supported by faculty advisors and experienced mentors who guide students in:';
+    'Supported by faculty advisors and experienced mentors guiding students in:';
+  const displayMentorAreas = mentorshipAreas?.length
+    ? mentorshipAreas
+    : [
+        'Competitive programming strategies',
+        'Academic development',
+        'Career direction',
+        'Project building',
+      ];
 
-  const displayMentorshipAreas =
-    Array.isArray(mentorshipAreas) && mentorshipAreas.length > 0
-      ? mentorshipAreas
-      : MENTORSHIP_AREAS;
-
-  const displayOrgFinancialNote =
-    orgFinancialNote ||
-    'All financial transactions require official signatory approval and are maintained transparently according to club policy.';
-
-  /* ── Render ────────────────────────────────────────────────────────── */
+  const PREVIEW = 3;
+  const shownMission = missionExpanded
+    ? missionItems
+    : missionItems.slice(0, PREVIEW);
 
   return (
-    <PageShell>
+    <div className="overflow-x-clip">
       {/* ================================================================ */}
-      {/* Hero                                                             */}
+      {/* HERO — same pattern as EventsClient                             */}
       {/* ================================================================ */}
-      <PageHero
-        badge={settings?.about_page_badge || 'Student Organization'}
-        badgeIcon="📖"
-        title={settings?.about_page_title || 'About NEUPC'}
-        description={
-          settings?.about_page_subtitle ||
-          'Netrokona University Programming Club'
-        }
-        subtitle={
-          settings?.about_page_department ||
-          'Department of Computer Science and Engineering'
-        }
-      >
-        {/* ── Description Block ── */}
-        {(description1 || description2) && (
-          <div className="mx-auto mt-10 max-w-4xl text-left">
-            <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-white/3 p-6 backdrop-blur-xl sm:p-8 md:p-10">
-              {/* Decorative corner accents */}
-              <div className="from-primary-500/20 pointer-events-none absolute top-0 left-0 h-20 w-20 bg-linear-to-br to-transparent" />
-              <div className="from-secondary-500/20 pointer-events-none absolute right-0 bottom-0 h-20 w-20 bg-linear-to-tl to-transparent" />
-
-              {/* Quote icon */}
-              <div className="from-primary-500/15 to-secondary-500/15 mb-5 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-linear-to-br">
-                <svg
-                  className="text-primary-400 h-5 w-5"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10H0z" />
-                </svg>
-              </div>
-
-              <div className="relative space-y-4">
-                {description1 && (
-                  <p className="text-sm leading-relaxed text-gray-300 md:text-base lg:text-lg">
-                    {description1}
-                  </p>
-                )}
-                {description2 && (
-                  <p className="text-sm leading-relaxed text-gray-400 md:text-base">
-                    {description2}
-                  </p>
-                )}
-              </div>
-
-              {/* Bottom accent line */}
-              <div className="from-primary-500/40 via-secondary-500/30 mt-6 h-px w-full bg-linear-to-r to-transparent" />
-            </div>
-          </div>
-        )}
-      </PageHero>
-
-      {/* ================================================================ */}
-      {/* Stats ribbon                                                     */}
-      {/* ================================================================ */}
-      {displayStats.length > 0 && (
-        <MotionSection as="section" className="relative overflow-hidden py-14 md:py-20">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-5xl">
-              <MotionStagger stagger={0.06} className={cn(
-                  'grid gap-4 sm:grid-cols-2',
-                  displayStats.length >= 4
-                    ? 'lg:grid-cols-4'
-                    : displayStats.length === 3
-                      ? 'lg:grid-cols-3'
-                      : 'lg:grid-cols-2'
-                )}
-              >
-                {displayStats.map((stat, i) => (
-                  <MotionFadeIn key={stat.label || i} direction="up">
-                    <StatCard stat={stat} index={i} />
-                  </MotionFadeIn>
-                ))}
-              </MotionStagger>
-            </div>
-          </div>
-        </MotionSection>
-      )}
-
-      {/* ================================================================ */}
-      {/* Mission & Vision                                                 */}
-      {/* ================================================================ */}
-      <MotionSection as="section" className="relative overflow-hidden pt-12 pb-24 md:pt-16 md:pb-32">
-        <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/1.5 via-transparent to-white/1.5" aria-hidden="true" />
-
-        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-6xl">
-            <SectionHeader
-              badge="Our Purpose"
-              title="Mission & Vision"
-              subtitle="Driving excellence in programming education and community building"
-              icon={Target}
-            />
-
-            <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
-              {/* Mission card */}
-              <GlassCard
-                accent="primary"
-                className="p-8 md:p-10"
-              >
-                {/* Glow blob */}
-                <div className="from-primary-500/15 pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full bg-linear-to-br to-transparent blur-3xl" />
-                <div className="relative">
-                  <div className="mb-7 flex items-center gap-4">
-                    <IconBox
-                      icon={Target}
-                      size={22}
-                      accent="primary"
-                      className="h-12 w-12"
-                    />
-                    <div>
-                      <h3 className="text-xl font-bold text-white md:text-2xl">
-                        Our Mission
-                      </h3>
-                      <div className="from-primary-500 mt-1.5 h-0.5 w-14 rounded-full bg-linear-to-r to-transparent" />
-                    </div>
-                  </div>
-
-                  <ul className="space-y-4">
-                    {missionItems.map((item, i) => {
-                      const text =
-                        typeof item === 'string' ? item : item?.title || '';
-                      return (
-                        <li
-                          key={text || i}
-                          className="flex items-start gap-3 text-gray-300 transition-colors hover:text-white"
-                        >
-                          <CheckCircle
-                            size={16}
-                            className="text-primary-500 mt-0.5 shrink-0"
-                          />
-                          <span className="text-sm leading-relaxed md:text-base">
-                            {text}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              </GlassCard>
-
-              {/* Vision card */}
-              <GlassCard
-                accent="secondary"
-                className="p-8 md:p-10"
-              >
-                <div className="from-secondary-500/15 pointer-events-none absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-linear-to-tr to-transparent blur-3xl" />
-                <div className="relative">
-                  <div className="mb-7 flex items-center gap-4">
-                    <IconBox
-                      icon={Rocket}
-                      size={22}
-                      accent="secondary"
-                      className="h-12 w-12"
-                    />
-                    <div>
-                      <h3 className="text-xl font-bold text-white md:text-2xl">
-                        Our Vision
-                      </h3>
-                      <div className="from-secondary-500 mt-1.5 h-0.5 w-14 rounded-full bg-linear-to-r to-transparent" />
-                    </div>
-                  </div>
-
-                  <ul className="space-y-4">
-                    {visionItems.map((item, i) => {
-                      const text =
-                        typeof item === 'string' ? item : item?.title || '';
-                      return (
-                        <li
-                          key={text || i}
-                          className="flex items-start gap-3 text-gray-300 transition-colors hover:text-white"
-                        >
-                          <ArrowRight
-                            size={16}
-                            className="text-secondary-500 mt-0.5 shrink-0"
-                          />
-                          <span className="text-sm leading-relaxed md:text-base">
-                            {text}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              </GlassCard>
-            </div>
-          </div>
+      <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
+        {/* Ambient background */}
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="grid-overlay absolute inset-0 opacity-25" />
+          <div className="absolute -top-24 left-1/4 h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-neon-violet/12 blur-[120px] sm:h-[500px] sm:w-[500px]" />
+          <div className="absolute top-1/3 right-0 h-[300px] w-[300px] rounded-full bg-neon-lime/8 blur-[120px] sm:h-[400px] sm:w-[400px]" />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#05060b] to-transparent" />
         </div>
-      </MotionSection>
 
-      {/* ================================================================ */}
-      {/* What We Do                                                       */}
-      {/* ================================================================ */}
-      <MotionSection as="section" className="relative overflow-hidden py-24 md:py-32">
-        <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/2 via-transparent to-white/2" aria-hidden="true" />
+        <motion.div
+          variants={stagger}
+          initial="hidden"
+          animate="visible"
+          className="mx-auto w-full max-w-screen-xl"
+        >
+          <div className="max-w-2xl space-y-6 sm:max-w-3xl sm:space-y-8">
 
-        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-6xl">
-            <SectionHeader
-              badge="Activities"
-              title="What We Do"
-              subtitle="Our activities and initiatives throughout the year"
-              icon={Code}
-            />
+            {/* Eyebrow */}
+            <motion.div variants={fadeUp} className="flex items-center gap-3">
+              <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
+              <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-400 uppercase sm:text-[11px]">
+                {settings?.about_page_badge || 'About · NEUPC'}
+              </span>
+            </motion.div>
 
-            <MotionStagger stagger={0.07} className={cn(
-                'grid gap-5 sm:grid-cols-2',
-                activityCards.length >= 4
-                  ? 'lg:grid-cols-4'
-                  : activityCards.length === 3
-                    ? 'lg:grid-cols-3'
-                    : 'lg:grid-cols-2'
-              )}
+            {/* Headline */}
+            <motion.h1
+              variants={fadeUp}
+              className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] font-black leading-none text-white uppercase select-none"
             >
-              {activityCards.map((card, i) => (
-                <MotionFadeIn key={card.title} direction="up">
-                  <ActivityCard card={card} index={i} />
-                </MotionFadeIn>
-              ))}
-            </MotionStagger>
+              About
+              <br />
+              <span className="neon-text">NEUPC</span>
+            </motion.h1>
 
-            {/* Activity image slideshow */}
-            {galleryImages.length > 0 && (
-              <MotionFadeIn direction="up" delay={0.2}>
-                <ActivityImageSlider images={galleryImages} />
-              </MotionFadeIn>
-            )}
+            {/* Description */}
+            <motion.p
+              variants={fadeUp}
+              className="max-w-lg text-sm leading-relaxed text-zinc-400 sm:max-w-xl sm:text-base lg:text-lg"
+            >
+              {description1 ||
+                "NEUPC is the nexus of algorithmic thought and software craftsmanship at Netrokona University — a collective of developers, researchers, and visionaries pushing the boundaries of what's possible."}
+            </motion.p>
+
+            {/* Status pill */}
+            <motion.div
+              variants={fadeUp}
+              className="inline-flex items-center gap-2.5 rounded-full border border-neon-lime/20 bg-neon-lime/8 px-4 py-2 font-mono text-[10px] tracking-[0.18em] text-neon-lime uppercase sm:px-5 sm:py-2.5 sm:text-[11px]"
+            >
+              <span className="pulse-dot bg-neon-lime h-1.5 w-1.5 rounded-full" />
+              {settings?.member_count
+                ? `${settings.member_count} Members & Growing`
+                : 'Est. 2025 · Dept of CSE'}
+            </motion.div>
+
+            {/* Stats row */}
+            <motion.div variants={fadeUp} className="border-t border-white/8 pt-6 sm:pt-8">
+              <div className="grid grid-cols-3 divide-x divide-white/8 sm:grid-cols-3">
+                <div className="pr-3 sm:pr-6 lg:pr-8">
+                  <div className="space-y-0.5">
+                    <div className="font-heading text-xl font-black text-neon-lime sm:text-2xl">
+                      {settings?.member_count || '150+'}
+                    </div>
+                    <div className="font-mono text-[9px] tracking-[0.2em] text-zinc-500 uppercase sm:text-[10px]">
+                      <span className="hidden sm:inline">Members</span>
+                      <span className="sm:hidden">Members</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-3 sm:px-6 lg:px-8">
+                  <div className="space-y-0.5">
+                    <div className="font-heading text-xl font-black text-white sm:text-2xl">
+                      {settings?.contest_count || '40+'}
+                    </div>
+                    <div className="font-mono text-[9px] tracking-[0.2em] text-zinc-500 uppercase sm:text-[10px]">
+                      Contests
+                    </div>
+                  </div>
+                </div>
+                <div className="pl-3 sm:pl-6 lg:pl-8">
+                  <div className="space-y-0.5">
+                    <div className="font-heading text-xl font-black text-white sm:text-2xl">
+                      {settings?.award_count || '12+'}
+                    </div>
+                    <div className="font-mono text-[9px] tracking-[0.2em] text-zinc-500 uppercase sm:text-[10px]">
+                      Awards
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
           </div>
+        </motion.div>
+      </section>
+
+      {/* ================================================================ */}
+      {/* MISSION & VISION                                                 */}
+      {/* ================================================================ */}
+      <section className="relative overflow-hidden py-20 sm:py-28">
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="bg-neon-lime/5 absolute top-0 -left-20 h-[400px] w-[500px] rounded-full blur-[140px]" />
         </div>
-      </MotionSection>
 
-      {/* ================================================================ */}
-      {/* Core Values                                                      */}
-      {/* ================================================================ */}
-      <MotionSection as="section" className="relative overflow-hidden py-24 md:py-32">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-5xl">
-            <SectionHeader
-              badge="Principles"
-              title="Our Core Values"
-              subtitle="The principles that guide our community"
-              icon={Shield}
-            />
+        <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
+          <SectionEyebrow
+            tag="Our Purpose · 001"
+            title="Mission &"
+            accent="Vision"
+            description="What drives us every day and where we're headed as a community"
+            color="violet"
+          />
 
-            <MotionStagger stagger={0.05} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {displayCoreValues.map((value, i) => {
-                const accent = i % 2 === 0 ? 'primary' : 'secondary';
-                const ValueIcon = resolveIconComponent(value.icon);
-                return (
-                  <MotionFadeIn key={value.label} direction="up">
-                    <GlassCard
-                      accent={accent}
-                      className="flex items-center gap-4 p-5"
-                    >
-                      <IconBox
-                        icon={ValueIcon}
-                        accent={accent}
-                        className="h-10 w-10"
-                      />
-                      <span className="text-sm font-medium text-gray-300 group-hover:text-white md:text-base">
-                        {value.label}
-                      </span>
-                    </GlassCard>
-                  </MotionFadeIn>
-                );
-              })}
-            </MotionStagger>
-          </div>
-        </div>
-      </MotionSection>
-
-      {/* ================================================================ */}
-      {/* Organizational Structure                                         */}
-      {/* ================================================================ */}
-      <MotionSection as="section" className="relative overflow-hidden py-24 md:py-32">
-        <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/2 via-transparent to-white/2" aria-hidden="true" />
-
-        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-4xl">
-            <SectionHeader
-              badge="Structure"
-              title="How We're Organized"
-              subtitle="A well-defined hierarchy driving excellence"
-              icon={Briefcase}
-            />
-
-            <div className="relative">
-              {/* Vertical connector */}
-              <div className="from-primary-500/25 via-secondary-500/25 to-primary-500/25 absolute top-0 bottom-0 left-6 w-px bg-linear-to-b md:left-8" aria-hidden="true" />
-
-              <MotionStagger stagger={0.08} className="space-y-4">
-                {displayOrgStructure.map((item, i) => {
-                  const accent =
-                    item.color === 'primary' ? 'primary' : 'secondary';
-                  const OrgIcon = resolveIconComponent(item.icon);
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            className="grid gap-6 lg:grid-cols-2 lg:gap-8"
+          >
+            {/* Mission card */}
+            <motion.div
+              variants={fadeUp}
+              className="holographic-card group rounded-2xl p-7 sm:p-10"
+            >
+              <div className="mb-6 flex items-center gap-3">
+                <IconBox
+                  icon={Rocket}
+                  size={18}
+                  accent="lime"
+                  className="h-10 w-10"
+                />
+                <h3 className="font-heading text-neon-lime text-[11px] font-bold tracking-widest uppercase sm:text-[12px]">
+                  Mission
+                </h3>
+              </div>
+              <ul className="space-y-4">
+                {shownMission.map((item, i) => {
+                  const text =
+                    typeof item === 'string' ? item : item?.title || '';
                   return (
-                    <MotionFadeIn key={item.title} direction="up">
-                    <div
-                      className="group relative flex items-start gap-5 rounded-xl border border-white/6 bg-white/3 py-5 pr-6 pl-14 backdrop-blur-xl transition-all duration-500 hover:border-white/12 hover:bg-white/6 md:gap-6 md:py-6 md:pr-8 md:pl-18"
+                    <li
+                      key={i}
+                      className="flex items-start gap-3 text-zinc-400 transition-colors hover:text-zinc-200"
                     >
-                      {/* Node dot */}
+                      <span className="bg-neon-lime mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full" />
+                      <span className="text-sm leading-relaxed sm:text-base">
+                        {text}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              {missionItems.length > PREVIEW && (
+                <button
+                  type="button"
+                  onClick={() => setMissionExpanded((v) => !v)}
+                  className="font-heading text-neon-lime mt-5 text-[10px] font-bold tracking-widest uppercase transition-opacity hover:opacity-70 sm:text-[11px]"
+                >
+                  {missionExpanded
+                    ? '− Collapse'
+                    : `+ ${missionItems.length - PREVIEW} More`}
+                </button>
+              )}
+            </motion.div>
+
+            {/* Vision card */}
+            <motion.div
+              variants={fadeUp}
+              className="holographic-card group rounded-2xl p-7 sm:p-10"
+            >
+              <div className="mb-6 flex items-center gap-3">
+                <IconBox
+                  icon={Eye}
+                  size={18}
+                  accent="violet"
+                  className="h-10 w-10"
+                />
+                <h3 className="font-heading text-neon-violet text-[11px] font-bold tracking-widest uppercase sm:text-[12px]">
+                  Vision
+                </h3>
+              </div>
+              <ul className="space-y-4">
+                {visionItems.map((item, i) => {
+                  const text =
+                    typeof item === 'string' ? item : item?.title || '';
+                  return (
+                    <li
+                      key={i}
+                      className="flex items-start gap-3 text-zinc-400 transition-colors hover:text-zinc-200"
+                    >
+                      <span className="bg-neon-violet mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full" />
+                      <span className="text-sm leading-relaxed sm:text-base">
+                        {text}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              {description2 && (
+                <p className="mt-6 border-t border-white/5 pt-5 text-sm leading-relaxed text-zinc-500 sm:text-base">
+                  {description2}
+                </p>
+              )}
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ================================================================ */}
+      {/* WHAT WE DO                                                       */}
+      {/* ================================================================ */}
+      <section className="relative overflow-hidden py-20 sm:py-28">
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="bg-neon-violet/5 absolute top-1/4 -right-20 h-[400px] w-[400px] rounded-full blur-[140px]" />
+        </div>
+
+        <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
+          <SectionEyebrow
+            tag="Activities · 002"
+            title="What We"
+            accent="Do"
+            description="Our programs and initiatives throughout the academic year"
+            color="lime"
+          />
+
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            className={cn(
+              'grid gap-5',
+              activities.length >= 4
+                ? 'sm:grid-cols-2 lg:grid-cols-4'
+                : activities.length === 3
+                  ? 'sm:grid-cols-2 lg:grid-cols-3'
+                  : 'sm:grid-cols-2'
+            )}
+          >
+            {activities.map((card, i) => {
+              const accent = i % 2 === 0 ? 'lime' : 'violet';
+              const items = Array.isArray(card.items) ? card.items : [];
+              return (
+                <motion.div
+                  key={card.title || i}
+                  variants={cardReveal}
+                  className="flex"
+                >
+                  <div className="holographic-card group flex h-full w-full flex-col rounded-2xl p-7">
+                    <IconBox
+                      icon={card.icon || card.emoji}
+                      size={22}
+                      accent={accent}
+                      className="mb-5 h-12 w-12"
+                    />
+                    <h3 className="font-heading mb-3 text-lg font-black text-white">
+                      {card.title}
+                    </h3>
+                    {(card.desc || card.description) && (
+                      <p className="text-sm leading-relaxed text-zinc-500">
+                        {card.desc || card.description}
+                      </p>
+                    )}
+                    {items.length > 0 && (
+                      <ul className="mt-4 space-y-2.5">
+                        {items.map((it, j) => (
+                          <li
+                            key={j}
+                            className="flex items-start gap-2.5 text-sm text-zinc-500"
+                          >
+                            <span
+                              className={cn(
+                                'mt-[0.35rem] h-1 w-1 shrink-0 rounded-full',
+                                accent === 'lime'
+                                  ? 'bg-neon-lime'
+                                  : 'bg-neon-violet'
+                              )}
+                            />
+                            {it}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+
+          {galleryImages.length > 0 && (
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+            >
+              <GallerySlider images={galleryImages} />
+            </motion.div>
+          )}
+        </div>
+      </section>
+
+      {/* ================================================================ */}
+      {/* CORE PRINCIPLES                                                  */}
+      {/* ================================================================ */}
+      <section className="relative overflow-hidden py-20 sm:py-28">
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="bg-neon-lime/4 absolute top-1/3 -left-20 h-[400px] w-[500px] rounded-full blur-[160px]" />
+        </div>
+
+        <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
+          <SectionEyebrow
+            tag="Foundation · 003"
+            title="Core"
+            accent="Principles"
+            description="The values that define our community and guide every decision"
+            color="lime"
+          />
+
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            {principles.map((p, i) => {
+              const accent = p.color || (i % 2 === 0 ? 'lime' : 'violet');
+              return (
+                <motion.div key={p.label || i} variants={cardReveal}>
+                  <div className="holographic-card no-lift group flex items-center gap-4 rounded-2xl p-5 sm:p-6">
+                    <IconBox
+                      icon={p.icon}
+                      size={20}
+                      accent={accent}
+                      className="h-11 w-11 shrink-0 group-hover:scale-110"
+                    />
+                    <span className="text-sm font-medium text-zinc-300 transition-colors group-hover:text-white sm:text-base">
+                      {p.label}
+                    </span>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ================================================================ */}
+      {/* ORG STRUCTURE                                                    */}
+      {/* ================================================================ */}
+      <section className="relative overflow-hidden py-20 sm:py-28">
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="bg-neon-violet/5 absolute top-1/3 right-0 h-[400px] w-[400px] rounded-full blur-[140px]" />
+        </div>
+
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+          <SectionEyebrow
+            tag="Structure · 004"
+            title="How We're"
+            accent="Organized"
+            description="A well-defined hierarchy enabling focused, effective leadership"
+            color="violet"
+          />
+
+          <div className="relative">
+            {/* Vertical connector line */}
+            <div
+              className="from-neon-lime/30 via-neon-violet/20 pointer-events-none absolute top-0 bottom-0 w-px bg-gradient-to-b to-transparent"
+              style={{ left: '1.85rem' }}
+              aria-hidden
+            />
+
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              className="space-y-4"
+            >
+              {orgItems.map((item, i) => {
+                const accent = item.color || (i % 2 === 0 ? 'lime' : 'violet');
+                return (
+                  <motion.div key={item.title || i} variants={fadeUp}>
+                    <div className="holographic-card no-lift group relative flex items-center gap-5 rounded-xl py-5 pr-6 pl-16 md:pl-20">
+                      {/* Connector dot */}
                       <div
                         className={cn(
-                          'absolute top-1/2 left-[1.15rem] h-3 w-3 -translate-y-1/2 rounded-full border-2 border-gray-950 shadow-lg transition-transform duration-300 group-hover:scale-150 md:left-[1.6rem]',
-                          accent === 'primary'
-                            ? 'bg-primary-500 shadow-primary-500/30'
-                            : 'bg-secondary-500 shadow-secondary-500/30'
+                          'absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full border-2 border-[#05060b] shadow-lg transition-transform duration-300 group-hover:scale-125',
+                          accent === 'lime'
+                            ? 'bg-neon-lime shadow-[0_0_8px_rgba(182,243,107,0.4)]'
+                            : 'bg-neon-violet shadow-[0_0_8px_rgba(124,92,255,0.4)]'
                         )}
+                        style={{ left: '1.6rem' }}
                       />
 
                       <IconBox
-                        icon={OrgIcon}
+                        icon={item.icon}
+                        size={18}
                         accent={accent}
-                        className="h-10 w-10"
+                        className="h-10 w-10 shrink-0"
                       />
 
-                      <div>
-                        <h4 className="text-base font-semibold text-white md:text-lg">
+                      <div className="min-w-0">
+                        <h4 className="font-heading text-base font-black text-white sm:text-lg">
                           {item.title}
                         </h4>
-                        <p className="mt-0.5 text-sm text-gray-400">
-                          {item.description}
+                        <p className="mt-0.5 text-sm text-zinc-500">
+                          {item.desc || item.description}
                         </p>
                       </div>
                     </div>
-                    </MotionFadeIn>
-                  );
-                })}
-              </MotionStagger>
-
-              {/* Financial note */}
-              {displayOrgFinancialNote && (
-                <div className="border-primary-500/20 bg-primary-500/4 mt-7 rounded-xl border-l-2 p-5">
-                  <p className="text-sm leading-relaxed text-gray-400 italic">
-                    {displayOrgFinancialNote}
-                  </p>
-                </div>
-              )}
-
-              {/* Executive committee image slider */}
-              {committeeMembers.length > 0 && (
-                <div className="mt-10">
-                  <h4 className="mb-4 text-center text-lg font-semibold text-white md:text-xl">
-                    Current Executive Committee
-                  </h4>
-                  <CommitteeSlider members={committeeMembers} />
-                </div>
-              )}
-            </div>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
           </div>
         </div>
-      </MotionSection>
+      </section>
 
       {/* ================================================================ */}
-      {/* Why Programming Matters                                          */}
+      {/* COMMITTEE / CORE ARCHITECTS                                      */}
       {/* ================================================================ */}
-      <MotionSection as="section" className="relative overflow-hidden py-24 md:py-32">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-5xl">
-            <SectionHeader
-              badge="Impact"
-              title="Why Programming Matters"
-              subtitle="More than code — building essential skills for the future"
-              icon={Zap}
+      {coreExecutive.length > 0 && (
+        <section className="relative overflow-hidden py-20 sm:py-28">
+          <div className="pointer-events-none absolute inset-0 -z-10">
+            <div className="bg-neon-violet/6 absolute top-0 left-1/2 h-[500px] w-[700px] -translate-x-1/2 rounded-full blur-[160px]" />
+          </div>
+
+          <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
+            <SectionEyebrow
+              tag="Leadership · 005"
+              title="Core"
+              accent="Architects"
+              description="The people steering NEUPC's mission and culture"
+              color="violet"
             />
 
-            <div>
-              <MotionStagger stagger={0.06} className="grid gap-4 sm:grid-cols-2">
-                {displaySkills.map((skill, i) => {
-                  const accent = i % 2 === 0 ? 'primary' : 'secondary';
-                  const SkillIcon = resolveIconComponent(skill.icon);
-                  return (
-                    <MotionFadeIn key={skill.label} direction="up">
-                      <GlassCard
-                        accent={accent}
-                        className="flex items-center gap-4 p-5"
-                      >
-                        <IconBox
-                          icon={SkillIcon}
-                          size={20}
-                          accent={accent}
-                          className="h-11 w-11"
-                        />
-                        <span className="text-base font-medium text-gray-300 group-hover:text-white">
-                          {skill.label}
-                        </span>
-                      </GlassCard>
-                    </MotionFadeIn>
-                  );
-                })}
-              </MotionStagger>
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              className={cn(
+                'grid gap-5',
+                coreExecutive.length >= 4
+                  ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
+                  : coreExecutive.length === 3
+                    ? 'grid-cols-2 sm:grid-cols-3'
+                    : 'grid-cols-2 sm:grid-cols-2'
+              )}
+            >
+              {coreExecutive.map((m, i) => (
+                <CommitteeCard
+                  key={m.id || i}
+                  member={m}
+                  accent={i % 2 === 0 ? 'lime' : 'violet'}
+                />
+              ))}
+            </motion.div>
 
-              {/* Summary callout */}
-              <MotionFadeIn direction="up" delay={0.15}>
-                <div className="from-primary-500/4 to-secondary-500/4 mt-7 rounded-xl border border-white/6 bg-linear-to-r p-6 md:p-7">
-                  <div className="flex items-start gap-4">
-                    <div className="bg-primary-500/10 mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10">
-                      <TrendingUp size={16} className="text-primary-400" />
-                    </div>
-                    <p className="text-sm leading-relaxed text-gray-300 md:text-base">
-                      {displaySkillsDescription}
-                    </p>
-                  </div>
-                </div>
-              </MotionFadeIn>
-            </div>
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={viewport}
+              className="mt-10 text-center"
+            >
+              <Link
+                href="/committee"
+                className="font-heading hover:border-neon-violet/50 hover:text-neon-violet inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full border border-white/15 px-8 py-3.5 text-[11px] font-bold tracking-widest text-zinc-300 uppercase backdrop-blur-sm transition-all"
+              >
+                View Full Committee
+                <span
+                  aria-hidden
+                  className="transition-transform group-hover:translate-x-1"
+                >
+                  →
+                </span>
+              </Link>
+            </motion.div>
           </div>
-        </div>
-      </MotionSection>
+        </section>
+      )}
 
       {/* ================================================================ */}
-      {/* Growth & Inclusivity                                             */}
+      {/* GROWTH & INCLUSIVITY                                             */}
       {/* ================================================================ */}
-      <MotionSection as="section" className="relative overflow-hidden py-24 md:py-32">
-        <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-white/2 via-transparent to-white/2" aria-hidden="true" />
-
-        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-6xl">
-            <SectionHeader
-              badge="Community"
-              title="Growth & Inclusivity"
-              subtitle="Building leaders through mentorship and diversity"
-              icon={Users}
-            />
-
-            <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
-              {/* WIE card */}
-              <GlassCard
-                accent="secondary"
-                className="p-8 md:p-10"
-              >
-                <div className="from-secondary-500/10 pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full bg-linear-to-br to-transparent blur-3xl" />
-                <div className="relative">
-                  <div className="mb-7 flex items-center gap-4">
-                    <IconBox
-                      icon={Heart}
-                      size={22}
-                      accent="secondary"
-                      className="h-12 w-12"
-                    />
-                    <div>
-                      <h3 className="text-xl font-bold text-white md:text-2xl">
-                        {displayWieTitle}
-                      </h3>
-                      <div className="from-secondary-500 mt-1.5 h-0.5 w-14 rounded-full bg-linear-to-r to-transparent" />
-                    </div>
-                  </div>
-                  <p className="text-sm leading-relaxed text-gray-400 md:text-base">
-                    {displayWieDescription}
-                  </p>
-                </div>
-              </GlassCard>
-
-              {/* Mentorship card */}
-              <GlassCard
-                accent="primary"
-                className="p-8 md:p-10"
-              >
-                <div className="from-primary-500/10 pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-linear-to-tr to-transparent blur-3xl" />
-                <div className="relative">
-                  <div className="mb-7 flex items-center gap-4">
-                    <IconBox
-                      icon={GraduationCap}
-                      size={22}
-                      accent="primary"
-                      className="h-12 w-12"
-                    />
-                    <div>
-                      <h3 className="text-xl font-bold text-white md:text-2xl">
-                        {displayMentorshipTitle}
-                      </h3>
-                      <div className="from-primary-500 mt-1.5 h-0.5 w-14 rounded-full bg-linear-to-r to-transparent" />
-                    </div>
-                  </div>
-                  <p className="mb-5 text-sm text-gray-400 md:text-base">
-                    {displayMentorshipDescription}
-                  </p>
-                  <ul className="space-y-3">
-                    {displayMentorshipAreas.map((area) => (
-                      <li
-                        key={area}
-                        className="flex items-center gap-3 text-gray-300 transition-colors duration-200 hover:text-white"
-                      >
-                        <ChevronRight
-                          size={14}
-                          className="text-primary-500 shrink-0"
-                        />
-                        <span className="text-sm md:text-base">{area}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </GlassCard>
-            </div>
-          </div>
+      <section className="relative overflow-hidden py-20 sm:py-28">
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="bg-neon-lime/4 absolute -right-20 bottom-0 h-[400px] w-[500px] rounded-full blur-[160px]" />
         </div>
-      </MotionSection>
+
+        <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
+          <SectionEyebrow
+            tag="Community · 006"
+            title="Growth &"
+            accent="Inclusivity"
+            description="Building leaders through mentorship, diversity, and shared purpose"
+            color="lime"
+          />
+
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            className="grid gap-6 lg:grid-cols-2 lg:gap-8"
+          >
+            {/* WIE */}
+            <motion.div
+              variants={fadeUp}
+              className="holographic-card group h-full rounded-2xl p-7 sm:p-10"
+            >
+              <div className="mb-6 flex items-center gap-4">
+                <IconBox
+                  icon={Users}
+                  size={22}
+                  accent="lime"
+                  className="h-12 w-12"
+                />
+                <div>
+                  <h3 className="font-heading text-xl font-black text-white sm:text-2xl">
+                    {displayWieTitle}
+                  </h3>
+                  <div className="bg-neon-lime mt-1.5 h-0.5 w-14 rounded-full" />
+                </div>
+              </div>
+              <p className="text-sm leading-relaxed text-zinc-400 sm:text-base">
+                {displayWieDesc}
+              </p>
+            </motion.div>
+
+            {/* Mentorship */}
+            <motion.div
+              variants={fadeUp}
+              className="holographic-card group h-full rounded-2xl p-7 sm:p-10"
+            >
+              <div className="mb-6 flex items-center gap-4">
+                <IconBox
+                  icon={GraduationCap}
+                  size={22}
+                  accent="violet"
+                  className="h-12 w-12"
+                />
+                <div>
+                  <h3 className="font-heading text-xl font-black text-white sm:text-2xl">
+                    {displayMentorTitle}
+                  </h3>
+                  <div className="bg-neon-violet mt-1.5 h-0.5 w-14 rounded-full" />
+                </div>
+              </div>
+              <p className="mb-5 text-sm text-zinc-400 sm:text-base">
+                {displayMentorDesc}
+              </p>
+              <ul className="space-y-3">
+                {displayMentorAreas.map((area, i) => (
+                  <li
+                    key={i}
+                    className="flex items-center gap-3 text-sm text-zinc-400 transition-colors hover:text-zinc-200 sm:text-base"
+                  >
+                    <span className="bg-neon-violet h-1 w-1 shrink-0 rounded-full" />
+                    {area}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ================================================================ */}
+      {/* STATUS PULSE                                                     */}
+      {/* ================================================================ */}
+      <div className="border-y border-white/5 py-8">
+        <div className="flex flex-wrap items-center justify-center gap-5 px-4 text-center">
+          <div className="flex items-center gap-2.5">
+            <span className="relative flex h-2 w-2">
+              <span className="bg-neon-lime absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
+              <span className="pulse-dot bg-neon-lime relative inline-flex h-2 w-2 rounded-full" />
+            </span>
+            <span className="text-neon-lime font-mono text-[9px] font-bold tracking-[0.4em] uppercase">
+              Club Active
+            </span>
+          </div>
+          <div className="h-3 w-px bg-white/10" />
+          <span className="font-mono text-[9px] tracking-[0.5em] text-zinc-600 uppercase">
+            NEUPC · Dept of CSE · Netrokona University
+          </span>
+        </div>
+      </div>
 
       {/* ================================================================ */}
       {/* CTA                                                              */}
@@ -1206,6 +1089,6 @@ export default function AboutClient({
       />
 
       <ScrollToTop />
-    </PageShell>
+    </div>
   );
 }

@@ -1,25 +1,19 @@
-/**
- * @file CTA Section — Reusable call-to-action with Framer Motion animations.
- * @module CTASection
- */
-
 'use client';
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useIsMember } from './UserRoleProvider';
-import { fadeUp, scaleIn, staggerContainer, viewportConfig, buttonHover, buttonTap } from '@/app/_components/motion/motion';
-import { cn } from '@/app/_lib/utils';
 
-/**
- * CTASection — Reusable call-to-action section for page bottoms.
- *
- * @param {string} icon           – Emoji icon
- * @param {string} title          – CTA heading
- * @param {string} description    – CTA body text
- * @param {object} primaryAction  – { label: string, href: string }
- * @param {object} secondaryAction – { label: string, href: string }
- */
+const fadeUp = {
+  hidden: { opacity: 0, y: 20, filter: 'blur(6px)' },
+  visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } },
+};
+const stagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
+};
+const viewport = { once: true, margin: '-40px 0px' };
+
 export default function CTASection({
   icon = '🎯',
   title,
@@ -28,105 +22,91 @@ export default function CTASection({
   secondaryAction = { label: 'Contact Us', href: '/contact' },
 }) {
   const isLoggedIn = useIsMember();
-  const isExternal = primaryAction.href?.startsWith('http');
   const isJoinAction = primaryAction.href === '/join';
-
-  // Hide join-related primary action for logged in users
   const showPrimary = !(isJoinAction && isLoggedIn);
+  const isExternal = primaryAction.href?.startsWith('http');
 
   return (
-    <section className="relative overflow-hidden py-20">
-      <div className="via-primary-500/5 absolute inset-0 bg-linear-to-b from-transparent to-transparent" />
-      <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="relative overflow-hidden py-20 sm:py-28">
+      {/* Ambient */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute left-1/2 top-1/2 h-[500px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-neon-violet/8 blur-[160px]" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+      </div>
+
+      <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
         <motion.div
-          className="mx-auto max-w-3xl text-center"
-          variants={staggerContainer(0.12, 0)}
+          variants={stagger}
           initial="hidden"
           whileInView="visible"
-          viewport={viewportConfig}
+          viewport={viewport}
+          className="mx-auto max-w-2xl text-center"
         >
-          <motion.div
-            variants={scaleIn}
-            className="mb-6 text-5xl"
-          >
+          {/* Icon */}
+          <motion.div variants={fadeUp} className="mb-6 text-5xl" aria-hidden>
             {icon}
           </motion.div>
 
+          {/* Eyebrow line */}
+          <motion.div variants={fadeUp} className="mb-5 flex items-center justify-center gap-3">
+            <span className="h-px w-8 bg-neon-lime sm:w-10" />
+            <span className="font-mono text-[10px] font-bold uppercase tracking-[0.4em] text-neon-lime sm:text-[11px]">
+              Get Involved
+            </span>
+            <span className="h-px w-8 bg-neon-lime sm:w-10" />
+          </motion.div>
+
+          {/* Title */}
           <motion.h2
             variants={fadeUp}
-            className="mb-4 text-3xl font-bold text-white md:text-4xl"
+            className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl"
           >
             {title}
           </motion.h2>
 
-          <motion.p
-            variants={fadeUp}
-            className="mb-8 text-lg text-gray-300"
-          >
-            {description}
-          </motion.p>
+          {/* Description */}
+          {description && (
+            <motion.p
+              variants={fadeUp}
+              className="mx-auto mt-5 max-w-lg text-sm leading-relaxed font-light text-zinc-400 sm:text-base"
+            >
+              {description}
+            </motion.p>
+          )}
 
+          {/* CTAs */}
           <motion.div
             variants={fadeUp}
-            className="flex flex-col justify-center gap-4 sm:flex-row"
+            className="mt-10 flex flex-wrap items-center justify-center gap-4"
           >
-            {showPrimary &&
-              (isExternal ? (
-                <motion.a
+            {showPrimary && (
+              isExternal ? (
+                <a
                   href={primaryAction.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="from-primary-500 to-secondary-500 group inline-flex items-center justify-center gap-2 rounded-lg bg-linear-to-r px-8 py-3 font-semibold text-white shadow-lg"
-                  whileHover={buttonHover}
-                  whileTap={buttonTap}
+                  className="group bg-neon-lime font-heading inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full px-8 py-3.5 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.55)] transition-shadow hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)]"
                 >
                   {primaryAction.label}
-                  <svg
-                    className="h-5 w-5 transition-transform group-hover:translate-x-1"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 8l4 4m0 0l-4 4m4-4H3"
-                    />
-                  </svg>
-                </motion.a>
+                  <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                </a>
               ) : (
-                <motion.div whileHover={buttonHover} whileTap={buttonTap}>
-                  <Link
-                    href={primaryAction.href}
-                    className="from-primary-500 to-secondary-500 group inline-flex items-center justify-center gap-2 rounded-lg bg-linear-to-r px-8 py-3 font-semibold text-white shadow-lg"
-                  >
-                    {primaryAction.label}
-                    <svg
-                      className="h-5 w-5 transition-transform group-hover:translate-x-1"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 8l4 4m0 0l-4 4m4-4H3"
-                      />
-                    </svg>
-                  </Link>
-                </motion.div>
-              ))}
+                <Link
+                  href={primaryAction.href}
+                  className="group bg-neon-lime font-heading inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full px-8 py-3.5 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.55)] transition-shadow hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)]"
+                >
+                  {primaryAction.label}
+                  <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                </Link>
+              )
+            )}
 
-            <motion.div whileHover={buttonHover} whileTap={buttonTap}>
-              <Link
-                href={secondaryAction.href}
-                className="group inline-flex items-center justify-center gap-2 rounded-lg border-2 border-white/20 bg-white/10 px-8 py-3 font-semibold text-white backdrop-blur-sm"
-              >
-                {secondaryAction.label}
-              </Link>
-            </motion.div>
+            <Link
+              href={secondaryAction.href}
+              className="font-heading hover:border-neon-lime/50 hover:text-neon-lime inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full border border-white/15 px-8 py-3.5 text-[11px] font-bold tracking-widest text-zinc-300 uppercase backdrop-blur-sm transition-all"
+            >
+              {secondaryAction.label}
+            </Link>
           </motion.div>
         </motion.div>
       </div>
