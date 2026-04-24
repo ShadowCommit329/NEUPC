@@ -58,14 +58,12 @@ export default function InlinePagination({
   return (
     <div className="mt-10 flex flex-col items-center gap-3 border-t border-white/6 pt-6 sm:flex-row sm:justify-between">
       {/* Results range */}
-      <p className="text-xs text-gray-500 tabular-nums">
+      <p className="font-mono text-[10px] tracking-wider text-zinc-600 uppercase tabular-nums">
         Showing{' '}
-        <span className="font-semibold text-gray-300">
-          {from}–{to}
-        </span>{' '}
-        of <span className="font-semibold text-gray-300">{total}</span>{' '}
-        {itemLabel}
-        {total !== 1 ? 's' : ''}
+        <span className="text-zinc-300">{from}–{to}</span>
+        {' '}of{' '}
+        <span className="text-zinc-300">{total}</span>
+        {' '}{itemLabel}{total !== 1 ? 's' : ''}
       </p>
 
       {/* Page buttons */}
@@ -74,20 +72,10 @@ export default function InlinePagination({
         <button
           disabled={currentPage === 1}
           onClick={() => onPageChange(currentPage - 1)}
-          className="flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/4 px-3 text-sm text-gray-400 transition-all hover:border-white/20 hover:bg-white/8 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+          className="flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/4 px-3 font-mono text-[10px] tracking-wider text-zinc-400 uppercase transition-all hover:border-neon-lime/30 hover:text-neon-lime disabled:pointer-events-none disabled:opacity-30"
         >
-          <svg
-            className="h-3.5 w-3.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           Prev
         </button>
@@ -95,10 +83,7 @@ export default function InlinePagination({
         {/* Page numbers */}
         {pages.map((p, i) =>
           p === '…' ? (
-            <span
-              key={`e-${i}`}
-              className="flex h-9 w-9 items-center justify-center text-sm text-gray-600"
-            >
+            <span key={`e-${i}`} className="flex h-9 w-9 items-center justify-center font-mono text-[10px] text-zinc-600">
               …
             </span>
           ) : (
@@ -106,10 +91,10 @@ export default function InlinePagination({
               key={p}
               onClick={() => onPageChange(p)}
               className={cn(
-                'flex h-9 w-9 items-center justify-center rounded-xl text-sm font-medium transition-all',
+                'flex h-9 w-9 items-center justify-center rounded-xl font-mono text-[10px] font-bold transition-all',
                 p === currentPage
-                  ? 'bg-primary-500 text-white shadow-lg shadow-primary-900/30'
-                  : 'border border-white/10 bg-white/4 text-gray-400 hover:border-white/20 hover:bg-white/8 hover:text-white'
+                  ? 'bg-neon-lime text-black shadow-[0_0_16px_-4px_rgba(182,243,107,0.5)]'
+                  : 'border border-white/10 bg-white/4 text-zinc-400 hover:border-neon-lime/30 hover:text-neon-lime'
               )}
             >
               {p}
@@ -121,21 +106,11 @@ export default function InlinePagination({
         <button
           disabled={currentPage === totalPages}
           onClick={() => onPageChange(currentPage + 1)}
-          className="flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/4 px-3 text-sm text-gray-400 transition-all hover:border-white/20 hover:bg-white/8 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+          className="flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/4 px-3 font-mono text-[10px] tracking-wider text-zinc-400 uppercase transition-all hover:border-neon-lime/30 hover:text-neon-lime disabled:pointer-events-none disabled:opacity-30"
         >
           Next
-          <svg
-            className="h-3.5 w-3.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>
       </div>

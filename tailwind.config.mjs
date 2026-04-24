@@ -65,6 +65,7 @@ const config = {
         'neon-lime': '#B6F36B',
         'neon-violet': '#7C5CFF',
         'neon-cyan': '#5EEAD4',
+        'neon-emerald': '#10B981',
         'deep-void': '#020307',
         surface: '#0C0E16',
         'surface-2': '#12151F',

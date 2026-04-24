@@ -41,7 +41,6 @@ export default async function Page() {
       getPublicJourney(),
     ]);
 
-  // Stats come from about_stats setting (shared with about page)
   const stats = aboutData.stats || [];
 
   return (
