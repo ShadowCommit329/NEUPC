@@ -1079,11 +1079,11 @@
   padding: 0.8rem 1rem 0.8rem 3.25rem;
   background: linear-gradient(
     90deg,
-    rgba(8, 131, 149, 0.14) 0%,
-    rgba(8, 131, 149, 0.04) 55%,
+    rgba(139, 92, 246, 0.12) 0%,
+    rgba(139, 92, 246, 0.04) 55%,
     transparent 100%
   );
-  border-left: 3px solid #088395;
+  border-left: 3px solid #8B5CF6;
   border-radius: 0 0.5rem 0.5rem 0;
   scroll-margin-top: 6rem;
 }
@@ -1097,7 +1097,7 @@
   font-family: 'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
   font-size: 0.6em;
   font-weight: 400;
-  color: rgba(8, 131, 149, 0.65);
+  color: rgba(139, 92, 246, 0.55);
   letter-spacing: -0.04em;
   pointer-events: none;
 }
@@ -1124,7 +1124,7 @@
   font-family: 'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
   font-size: 0.58em;
   font-weight: 400;
-  color: rgba(8, 131, 149, 0.45);
+  color: rgba(139, 92, 246, 0.38);
   letter-spacing: -0.04em;
   pointer-events: none;
 }
@@ -1150,7 +1150,7 @@
   font-family: 'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
   font-size: 0.56em;
   font-weight: 400;
-  color: rgba(8, 131, 149, 0.3);
+  color: rgba(139, 92, 246, 0.22);
   letter-spacing: -0.04em;
   pointer-events: none;
 }
@@ -1170,9 +1170,9 @@
 /* ─── Links ───────────────────────────────────────────────── */
 
 .blog-content a {
-  color: #4db8c8;
+  color: #a78bfa;
   text-decoration: none;
-  border-bottom: 1px solid rgba(77, 184, 200, 0.35);
+  border-bottom: 1px solid rgba(167, 139, 250, 0.35);
   padding-bottom: 1px;
   transition:
     color 0.15s,
@@ -1180,8 +1180,8 @@
 }
 
 .blog-content a:hover {
-  color: #7dd8e6;
-  border-bottom-color: rgba(125, 216, 230, 0.65);
+  color: #c4b5fd;
+  border-bottom-color: rgba(196, 181, 253, 0.65);
 }
 
 /* ─── Unordered lists ─────────────────────────────────────── */
@@ -1206,13 +1206,13 @@
   width: 0.38em;
   height: 0.38em;
   border-radius: 50%;
-  background: #088395;
+  background: #8B5CF6;
 }
 
 /* Nested ul — hollow ring */
 .blog-content ul ul > li::before {
   background: transparent;
-  border: 1.5px solid rgba(8, 131, 149, 0.5);
+  border: 1.5px solid rgba(139, 92, 246, 0.5);
 }
 
 /* Triple nested — dash */
@@ -1222,7 +1222,7 @@
   height: 2px;
   top: 0.73em;
   border: none;
-  background: rgba(8, 131, 149, 0.38);
+  background: rgba(139, 92, 246, 0.38);
 }
 
 /* ─── Ordered lists ────────────────────────────────────────── */
@@ -1251,13 +1251,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(8, 131, 149, 0.1);
-  border: 1px solid rgba(8, 131, 149, 0.22);
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.22);
   border-radius: 0.3rem;
   font-size: 0.67em;
   font-weight: 700;
   font-family: 'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
-  color: #4db8c8;
+  color: #a78bfa;
   line-height: 1;
   letter-spacing: 0;
 }
@@ -1274,9 +1274,9 @@
 
 .blog-content ol ol > li::before {
   content: counter(ol-nested, lower-alpha);
-  background: rgba(8, 131, 149, 0.05);
-  border-color: rgba(8, 131, 149, 0.13);
-  color: rgba(77, 184, 200, 0.65);
+  background: rgba(139, 92, 246, 0.05);
+  border-color: rgba(139, 92, 246, 0.13);
+  color: rgba(167, 139, 250, 0.65);
 }
 
 .blog-content li {
@@ -1288,10 +1288,10 @@
 /* ─── Blockquote ──────────────────────────────────────────── */
 
 .blog-content blockquote {
-  border-left: 3px solid rgba(8, 131, 149, 0.65);
+  border-left: 3px solid rgba(139, 92, 246, 0.65);
   margin: 2.25rem 0;
   padding: 0.6rem 1.25rem;
-  background: rgba(8, 131, 149, 0.05);
+  background: rgba(139, 92, 246, 0.05);
   border-radius: 0 0.5rem 0.5rem 0;
 }
 
@@ -1323,8 +1323,8 @@
 .blog-content thead {
   background: linear-gradient(
     180deg,
-    rgba(8, 131, 149, 0.16) 0%,
-    rgba(8, 131, 149, 0.1) 100%
+    rgba(139, 92, 246, 0.14) 0%,
+    rgba(139, 92, 246, 0.08) 100%
   );
 }
 
@@ -1336,8 +1336,8 @@
   font-family: 'JetBrains Mono', 'Cascadia Code', ui-monospace, monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #4db8c8;
-  border-bottom: 1px solid rgba(8, 131, 149, 0.2);
+  color: #a78bfa;
+  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
 }
 
 .blog-content td {
@@ -1354,7 +1354,7 @@
 }
 
 .blog-content tbody tr:hover {
-  background: rgba(8, 131, 149, 0.06);
+  background: rgba(139, 92, 246, 0.06);
   transition: background 0.15s;
 }
 
@@ -1494,7 +1494,7 @@
 
 .blog-content .code-line:hover {
   background: rgba(255, 255, 255, 0.03);
-  border-left-color: rgba(8, 131, 149, 0.45);
+  border-left-color: rgba(139, 92, 246, 0.45);
 }
 
 .blog-content .code-line:hover::before {
@@ -1590,7 +1590,7 @@
 }
 
 .blog-content pre > code::-webkit-scrollbar-thumb:hover {
-  background: rgba(8, 131, 149, 0.45);
+  background: rgba(139, 92, 246, 0.45);
 }
 
 /* ── Code runner textarea — editor-style ────────────────── */
