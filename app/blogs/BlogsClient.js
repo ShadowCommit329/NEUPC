@@ -404,7 +404,7 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
           variants={stagger}
           initial="hidden"
           animate="visible"
-          className="mx-auto w-full max-w-screen-xl"
+          className="mx-auto w-full max-w-7xl"
         >
           <div className="max-w-2xl space-y-6 sm:max-w-3xl sm:space-y-8">
 
@@ -484,7 +484,7 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
       {/* ── Featured article ──────────────────────────────────────────────── */}
       {featuredBlogs.length > 0 && (
         <section className="px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
-          <div className="mx-auto max-w-screen-xl space-y-7 sm:space-y-9">
+          <div className="mx-auto max-w-7xl space-y-7 sm:space-y-9">
             <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={viewport}>
               <motion.div variants={fadeUp} className="flex items-center gap-3">
                 <span className="bg-neon-lime h-px w-7" />
@@ -510,7 +510,7 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
         className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
         style={{ scrollMarginTop: '80px' }}
       >
-        <div className="mx-auto max-w-screen-xl space-y-8 sm:space-y-10">
+        <div className="mx-auto max-w-7xl space-y-8 sm:space-y-10">
 
           <SectionEyebrow
             tag="Browse Articles"
@@ -679,7 +679,7 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
       {/* ── Tags cloud ───────────────────────────────────────────────────── */}
       {allTags.length > 0 && (
         <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-          <div className="mx-auto max-w-screen-xl">
+          <div className="mx-auto max-w-7xl">
             <SectionEyebrow tag="Explore Topics" title="Popular Tags" />
             <motion.div
               variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
@@ -705,7 +705,7 @@ export default function BlogsClient({ initialBlogs = [], settings = {} }) {
 
       {/* ── CTA ──────────────────────────────────────────────────────────── */}
       <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-        <div className="mx-auto max-w-screen-xl">
+        <div className="mx-auto max-w-7xl">
           <motion.div
             variants={fadeUp}
             initial="hidden"

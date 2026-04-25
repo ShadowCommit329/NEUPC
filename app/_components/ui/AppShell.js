@@ -47,7 +47,7 @@ export default function AppShell({ children }) {
       {/* Loading overlay */}
       <div
         aria-hidden="true"
-        className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-5 bg-[#05060b] transition-opacity duration-500"
+        className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-5 bg-[#05060B] transition-opacity duration-500"
         style={{ opacity: shown ? 0 : 1, pointerEvents: shown ? 'none' : 'all' }}
       >
         <div className="relative h-14 w-14">

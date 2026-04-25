@@ -32,8 +32,8 @@ export default function ScrollHeader({ children }) {
       ref={headerRef}
       className={`fixed top-0 isolate z-[200] w-full border-b backdrop-blur-2xl transition-all duration-300 ${
         scrolled
-          ? 'border-slate-200/80 bg-white/80 py-3 dark:border-white/5 dark:bg-[#05060b]/80'
-          : 'border-slate-200/60 bg-white/85 py-3 sm:py-4 lg:border-transparent lg:bg-transparent lg:py-5 dark:border-white/10 dark:bg-[#05060b]/85'
+          ? 'border-slate-200/80 bg-white/80 py-3 dark:border-white/5 dark:bg-[#05060B]/80'
+          : 'border-slate-200/60 bg-white/85 py-3 sm:py-4 lg:border-transparent lg:bg-transparent lg:py-5 dark:border-white/10 dark:bg-[#05060B]/85'
       }`}
     >
       {children}

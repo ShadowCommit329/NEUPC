@@ -1,12 +1,24 @@
 import crypto from 'crypto';
 
+function getExtensionSecret() {
+  return (
+    process.env.AUTH_SECRET ||
+    process.env.NEXTAUTH_SECRET ||
+    process.env.NEUPC_EXTENSION_TOKEN
+  );
+}
+
 /**
  * Generates a secure, user-specific token for browser extension authentication
  * Format: base64(userId:hash(userId))
  */
 export function generateExtensionToken(userId) {
-  const secret = process.env.NEXTAUTH_SECRET || process.env.NEUPC_EXTENSION_TOKEN;
-  if (!secret) throw new Error('NEXTAUTH_SECRET must be set to generate extension tokens');
+  const secret = getExtensionSecret();
+  if (!secret) {
+    throw new Error(
+      'AUTH_SECRET, NEXTAUTH_SECRET, or NEUPC_EXTENSION_TOKEN must be set to generate extension tokens'
+    );
+  }
   const hash = crypto.createHmac('sha256', secret).update(userId).digest('hex');
   const tokenString = `${userId}:${hash}`;
   return Buffer.from(tokenString).toString('base64');
@@ -26,7 +38,7 @@ export function verifyExtensionToken(token) {
     const [userId, hash] = decoded.split(':');
     if (!userId || !hash) return null;
 
-    const secret = process.env.NEXTAUTH_SECRET || process.env.NEUPC_EXTENSION_TOKEN;
+    const secret = getExtensionSecret();
     if (!secret) return null;
     const expectedHash = crypto
       .createHmac('sha256', secret)

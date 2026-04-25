@@ -176,20 +176,20 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
         'group relative flex w-full items-center justify-between gap-2 rounded-md py-2 pr-2 text-left transition-all duration-150 touch-manipulation active:bg-white/5',
         level === 3 ? 'pl-8' : 'pl-3',
         isActive
-          ? 'text-neon-lime'
+          ? 'text-neon-violet'
           : isPast
             ? 'text-zinc-500 hover:text-zinc-300'
             : 'text-zinc-600 hover:text-zinc-400'
       )}
     >
       {isActive && (
-        <span className="bg-neon-lime absolute inset-y-1 left-0 w-0.5 rounded-full" />
+        <span className="bg-neon-violet absolute inset-y-1 left-0 w-0.5 rounded-full" />
       )}
       <span className="flex items-center gap-2 min-w-0">
         {level === 2 && sectionNum != null && (
           <span className={cn(
             'shrink-0 font-mono text-[9px] font-bold tabular-nums',
-            isActive ? 'text-neon-lime/70' : isPast ? 'text-zinc-600' : 'text-zinc-700'
+            isActive ? 'text-neon-violet/70' : isPast ? 'text-zinc-600' : 'text-zinc-700'
           )}>
             {String(sectionNum).padStart(2, '0')}
           </span>
@@ -197,7 +197,7 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
         {level === 3 && (
           <span className={cn(
             'mt-0.5 h-1 w-1 shrink-0 rounded-full',
-            isActive ? 'bg-neon-lime' : isPast ? 'bg-zinc-600' : 'bg-zinc-700'
+            isActive ? 'bg-neon-violet' : isPast ? 'bg-zinc-600' : 'bg-zinc-700'
           )} />
         )}
         <span className={cn(
@@ -210,7 +210,7 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
       <svg
         className={cn(
           'h-3.5 w-3.5 shrink-0 transition-transform',
-          isActive ? 'text-neon-lime translate-x-0.5' : 'text-zinc-700 hidden group-hover:block group-hover:text-zinc-500'
+          isActive ? 'text-neon-violet translate-x-0.5' : 'text-zinc-700 hidden group-hover:block group-hover:text-zinc-500'
         )}
         fill="none" viewBox="0 0 24 24" stroke="currentColor"
       >
@@ -229,12 +229,12 @@ function RelatedRoadmapCard({ roadmap }) {
   return (
     <Link
       href={`/roadmaps/${roadmap.slug || roadmap.id}`}
-      className="holographic-card group block p-6 rounded-2xl transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-lime hover:border-neon-lime/40"
+      className="holographic-card group block p-6 rounded-2xl transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-violet hover:border-neon-violet/40"
     >
-      <div className="font-mono text-neon-lime text-[9px] mb-4 font-bold tracking-widest uppercase">
+      <div className="font-mono text-neon-violet text-[9px] mb-4 font-bold tracking-widest uppercase">
         {roadmap.category || 'Roadmap'}
       </div>
-      <h4 className="text-xl font-heading font-black text-white group-hover:text-neon-lime transition-colors uppercase tracking-tighter line-clamp-2">
+      <h4 className="text-xl font-heading font-black text-white group-hover:text-neon-violet transition-colors uppercase tracking-tighter line-clamp-2">
         {roadmap.title}
       </h4>
       <div className="mt-6 flex items-center gap-4 text-[9px] font-mono tracking-widest uppercase">
@@ -456,7 +456,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#0A0A0B] text-white">
         <div className="text-center">
-          <div className="mb-6 font-mono text-[10px] tracking-[0.4em] text-neon-lime uppercase">ERROR_404</div>
+          <div className="mb-6 font-mono text-[10px] tracking-[0.4em] text-neon-violet uppercase">ERROR_404</div>
           <h1 className="mb-3 font-heading text-5xl font-black uppercase text-white tracking-tighter">
             Path Not Found
           </h1>
@@ -495,8 +495,8 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
           className="h-full transition-all duration-150"
           style={{
             width: `${scrollProgress}%`,
-            background: 'linear-gradient(to right, #B6F36B, #B6F36Bcc, #10B981)',
-            boxShadow: '0 0 8px rgba(182,243,107,0.6)',
+            background: 'linear-gradient(to right, #8B5CF6, #8B5CF6cc, #10B981)',
+            boxShadow: '0 0 8px rgba(139,92,246,0.6)',
           }}
         />
       </div>
@@ -521,7 +521,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
               </Link>
               <span className="hidden text-zinc-700 sm:block">/</span>
               {meta.category && (
-                <span className="hidden rounded-full border border-neon-lime/25 bg-neon-lime/8 px-3 py-1 font-mono text-[9px] font-bold tracking-widest text-neon-lime uppercase sm:block">
+                <span className="hidden rounded-full border border-neon-violet/25 bg-neon-violet/8 px-3 py-1 font-mono text-[9px] font-bold tracking-widest text-neon-violet uppercase sm:block">
                   {meta.category}
                 </span>
               )}
@@ -535,7 +535,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                   onClick={() => setShowMobileTOC(!showMobileTOC)}
                   aria-label="Open learning path"
                   aria-expanded={showMobileTOC}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all touch-manipulation hover:border-neon-lime/30 hover:text-neon-lime active:bg-white/10 xl:hidden"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all touch-manipulation hover:border-neon-violet/30 hover:text-neon-violet active:bg-white/10 xl:hidden"
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
@@ -553,7 +553,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowMobileTOC(false)} />
           <div className="holographic-card no-lift absolute top-20 right-4 left-4 flex max-h-[calc(100dvh-6rem)] flex-col overflow-hidden rounded-2xl shadow-2xl">
             <div className="flex shrink-0 items-center justify-between border-b border-[#27272A] px-5 py-4">
-              <h3 className="font-mono text-[10px] font-bold tracking-[0.6em] text-neon-lime uppercase">Learning_Path</h3>
+              <h3 className="font-mono text-[10px] font-bold tracking-[0.6em] text-neon-violet uppercase">Learning_Path</h3>
               <button
                 onClick={() => setShowMobileTOC(false)}
                 aria-label="Close learning path"
@@ -597,7 +597,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
         {/* Ambient glows — same as event/blog pages */}
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
           <div className="grid-overlay absolute inset-0 opacity-15" />
-          <div className="bg-neon-lime/8 absolute -top-32 -left-32 h-[500px] w-[500px] rounded-full blur-[140px]" />
+          <div className="bg-neon-violet/8 absolute -top-32 -left-32 h-[500px] w-[500px] rounded-full blur-[140px]" />
           <div className="bg-neon-lime/6 absolute top-1/2 -right-32 h-[400px] w-[400px] rounded-full blur-[140px]" />
         </div>
 
@@ -622,9 +622,9 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
               'inline-flex min-h-[28px] items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:text-[10px]',
               meta.featured
                 ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
-                : 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                : 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
             )}>
-              <span className={cn('h-1.5 w-1.5 rounded-full animate-pulse', meta.featured ? 'bg-neon-lime' : 'bg-neon-lime')} />
+              <span className={cn('h-1.5 w-1.5 rounded-full animate-pulse', meta.featured ? 'bg-neon-lime' : 'bg-neon-violet')} />
               {meta.featured ? 'Featured' : meta.category}
             </span>
             <span className={cn(
@@ -649,7 +649,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
           {/* Author + meta chips — identical pattern to blog/event pages */}
           <div className="mt-6 grid grid-cols-2 gap-2.5 border-t border-white/8 pt-6 sm:mt-8 sm:flex sm:flex-wrap sm:gap-3 sm:pt-8">
             <div className="col-span-2 flex items-center gap-3 rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:col-span-1 sm:px-4">
-              <div className="h-8 w-8 shrink-0 rounded-full border border-neon-lime/30 p-0.5">
+              <div className="h-8 w-8 shrink-0 rounded-full border border-neon-violet/30 p-0.5">
                 {meta.authorAvatar ? (
                   <SafeImg
                     src={driveImageUrl(meta.authorAvatar)}
@@ -658,7 +658,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                     fallback=""
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center rounded-full bg-neon-lime/20 font-heading text-[10px] font-black text-neon-lime">
+                  <div className="flex h-full w-full items-center justify-center rounded-full bg-neon-violet/20 font-heading text-[10px] font-black text-neon-violet">
                     {meta.authorInitials}
                   </div>
                 )}
@@ -723,7 +723,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                     <button
                       onClick={() => setTocCollapsed(false)}
                       title="Expand contents"
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-all hover:bg-neon-lime/10 hover:text-neon-lime"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-all hover:bg-neon-violet/10 hover:text-neon-violet"
                     >
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
@@ -731,7 +731,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                     </button>
                     <div className="relative h-32 w-1 overflow-hidden rounded-full bg-white/8">
                       <div
-                        className="bg-neon-lime absolute top-0 left-0 w-full rounded-full transition-all duration-300"
+                        className="bg-neon-violet absolute top-0 left-0 w-full rounded-full transition-all duration-300"
                         style={{ height: `${scrollProgress}%` }}
                       />
                     </div>
@@ -739,7 +739,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                   </div>
                 ) : (
                   <div
-                    className="overflow-hidden rounded-[2rem] border border-neon-lime/10"
+                    className="overflow-hidden rounded-[2rem] border border-neon-violet/10"
                     style={{
                       background: 'rgba(20, 20, 22, 0.7)',
                       backdropFilter: 'blur(40px)',
@@ -748,10 +748,10 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                   >
                     <div className="flex items-center justify-between border-b border-[#27272A]/50 px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <svg className="h-3.5 w-3.5 text-neon-lime" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="h-3.5 w-3.5 text-neon-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
                         </svg>
-                        <span className="font-mono text-[10px] font-bold tracking-[0.4em] text-neon-lime uppercase">Learning_Path</span>
+                        <span className="font-mono text-[10px] font-bold tracking-[0.4em] text-neon-violet uppercase">Learning_Path</span>
                         <span className="rounded-md bg-white/8 px-1.5 py-0.5 font-mono text-[10px] text-zinc-600 tabular-nums">
                           {tocItems.filter((s) => s.level === 2).length}
                         </span>
@@ -759,7 +759,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                       <button
                         onClick={() => setTocCollapsed(true)}
                         title="Collapse"
-                        className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-600 transition-all hover:bg-white/8 hover:text-neon-lime"
+                        className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-600 transition-all hover:bg-white/8 hover:text-neon-violet"
                       >
                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -782,11 +782,11 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                     <div className="border-t border-[#27272A]/50 px-6 py-4">
                       <div className="mb-1.5 flex items-center justify-between font-mono text-[10px] text-zinc-600">
                         <span>{activeIdx >= 0 ? activeIdx + 1 : 0} / {tableOfContents.length} sections</span>
-                        <span className="font-bold text-neon-lime tabular-nums">{Math.round(scrollProgress)}%</span>
+                        <span className="font-bold text-neon-violet tabular-nums">{Math.round(scrollProgress)}%</span>
                       </div>
                       <div className="h-0.5 overflow-hidden rounded-full bg-white/8">
                         <div
-                          className="bg-neon-lime h-full rounded-full transition-all duration-300"
+                          className="bg-neon-violet h-full rounded-full transition-all duration-300"
                           style={{ width: `${scrollProgress}%` }}
                         />
                       </div>
@@ -823,9 +823,9 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                               title={tip}
                               aria-label={tip}
                               onClick={action}
-                              className="group flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/3 transition-all touch-manipulation hover:border-neon-lime/50 hover:bg-neon-lime/8 active:bg-white/8"
+                              className="group flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/3 transition-all touch-manipulation hover:border-neon-violet/50 hover:bg-neon-violet/8 active:bg-white/8"
                             >
-                              <svg className="h-4 w-4 text-zinc-400 transition-colors group-hover:text-neon-lime" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                              <svg className="h-4 w-4 text-zinc-400 transition-colors group-hover:text-neon-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
                               </svg>
                             </button>
@@ -846,7 +846,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
             <div className="mb-6 space-y-3">
               <div className="holographic-card no-lift flex flex-wrap items-center justify-between gap-2 rounded-xl px-4 py-2.5">
                 <span className="flex items-center gap-2 font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
-                  <svg className="text-neon-lime h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="text-neon-violet h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                   </svg>
                   <span className="hidden sm:inline">Reading_Config</span>
@@ -866,7 +866,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                         onClick={() => setFontSize(fs.id)}
                         className={cn(
                           'rounded px-2 py-0.5 text-xs font-semibold transition-all touch-manipulation',
-                          fontSize === fs.id ? 'bg-neon-lime/20 text-neon-lime' : 'text-zinc-500 hover:text-zinc-300 active:bg-white/5'
+                          fontSize === fs.id ? 'bg-neon-violet/20 text-neon-violet' : 'text-zinc-500 hover:text-zinc-300 active:bg-white/5'
                         )}
                       >
                         {fs.label}
@@ -880,7 +880,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                     className={cn(
                       'flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-all touch-manipulation',
                       showReadingSettings
-                        ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                        ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
                         : 'border-[#3F3F46] bg-white/5 text-zinc-500 hover:text-zinc-300 active:bg-white/10'
                     )}
                   >
@@ -906,7 +906,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                             className={cn(
                               'rounded-lg border px-2 py-2 text-xs transition-all touch-manipulation',
                               fontFamily === f.id
-                                ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                                ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
                                 : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
                             )}
                             style={{ fontFamily: f.style }}
@@ -926,7 +926,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                             className={cn(
                               'flex-1 rounded-lg border py-1.5 text-[11px] font-semibold transition-all touch-manipulation',
                               fontSize === fs.id
-                                ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                                ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
                                 : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
                             )}
                           >
@@ -945,7 +945,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                             className={cn(
                               'flex flex-1 items-center justify-center gap-1.5 rounded-lg border py-2 text-xs transition-all touch-manipulation',
                               textAlign === a.id
-                                ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                                ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
                                 : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
                             )}
                           >
@@ -974,7 +974,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                                 className={cn(
                                   'flex-1 rounded-lg border py-1.5 text-[11px] capitalize transition-all touch-manipulation',
                                   state === k
-                                    ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                                    ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
                                     : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
                                 )}
                               >
@@ -997,7 +997,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                             className={cn(
                               'h-8 w-8 rounded-lg transition-all touch-manipulation',
                               bgTheme === t.id
-                                ? 'ring-neon-lime scale-110 ring-2 ring-offset-1 ring-offset-[#131315]'
+                                ? 'ring-neon-violet scale-110 ring-2 ring-offset-1 ring-offset-[#131315]'
                                 : 'ring-1 ring-white/15 hover:ring-white/30'
                             )}
                             style={{ background: t.bg }}
@@ -1014,7 +1014,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                               className={cn(
                                 'rounded-lg border py-1.5 text-xs capitalize transition-all touch-manipulation',
                                 contentWidth === id
-                                  ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                                  ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
                                   : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
                               )}
                             >
@@ -1029,18 +1029,18 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                         className={cn(
                           'flex w-full items-center justify-between rounded-lg border px-3 py-2 text-xs transition-all touch-manipulation',
                           focusMode
-                            ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                            ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
                             : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
                         )}
                       >
                         <span>Focus mode</span>
                         <div className={cn(
                           'relative flex h-4 w-7 items-center rounded-full border transition-all',
-                          focusMode ? 'border-neon-lime/50 bg-neon-lime/30' : 'border-white/15 bg-white/5'
+                          focusMode ? 'border-neon-violet/50 bg-neon-violet/30' : 'border-white/15 bg-white/5'
                         )}>
                           <div className={cn(
                             'absolute h-3 w-3 rounded-full transition-all duration-200',
-                            focusMode ? 'bg-neon-lime left-3.5' : 'left-0.5 bg-gray-600'
+                            focusMode ? 'bg-neon-violet left-3.5' : 'left-0.5 bg-gray-600'
                           )} />
                         </div>
                       </button>
@@ -1160,7 +1160,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                     'flex h-9 items-center gap-1.5 rounded-full border px-3 font-mono text-[10px] font-bold transition-all',
                     copied
                       ? 'border-neon-lime/40 bg-neon-lime/10 text-neon-lime'
-                      : 'border-[#3F3F46] bg-white/5 text-zinc-400 hover:border-neon-lime/30 hover:text-neon-lime'
+                      : 'border-[#3F3F46] bg-white/5 text-zinc-400 hover:border-neon-violet/30 hover:text-neon-violet'
                   )}
                 >
                   {copied ? (
@@ -1190,7 +1190,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
         <section className="relative overflow-hidden py-12 sm:py-16 lg:py-20">
           <div className="absolute top-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-white/8 to-transparent" />
           <div className="pointer-events-none absolute inset-0 z-0">
-            <div className="bg-neon-lime/5 absolute top-1/4 left-1/2 h-[400px] w-[600px] -translate-x-1/2 rounded-full blur-[150px]" />
+            <div className="bg-neon-violet/5 absolute top-1/4 left-1/2 h-[400px] w-[600px] -translate-x-1/2 rounded-full blur-[150px]" />
           </div>
           <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="mb-7 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
@@ -1205,7 +1205,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
               </div>
               <Link
                 href="/roadmaps"
-                className="w-fit shrink-0 rounded-full border border-white/10 bg-white/4 px-5 py-2.5 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors hover:border-neon-lime/40 hover:text-neon-lime sm:px-7 sm:py-3 sm:text-[11px]"
+                className="w-fit shrink-0 rounded-full border border-white/10 bg-white/4 px-5 py-2.5 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors hover:border-neon-violet/40 hover:text-neon-violet sm:px-7 sm:py-3 sm:text-[11px]"
               >
                 All Roadmaps →
               </Link>
@@ -1228,7 +1228,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
         <div className="absolute top-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-white/8 to-transparent" />
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-neon-lime/15 bg-gradient-to-br from-neon-lime/5 via-transparent to-neon-emerald/5 p-6 sm:rounded-3xl sm:p-10 lg:p-14">
+          <div className="rounded-2xl border border-neon-lime/15 bg-gradient-to-br from-neon-lime/5 via-transparent to-neon-violet/5 p-6 sm:rounded-3xl sm:p-10 lg:p-14">
             <div className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-3 md:items-center">
               <div className="md:col-span-2">
                 <p className="mb-2 font-mono text-[10px] font-bold tracking-[0.4em] text-neon-lime uppercase sm:text-[11px]">

@@ -1,239 +1,338 @@
-/**
- * @file Join page client component.
- * Renders the public account creation page with feature cards and Google OAuth sign-in.
- *
- * @module JoinClient
- */
-
 'use client';
 
 import { signIn } from 'next-auth/react';
 import dynamic from 'next/dynamic';
+import { motion } from 'framer-motion';
+import { Zap, Users, BarChart2, BadgeCheck } from 'lucide-react';
+
 const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
   ssr: false,
 });
-import PageBackground from '../_components/ui/PageBackground';
-import PageShell from '../_components/ui/PageShell';
-import { useDelayedLoad, useScrollReveal } from '../_lib/hooks';
-import { cn } from '../_lib/utils';
 
-/* ──────────────────── Constants ──────────────────── */
+// ─── Motion variants — synced with Events / Achievements / Homepage ──────────
 
-/** @type {{ icon: string, title: string, description: string }[]} */
+const stagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.12, delayChildren: 0.08 } },
+};
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24, filter: 'blur(6px)' },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
+  },
+};
+
+const cardReveal = {
+  hidden: { opacity: 0, y: 16 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+  },
+};
+
+const cardsStagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
+};
+
+const viewport = { once: true, margin: '-40px 0px' };
+
+// ─── Default features ────────────────────────────────────────────────────────
+
 const DEFAULT_FEATURES = [
   {
-    icon: '📅',
+    Icon: Zap,
     title: 'Event Registration',
-    description: 'Register for contests, workshops, and hackathons',
+    description: 'Register for contests, workshops, and hackathons as they go live.',
+    accent: true,
   },
   {
-    icon: '📩',
+    Icon: Users,
     title: 'Smart Notifications',
-    description: 'Get updates on events, blogs, roadmaps, and more',
+    description: 'Get alerts for events, blogs, roadmaps, and club announcements.',
+    accent: false,
   },
   {
-    icon: '📊',
-    title: 'Participation History',
-    description: 'Track your events and download certificates',
+    Icon: BarChart2,
+    title: 'Participation Log',
+    description: 'Track your event history and download participation certificates.',
+    accent: true,
   },
   {
-    icon: '📨',
-    title: 'Membership Application',
-    description: 'Apply to become an official club member',
+    Icon: BadgeCheck,
+    title: 'Membership Apply',
+    description: 'Submit your application to become an official club member.',
+    accent: false,
   },
 ];
 
-/* ──────────────────── Component ──────────────────── */
+const ICON_MAP = { Zap, Users, BarChart2, BadgeCheck };
 
-/**
- * @param {{ features?: { icon: string, title: string, description: string }[] }} props
- */
-export default function JoinClient({
-  features: propFeatures = [],
-  settings = {},
-}) {
-  const handleGoogleSignIn = () =>
-    signIn('google', { callbackUrl: '/account' });
-  const publicFeatures =
-    propFeatures.length > 0 ? propFeatures : DEFAULT_FEATURES;
-  const isLoaded = useDelayedLoad(50);
-  const [featuresRef, featuresVisible] = useScrollReveal({ threshold: 0.1 });
+// ─── Google SVG ───────────────────────────────────────────────────────────────
+
+const GoogleIcon = () => (
+  <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+  </svg>
+);
+
+// ─── Feature card ─────────────────────────────────────────────────────────────
+
+function FeatureCard({ feature }) {
+  const { Icon, title, description, accent } = feature;
+  return (
+    <motion.div
+      variants={cardReveal}
+      whileHover={{ y: -4, scale: 1.02 }}
+      transition={{ type: 'spring', stiffness: 280, damping: 20 }}
+      className="holographic-card group rounded-2xl p-5 sm:p-6"
+    >
+      <motion.div
+        className={`mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl transition-colors sm:mb-5 sm:h-11 sm:w-11 ${
+          accent
+            ? 'bg-neon-lime/10 text-neon-lime group-hover:bg-neon-lime group-hover:text-black'
+            : 'bg-neon-violet/10 text-neon-violet group-hover:bg-neon-violet group-hover:text-white'
+        }`}
+        whileHover={{ rotate: 6 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+      >
+        <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+      </motion.div>
+      <h3 className="font-heading mb-2 text-base font-bold text-white sm:text-lg">
+        {title}
+      </h3>
+      <p className="text-sm leading-relaxed font-light text-zinc-400">
+        {description}
+      </p>
+    </motion.div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+export default function JoinClient({ features: propFeatures = [], settings = {} }) {
+  const handleGoogleSignIn = () => signIn('google', { callbackUrl: '/account' });
+
+  const features =
+    propFeatures.length > 0
+      ? propFeatures.map((f, i) => ({
+          Icon: ICON_MAP[DEFAULT_FEATURES[i]?.Icon?.displayName] || DEFAULT_FEATURES[i]?.Icon || Zap,
+          title: f.title,
+          description: f.description,
+          accent: i % 2 === 0,
+        }))
+      : DEFAULT_FEATURES;
 
   return (
-    <PageShell>
-      <PageBackground variant="fixed" />
+    <div className="overflow-x-clip">
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden px-4 py-20 sm:px-6 sm:py-24 md:py-28 lg:px-8 lg:py-32">
-        <div className="relative container mx-auto">
-          <div className="mx-auto max-w-4xl text-center">
-            <div
-              style={{ transitionDelay: '0ms' }}
-              className={cn(
-                'mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white shadow-lg backdrop-blur-md transition-all duration-700 sm:mb-8',
-                isLoaded
-                  ? 'translate-y-0 opacity-100'
-                  : '-translate-y-4 opacity-0'
-              )}
+      {/* ── Hero ──────────────────────────────────────────────────────────── */}
+      <section className="relative isolate flex min-h-[80vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[85vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
+
+        {/* Ambient background — matches Events page exactly */}
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="grid-overlay absolute inset-0 opacity-25" />
+          <div className="absolute -top-24 left-1/4 h-100 w-100 -translate-x-1/2 rounded-full bg-neon-violet/12 blur-[120px] sm:h-125 sm:w-125" />
+          <div className="absolute top-1/3 right-0 h-75 w-75 rounded-full bg-neon-lime/8 blur-[120px] sm:h-100 sm:w-100" />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-[#05060b] to-transparent" />
+        </div>
+
+        <motion.div
+          variants={stagger}
+          initial="hidden"
+          animate="visible"
+          className="mx-auto w-full max-w-7xl"
+        >
+          <div className="max-w-2xl space-y-6 sm:max-w-3xl sm:space-y-8">
+
+            {/* Eyebrow */}
+            <motion.div variants={fadeUp} className="flex items-center gap-3">
+              <span className="pulse-dot bg-neon-lime inline-block h-1.5 w-1.5 rounded-full" />
+              <span className="font-mono text-[10px] tracking-[0.3em] text-zinc-400 uppercase sm:text-[11px]">
+                {settings?.join_page_badge || 'Join · NEUPC'}
+              </span>
+            </motion.div>
+
+            {/* Kinetic headline */}
+            <motion.h1
+              variants={fadeUp}
+              className="kinetic-headline font-heading text-[clamp(2.8rem,11vw,7rem)] font-black leading-none text-white uppercase select-none"
             >
-              <span className="text-base">👤</span>
-              <span>{settings?.join_page_badge || 'Public Account'}</span>
-            </div>
-            <h1
-              style={{ transitionDelay: '150ms' }}
-              className={cn(
-                'from-primary-300 to-secondary-300 mb-6 bg-linear-to-r via-white bg-clip-text text-4xl leading-tight font-extrabold tracking-tight text-transparent transition-all duration-700 sm:mb-8 sm:text-5xl md:text-6xl lg:text-7xl',
-                isLoaded
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-4 opacity-0'
+              {settings?.join_page_title ? (
+                settings.join_page_title
+              ) : (
+                <>
+                  Create Your
+                  <br />
+                  <span className="neon-text">Account.</span>
+                </>
               )}
-            >
-              {settings?.join_page_title || 'Create Your Public Account'}
-            </h1>
-            <p
-              style={{ transitionDelay: '300ms' }}
-              className={cn(
-                'mx-auto mb-10 max-w-2xl text-base leading-relaxed text-gray-200 transition-all duration-700 sm:mb-12 sm:text-lg md:text-xl',
-                isLoaded
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-4 opacity-0'
-              )}
+            </motion.h1>
+
+            {/* Description */}
+            <motion.p
+              variants={fadeUp}
+              className="max-w-lg text-sm leading-relaxed text-zinc-400 sm:max-w-xl sm:text-base lg:text-lg"
             >
               {settings?.join_page_description ||
-                'Stay updated with events, contests, and workshops at Netrokona University Programming Club'}
-            </p>
-            <div
-              style={{ transitionDelay: '450ms' }}
-              className={cn(
-                'flex flex-col justify-center gap-4 transition-all duration-700 sm:gap-5',
-                isLoaded
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-4 opacity-0'
-              )}
+                'Stay updated with events, contests, and workshops at Netrokona University Programming Club.'}
+            </motion.p>
+
+            {/* Status pill */}
+            <motion.div
+              variants={fadeUp}
+              className="inline-flex items-center gap-2.5 rounded-full border border-neon-lime/20 bg-neon-lime/8 px-4 py-2 font-mono text-[10px] tracking-[0.18em] text-neon-lime uppercase sm:px-5 sm:py-2.5 sm:text-[11px]"
             >
-              <button
+              <span className="pulse-dot bg-neon-lime h-1.5 w-1.5 rounded-full" />
+              Free · Open to All Students
+            </motion.div>
+
+            {/* CTA */}
+            <motion.div variants={fadeUp}>
+              <motion.button
                 onClick={handleGoogleSignIn}
-                className="from-primary-600 via-primary-500 to-secondary-500 group hover:shadow-primary-500/50 inline-flex items-center justify-center gap-3 rounded-2xl bg-linear-to-r px-8 py-4 text-base font-bold text-white shadow-2xl transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:shadow-2xl active:scale-95 sm:px-10 sm:py-5 sm:text-lg"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="group bg-neon-lime font-heading inline-flex min-h-11 touch-manipulation items-center gap-2.5 rounded-full px-8 py-3.5 text-[11px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)]"
               >
-                <svg
-                  className="h-6 w-6 sm:h-7 sm:w-7"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fill="#4285F4"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
-                  />
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    fill="#EA4335"
-                  />
-                </svg>
+                <GoogleIcon />
                 <span>Continue with Google</span>
-              </button>
-            </div>
+                <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+              </motion.button>
+            </motion.div>
+
           </div>
+        </motion.div>
+      </section>
+
+      {/* ── What you get ──────────────────────────────────────────────────── */}
+      <section className="relative py-20 sm:py-24 lg:py-32">
+
+        {/* Ambient */}
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+          <div className="grid-overlay absolute inset-0 opacity-20" />
+          <div className="bg-neon-lime/5 absolute top-1/2 left-1/2 h-75 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] sm:h-100" />
+        </div>
+
+        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
+          {/* Section eyebrow */}
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            className="mb-12 space-y-4 sm:mb-16"
+          >
+            <div className="flex items-center gap-3">
+              <span className="bg-neon-lime h-px w-8 sm:w-10" />
+              <span className="text-neon-lime font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px] sm:tracking-[0.5em]">
+                Public Account
+              </span>
+              <span className="bg-neon-lime h-px w-8 sm:w-10" />
+            </div>
+            <h2 className="kinetic-headline font-heading text-4xl font-black text-white uppercase sm:text-5xl md:text-6xl">
+              What You <span className="neon-text">Unlock.</span>
+            </h2>
+            <p className="max-w-xl text-sm leading-relaxed font-light text-zinc-400 sm:text-base">
+              Get started with a free public account. Upgrade to full membership anytime for deeper access.
+            </p>
+          </motion.div>
+
+          {/* Feature cards */}
+          <motion.div
+            variants={cardsStagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4"
+          >
+            {features.map((feature, i) => (
+              <FeatureCard key={feature.title || i} feature={feature} />
+            ))}
+          </motion.div>
+
+          {/* Important note — matches existing amber style */}
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            className="mt-8 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5 sm:mt-10 sm:p-6"
+          >
+            <div className="flex items-start gap-4">
+              <span className="mt-0.5 shrink-0 text-xl text-amber-400">ℹ</span>
+              <div>
+                <h3 className="font-heading mb-1.5 text-sm font-bold text-amber-300 uppercase tracking-wide">
+                  Important Note
+                </h3>
+                <p className="text-sm leading-relaxed text-zinc-400">
+                  Public accounts do not have access to internal member resources, weekly problem sets,
+                  or committee discussions. Upgrade to full membership for unrestricted access.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
         </div>
       </section>
 
-      {/* What is a Public Account Section */}
-      <section
-        ref={featuresRef}
-        className="relative bg-linear-to-b from-gray-900/60 via-gray-900/40 to-gray-900/60 py-16 sm:py-20 md:py-24 lg:py-32"
-      >
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-12 text-center sm:mb-16 md:mb-20">
-              <h2
-                className={cn(
-                  'mb-4 text-3xl leading-tight font-extrabold tracking-tight text-white transition-all duration-700 sm:mb-6 sm:text-4xl md:text-5xl lg:text-6xl',
-                  featuresVisible
-                    ? 'translate-y-0 opacity-100'
-                    : 'translate-y-6 opacity-0'
-                )}
-              >
-                What is a Public Account?
-              </h2>
-              <p
-                className={cn(
-                  'mx-auto max-w-2xl text-base leading-relaxed text-gray-300 transition-all delay-150 duration-700 sm:text-lg md:text-xl',
-                  featuresVisible
-                    ? 'translate-y-0 opacity-100'
-                    : 'translate-y-4 opacity-0'
-                )}
-              >
-                Get started with limited access and upgrade anytime
-              </p>
-            </div>
+      {/* ── Final CTA block — matches Join section on homepage ────────────── */}
+      <section className="relative py-20 sm:py-24 lg:py-28">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewport}
+            className="border-neon-lime/20 from-neon-lime/5 to-neon-violet/5 relative overflow-hidden rounded-2xl border bg-linear-to-br via-transparent p-6 sm:rounded-3xl sm:p-10 md:p-14 lg:p-16"
+          >
+            <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-3">
 
-            <div className="grid gap-5 sm:grid-cols-2 sm:gap-6 md:gap-8 lg:grid-cols-4">
-              {publicFeatures.map((feature, index) => (
-                <div
-                  key={index}
-                  style={{
-                    transitionDelay: featuresVisible
-                      ? `${300 + index * 100}ms`
-                      : '0ms',
-                  }}
-                  className={cn(
-                    'group hover:border-primary-500/40 hover:shadow-primary-500/20 relative overflow-hidden rounded-2xl border border-white/20 bg-white/5 p-6 backdrop-blur-xl transition-all duration-500 hover:-translate-y-1 hover:scale-[1.03] hover:bg-white/10 hover:shadow-2xl sm:p-7',
-                    featuresVisible
-                      ? 'translate-y-0 scale-100 opacity-100'
-                      : 'translate-y-6 scale-95 opacity-0'
-                  )}
-                >
-                  <div className="from-primary-500/20 to-secondary-500/20 absolute -top-8 -right-8 h-40 w-40 rounded-full bg-linear-to-br opacity-0 blur-3xl transition-all duration-500 group-hover:opacity-100"></div>
-                  <div className="relative">
-                    <div className="from-primary-500/30 to-secondary-500/30 mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br text-3xl shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-xl sm:text-4xl">
-                      {feature.icon}
-                    </div>
-                    <h3 className="mb-3 text-lg leading-snug font-bold text-white sm:text-xl">
-                      {feature.title}
-                    </h3>
-                    <p className="text-sm leading-relaxed text-gray-300 sm:text-base">
-                      {feature.description}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div
-              style={{ transitionDelay: featuresVisible ? '700ms' : '0ms' }}
-              className={cn(
-                'mt-10 rounded-2xl border-2 border-amber-500/30 bg-linear-to-br from-amber-500/10 to-orange-500/10 p-6 shadow-lg backdrop-blur-xl transition-all duration-700 sm:mt-12 sm:p-8 md:mt-16',
-                featuresVisible
-                  ? 'translate-y-0 opacity-100'
-                  : 'translate-y-6 opacity-0'
-              )}
-            >
-              <div className="flex items-start gap-4 sm:gap-5">
-                <div className="shrink-0 text-3xl sm:text-4xl">ℹ️</div>
-                <div>
-                  <h3 className="mb-3 text-lg font-bold text-amber-200 sm:text-xl">
-                    Important Note
-                  </h3>
-                  <p className="text-sm leading-relaxed text-gray-200 sm:text-base">
-                    Public accounts do not have access to internal member
-                    resources, weekly problem sets, or committee discussions.
-                    Upgrade to membership for full access.
-                  </p>
-                </div>
+              {/* Text */}
+              <div className="md:col-span-2">
+                <p className="text-neon-lime mb-2 font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:mb-3">
+                  /// Get started
+                </p>
+                <h3 className="font-heading text-2xl leading-tight font-black text-white uppercase sm:text-3xl md:text-4xl">
+                  Ready to join<br className="hidden sm:block" /> the community?
+                </h3>
+                <p className="mt-3 max-w-xl text-sm leading-relaxed font-light text-zinc-400 sm:mt-4">
+                  Sign in with your Google account to register, track events, and start your journey with NEUPC.
+                </p>
               </div>
+
+              {/* Buttons */}
+              <div className="flex flex-row flex-wrap items-center gap-3 md:flex-col md:items-end md:gap-3">
+                <motion.button
+                  onClick={handleGoogleSignIn}
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="group bg-neon-lime font-heading focus-visible:ring-neon-lime inline-flex items-center gap-2 rounded-full px-6 py-3 text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_40px_-10px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_60px_-5px_rgba(182,243,107,0.8)] focus-visible:ring-2 focus-visible:outline-none sm:px-8 sm:py-3.5 sm:text-[11px]"
+                >
+                  <GoogleIcon />
+                  Sign in now
+                  <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                </motion.button>
+                <p className="font-mono text-[10px] tracking-[0.3em] text-zinc-600 uppercase">
+                  Free · No credit card
+                </p>
+              </div>
+
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       <ScrollToTop />
-    </PageShell>
+    </div>
   );
 }

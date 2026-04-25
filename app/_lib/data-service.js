@@ -3539,7 +3539,7 @@ export async function getPositionsByCategory(category) {
 // Get current active committee members with full profiles.
 export async function getCurrentCommittee() {
   const selectWithProfiles =
-    '*, users!committee_members_user_id_fkey(id, full_name, email, phone, avatar_url, member_profiles!member_profiles_user_id_fkey(academic_session, department, updated_at), advisor_profiles!teacher_profiles_user_id_fkey(position, department)), committee_positions(id, title, category, rank, display_order, responsibilities)';
+    '*, users!committee_members_user_id_fkey(id, full_name, email, phone, avatar_url, member_profiles!member_profiles_user_id_fkey(academic_session, department, bio, github, linkedin, updated_at), advisor_profiles!teacher_profiles_user_id_fkey(position, department)), committee_positions(id, title, category, rank, display_order, responsibilities)';
   const selectWithoutProfiles =
     '*, users!committee_members_user_id_fkey(id, full_name, email, phone, avatar_url), committee_positions(id, title, category, rank, display_order, responsibilities)';
 

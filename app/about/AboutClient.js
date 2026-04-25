@@ -320,14 +320,14 @@ function GallerySlider({ images }) {
             <button
               onClick={prev}
               aria-label="Previous image"
-              className="absolute top-1/2 left-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#05060b]/60 text-white/60 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover/slider:opacity-100 hover:text-white"
+              className="absolute top-1/2 left-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#05060B]/60 text-white/60 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover/slider:opacity-100 hover:text-white"
             >
               <ChevronLeft size={18} />
             </button>
             <button
               onClick={next}
               aria-label="Next image"
-              className="absolute top-1/2 right-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#05060b]/60 text-white/60 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover/slider:opacity-100 hover:text-white"
+              className="absolute top-1/2 right-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-[#05060B]/60 text-white/60 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover/slider:opacity-100 hover:text-white"
             >
               <ChevronRight size={18} />
             </button>
@@ -494,7 +494,7 @@ export default function AboutClient({
           variants={stagger}
           initial="hidden"
           animate="visible"
-          className="mx-auto w-full max-w-screen-xl"
+          className="mx-auto w-full max-w-7xl"
         >
           <div className="max-w-2xl space-y-6 sm:max-w-3xl sm:space-y-8">
 
@@ -585,7 +585,7 @@ export default function AboutClient({
           <div className="bg-neon-lime/5 absolute top-0 -left-20 h-[400px] w-[500px] rounded-full blur-[140px]" />
         </div>
 
-        <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionEyebrow
             tag="Our Purpose · 001"
             title="Mission &"
@@ -698,7 +698,7 @@ export default function AboutClient({
           <div className="bg-neon-violet/5 absolute top-1/4 -right-20 h-[400px] w-[400px] rounded-full blur-[140px]" />
         </div>
 
-        <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionEyebrow
             tag="Activities · 002"
             title="What We"
@@ -792,7 +792,7 @@ export default function AboutClient({
           <div className="bg-neon-lime/4 absolute top-1/3 -left-20 h-[400px] w-[500px] rounded-full blur-[160px]" />
         </div>
 
-        <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionEyebrow
             tag="Foundation · 003"
             title="Core"
@@ -911,7 +911,7 @@ export default function AboutClient({
             <div className="bg-neon-violet/6 absolute top-0 left-1/2 h-[500px] w-[700px] -translate-x-1/2 rounded-full blur-[160px]" />
           </div>
 
-          <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <SectionEyebrow
               tag="Leadership · 005"
               title="Core"
@@ -975,7 +975,7 @@ export default function AboutClient({
           <div className="bg-neon-lime/4 absolute -right-20 bottom-0 h-[400px] w-[500px] rounded-full blur-[160px]" />
         </div>
 
-        <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionEyebrow
             tag="Community · 006"
             title="Growth &"

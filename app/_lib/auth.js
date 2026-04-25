@@ -43,6 +43,46 @@ async function withTimeout(
 
 import { authConfig } from './auth.config';
 
+function getAuthSecrets() {
+  const rotatedSecrets = Object.entries(process.env)
+    .filter(
+      ([key, value]) =>
+        key.startsWith('AUTH_SECRET_') &&
+        typeof value === 'string' &&
+        value.trim().length > 0
+    )
+    .sort(([firstKey], [secondKey]) => {
+      const firstIndex = Number(firstKey.replace('AUTH_SECRET_', ''));
+      const secondIndex = Number(secondKey.replace('AUTH_SECRET_', ''));
+      return firstIndex - secondIndex;
+    })
+    .map(([, value]) => value.trim());
+
+  const resolvedSecrets = [
+    process.env.AUTH_SECRET,
+    process.env.NEXTAUTH_SECRET,
+    ...rotatedSecrets,
+  ]
+    .map((secret) => secret?.trim())
+    .filter(Boolean);
+
+  return [...new Set(resolvedSecrets)];
+}
+
+const authSecrets = getAuthSecrets();
+const authSecret = authSecrets.length <= 1 ? authSecrets[0] : authSecrets;
+
+if (
+  process.env.NODE_ENV !== 'production' &&
+  process.env.AUTH_SECRET &&
+  process.env.NEXTAUTH_SECRET &&
+  process.env.AUTH_SECRET !== process.env.NEXTAUTH_SECRET
+) {
+  console.warn(
+    '[auth] AUTH_SECRET and NEXTAUTH_SECRET differ; existing sessions may fail to decrypt. Prefer a single value or keep both in secret rotation.'
+  );
+}
+
 export const {
   auth,
   signIn,
@@ -50,6 +90,21 @@ export const {
   handlers: { GET, POST },
 } = NextAuth({
   ...authConfig,
+  ...(authSecret ? { secret: authSecret } : {}),
+  logger: {
+    error(error) {
+      // Stale session cookies (e.g. signed with a previous AUTH_SECRET)
+      // surface as JWTSessionError on every request. Auth.js already
+      // returns a null session in that case, so treat it as a logged-out
+      // user instead of spamming the console.
+      if (error?.name === 'JWTSessionError') return;
+      console.error(error);
+    },
+    warn(code) {
+      console.warn(code);
+    },
+    debug() {},
+  },
   callbacks: {
     ...authConfig.callbacks,
     async signIn({ user, account }) {
