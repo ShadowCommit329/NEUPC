@@ -86,6 +86,28 @@ function getCodeLanguageLabel(language) {
   return LANGUAGE_LABELS[normalized] || normalized || 'Code';
 }
 
+// Inject slug IDs into h2/h3 that lack them so the TOC can find them.
+function injectHeadingIds(htmlString) {
+  if (!htmlString) return htmlString;
+  const seen = {};
+  return htmlString.replace(
+    /(<h([23])([^>]*)>)([\s\S]*?)(<\/h\2>)/gi,
+    (match, openTag, level, attrs, inner, closeTag) => {
+      if (/\bid=["']/.test(attrs)) return match;
+      const text = inner.replace(/<[^>]+>/g, '').trim();
+      let slug = text
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '') || `heading-${level}`;
+      if (seen[slug]) slug = `${slug}-${++seen[slug]}`;
+      else seen[slug] = 1;
+      return `<h${level}${attrs} id="${slug}">${inner}${closeTag}`;
+    }
+  );
+}
+
 function highlightCodeBlocks(htmlString) {
   if (!htmlString) return htmlString;
   const knownLangs = lowlight.listLanguages();
@@ -133,6 +155,8 @@ function highlightCodeBlocks(htmlString) {
 }
 
 import BlogComments from '@/app/_components/ui/BlogComments';
+import ScrollToTop from '@/app/_components/ui/ScrollToTop';
+import JoinButton from '@/app/_components/ui/JoinButton';
 import { incrementViewAction, likePostAction } from '@/app/_lib/blog-actions';
 import { useScrollLock } from '@/app/_lib/hooks';
 
@@ -257,7 +281,7 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
             isActive ? 'bg-neon-violet' : isPast ? 'bg-zinc-600' : 'bg-zinc-700'
           )} />
         )}
-        <span className={cn('line-clamp-2 leading-snug font-headline text-[10px] font-bold uppercase tracking-widest', isActive && 'font-black')}>
+        <span className={cn('line-clamp-2 leading-snug font-heading text-[10px] font-bold uppercase tracking-widest', isActive && 'font-black')}>
           {section.title}
         </span>
       </span>
@@ -282,12 +306,12 @@ function RelatedBlogCard({ blog }) {
   return (
     <Link
       href={`/blogs/${blog.slug || blog.id}`}
-      className="group block bg-[#131315] border border-[#27272A] hover:border-neon-violet/40 transition-all duration-300 p-8 rounded-[2rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-violet"
+      className="holographic-card group block p-6 rounded-2xl transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-violet hover:border-neon-violet/40"
     >
       <div className="font-mono text-neon-violet text-[9px] mb-4 font-bold tracking-widest uppercase">
         {getCategoryLabel(blog.category) || 'Article'}
       </div>
-      <h4 className="text-xl font-headline font-black text-white group-hover:text-neon-violet transition-colors uppercase tracking-tighter italic line-clamp-2">
+      <h4 className="text-xl font-heading font-black text-white group-hover:text-neon-violet transition-colors uppercase tracking-tighter line-clamp-2">
         {blog.title}
       </h4>
       <div className="mt-6 flex items-center gap-4 text-[9px] text-zinc-600 font-mono tracking-widest uppercase">
@@ -313,7 +337,6 @@ export default function BlogDetailClient({
 }) {
   const [activeSection, setActiveSection] = useState('');
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [showScrollTop, setShowScrollTop] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [liked, setLiked] = useState(false);
   const [viewCount, setViewCount] = useState(0);
@@ -344,6 +367,7 @@ export default function BlogDetailClient({
   const [formatError, setFormatError] = useState('');
   const contentRef = useRef(null);
   const tocNavRef = useRef(null);
+  const tocInitRef = useRef(false);
 
   const meta = useMemo(() => {
     const authorName =
@@ -385,7 +409,10 @@ export default function BlogDetailClient({
     incrementViewAction(fd).catch(() => {});
   }, [blog.id, meta.likes, meta.views]);
 
-  const enhancedContent = useMemo(() => highlightCodeBlocks(meta.content), [meta.content]);
+  const enhancedContent = useMemo(
+    () => highlightCodeBlocks(injectHeadingIds(meta.content)),
+    [meta.content]
+  );
 
   const openCodeRunner = useCallback((payload) => {
     setRunnerResult(null);
@@ -493,28 +520,31 @@ export default function BlogDetailClient({
   }, [openCodeRunner]);
 
   useEffect(() => {
-    if (!contentRef.current) return;
-    const headings = contentRef.current.querySelectorAll('h2[id], h3[id]');
-    const toc = Array.from(headings).map((h) => ({
-      id: h.id,
-      title: h.textContent,
-      level: h.tagName === 'H3' ? 3 : 2,
-    }));
-    if (toc.length) {
+    // Wait one frame so dangerouslySetInnerHTML has committed to the DOM.
+    const raf = requestAnimationFrame(() => {
+      if (!contentRef.current) return;
+      const headings = contentRef.current.querySelectorAll('h2[id], h3[id]');
+      const toc = Array.from(headings).map((h) => ({
+        id: h.id,
+        title: h.textContent.trim(),
+        level: h.tagName === 'H3' ? 3 : 2,
+      }));
       setTableOfContents(toc);
-      setActiveSection(toc[0].id);
-    }
-  }, [meta.content]);
+      setActiveSection(toc[0]?.id ?? '');
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [enhancedContent]);
 
   useEffect(() => {
     const onScroll = () => {
       const total = document.documentElement.scrollHeight - document.documentElement.clientHeight;
       setScrollProgress(total > 0 ? (window.scrollY / total) * 100 : 0);
-      setShowScrollTop(window.scrollY > 400);
       if (tableOfContents.length) {
+        const stickyNav = document.querySelector('[data-sticky-nav]');
+        const threshold = (stickyNav?.offsetHeight ?? 60) + 24;
         for (let i = tableOfContents.length - 1; i >= 0; i--) {
           const el = document.getElementById(tableOfContents[i].id);
-          if (el && el.getBoundingClientRect().top <= 140) {
+          if (el && el.getBoundingClientRect().top <= threshold) {
             setActiveSection(tableOfContents[i].id);
             break;
           }
@@ -528,6 +558,8 @@ export default function BlogDetailClient({
 
   useEffect(() => {
     if (!tocNavRef.current || !activeSection) return;
+    // Skip the very first set (on mount) to avoid jarring scroll on load.
+    if (!tocInitRef.current) { tocInitRef.current = true; return; }
     const el = tocNavRef.current.querySelector(`[data-section-id="${activeSection}"]`);
     if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [activeSection]);
@@ -545,22 +577,25 @@ export default function BlogDetailClient({
       if (p.paraSpacing) setParaSpacing(p.paraSpacing);
       if (p.textAlign) setTextAlign(p.textAlign);
       if (p.contentWidth) setContentWidth(p.contentWidth);
+      if (typeof p.tocCollapsed === 'boolean') setTocCollapsed(p.tocCollapsed);
     } catch { /* ignore */ }
   }, []);
 
   useEffect(() => {
     try {
       localStorage.setItem('neupc-reading-prefs', JSON.stringify({
-        fontSize, fontFamily, bgTheme, lineHeight, letterSpacing, paraSpacing, textAlign, contentWidth,
+        fontSize, fontFamily, bgTheme, lineHeight, letterSpacing, paraSpacing, textAlign, contentWidth, tocCollapsed,
       }));
     } catch { /* ignore */ }
-  }, [fontSize, fontFamily, bgTheme, lineHeight, letterSpacing, paraSpacing, textAlign, contentWidth]);
-
-  const scrollToTop = useCallback(() => window.scrollTo({ top: 0, behavior: 'smooth' }), []);
+  }, [fontSize, fontFamily, bgTheme, lineHeight, letterSpacing, paraSpacing, textAlign, contentWidth, tocCollapsed]);
 
   const scrollToSection = useCallback((id) => {
     const el = document.getElementById(id);
-    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 100, behavior: 'smooth' });
+    if (el) {
+      const stickyNav = document.querySelector('[data-sticky-nav]');
+      const offset = (stickyNav?.offsetHeight ?? 60) + 16;
+      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - offset, behavior: 'smooth' });
+    }
     setShowMobileTOC(false);
   }, []);
 
@@ -602,7 +637,7 @@ export default function BlogDetailClient({
       <main className="flex min-h-screen items-center justify-center bg-[#0A0A0B] text-white">
         <div className="text-center">
           <div className="mb-6 font-mono text-[10px] tracking-[0.4em] text-neon-violet uppercase">ERROR_404</div>
-          <h1 className="mb-3 font-headline text-5xl font-black uppercase text-white tracking-tighter">
+          <h1 className="mb-3 font-heading text-5xl font-black uppercase text-white tracking-tighter">
             Log Not Found
           </h1>
           <p className="mb-8 font-mono text-sm tracking-wider text-zinc-500">
@@ -610,7 +645,7 @@ export default function BlogDetailClient({
           </p>
           <Link
             href="/blogs"
-            className="inline-flex items-center gap-2 rounded-full bg-neon-violet px-8 py-3 font-headline text-[10px] font-black tracking-widest text-white uppercase transition-all hover:bg-white hover:text-black"
+            className="inline-flex items-center gap-2 rounded-full bg-neon-lime px-8 py-3 font-heading text-[10px] font-black tracking-widest text-black uppercase transition-all shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.7)]"
           >
             ← Back to Archives
           </Link>
@@ -646,6 +681,7 @@ export default function BlogDetailClient({
 
         {/* ── Sticky Mini Nav ──────────────────────────────────────────────── */}
         <div
+          data-sticky-nav
           className="sticky top-0 z-40 border-b border-[#27272A]/50 backdrop-blur-xl transition-colors duration-500"
           style={{ backgroundColor: `${currentBg}cc` }}
         >
@@ -654,12 +690,12 @@ export default function BlogDetailClient({
               <div className="flex items-center gap-3">
                 <Link
                   href="/blogs"
-                  className="group flex items-center gap-1.5 rounded-full border border-[#3F3F46] bg-white/4 px-3 py-1.5 font-mono text-[10px] tracking-wider text-zinc-400 uppercase transition-all hover:border-neon-violet/40 hover:text-neon-violet"
+                  className="group flex items-center gap-1.5 rounded-full border border-white/10 bg-white/3 px-3 py-1.5 font-heading text-[10px] tracking-widest text-zinc-400 uppercase transition-all hover:border-neon-lime/30 hover:text-neon-lime"
                 >
-                  <svg className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  <svg className="h-3 w-3 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                   </svg>
-                  Archives
+                  All Blogs
                 </Link>
                 <span className="hidden text-zinc-700 sm:block">/</span>
                 {meta.category && (
@@ -691,7 +727,7 @@ export default function BlogDetailClient({
         {showMobileTOC && hasTOC && (
           <div className="fixed inset-0 z-50 xl:hidden">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowMobileTOC(false)} />
-            <div className="absolute top-16 right-4 left-4 overflow-hidden rounded-2xl border border-[#27272A] bg-[#131315] shadow-2xl">
+            <div className="holographic-card no-lift absolute top-16 right-4 left-4 overflow-hidden rounded-2xl shadow-2xl">
               <div className="flex items-center justify-between border-b border-[#27272A] px-5 py-4">
                 <h3 className="font-mono text-[10px] font-bold tracking-[0.6em] text-neon-violet uppercase">Protocol_Overview</h3>
                 <button onClick={() => setShowMobileTOC(false)} className="text-zinc-500 hover:text-white">
@@ -713,141 +749,148 @@ export default function BlogDetailClient({
           </div>
         )}
 
-        {/* ── Hero: Technical Full-bleed ────────────────────────────────────── */}
-        <header className="relative min-h-[70vh] flex items-center justify-center pt-8 overflow-hidden bg-[#050505]">
+        {/* ── Hero ─────────────────────────────────────────────────────────── */}
+        <section className="relative overflow-hidden pt-20 pb-12 sm:pt-28 sm:pb-16 lg:pt-32 lg:pb-20">
+
           {/* Background cover image */}
           {meta.thumbnail && (
             <div className="absolute inset-0 z-0">
-              <SafeImg
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={driveImageUrl(meta.thumbnail)}
-                alt={meta.title}
-                className="w-full h-full object-cover opacity-20 scale-110 blur-sm"
-                fallback="/placeholder-blog.svg"
+                alt=""
+                aria-hidden
+                className="h-full w-full object-cover opacity-10 grayscale"
               />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#050505]/90 via-[#050505]/75 to-[#050505]" />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#05060B]/70 via-[#05060B]/40 to-[#05060B]" />
             </div>
           )}
 
-          {/* Technical grid overlay */}
-          <div className="absolute inset-0 z-0 opacity-5" style={{
-            backgroundImage: 'linear-gradient(rgba(139,92,246,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.3) 1px, transparent 1px)',
-            backgroundSize: '60px 60px',
-          }} />
-
-          {/* Institutional signature — top right */}
-          <div className="absolute top-8 right-10 z-10 space-y-1 text-right">
-            <p className="font-mono text-[10px] tracking-[0.4em] text-neon-violet uppercase font-bold">Engineering Logs</p>
-            <p className="font-mono text-[10px] tracking-[0.4em] text-zinc-500 uppercase">Dept of CSE</p>
-            <p className="font-mono text-[10px] tracking-[0.4em] text-zinc-500 uppercase">Netrokona University</p>
+          {/* Ambient */}
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+            <div className="grid-overlay absolute inset-0 opacity-15" />
+            <div className="bg-neon-violet/8 absolute -top-32 -left-32 h-[500px] w-[500px] rounded-full blur-[140px]" />
+            <div className="bg-neon-lime/6 absolute top-1/2 -right-32 h-[400px] w-[400px] rounded-full blur-[140px]" />
           </div>
 
-          <div className="relative z-10 w-full max-w-screen-2xl px-6 lg:px-10 flex flex-col items-center text-center gap-10">
-            {/* Archive badge */}
-            <div className="inline-flex items-center gap-3 px-4 py-1.5 bg-[#1C1C1F] rounded-full border border-[#27272A]">
-              <span className="w-2 h-2 rounded-full bg-neon-emerald animate-pulse" />
-              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-neon-emerald">
-                {meta.featured ? 'Featured_Log' : getCategoryLabel(meta.category) || 'Engineering_Log'}
+          <div className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+
+            {/* Back link */}
+            <nav className="mb-6 sm:mb-8">
+              <Link
+                href="/blogs"
+                className="group inline-flex min-h-[40px] items-center gap-2 rounded-full border border-white/10 bg-white/3 px-4 py-2 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase backdrop-blur-sm transition-all hover:border-neon-lime/30 hover:text-neon-lime sm:text-[11px]"
+              >
+                <svg className="h-3 w-3 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                All Blogs
+              </Link>
+            </nav>
+
+            {/* Category + featured eyebrow */}
+            <div className="mb-4 flex flex-wrap items-center gap-2 sm:mb-5">
+              <span className={cn(
+                'inline-flex min-h-[28px] items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-widest uppercase sm:text-[10px]',
+                meta.featured
+                  ? 'border-neon-lime/30 bg-neon-lime/10 text-neon-lime'
+                  : 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
+              )}>
+                <span className={cn('h-1.5 w-1.5 rounded-full animate-pulse', meta.featured ? 'bg-neon-lime' : 'bg-neon-violet')} />
+                {meta.featured ? 'Featured' : getCategoryLabel(meta.category) || 'Blog'}
               </span>
+              {meta.category && !meta.featured && (
+                <span className="inline-flex min-h-[28px] items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-[9px] tracking-widest text-zinc-400 uppercase sm:text-[10px]">
+                  {getCategoryLabel(meta.category)}
+                </span>
+              )}
             </div>
 
-            {/* Kinetic title */}
-            <h1
-              className="font-headline font-black text-white uppercase leading-none select-none"
-              style={{ letterSpacing: '-0.04em', lineHeight: 0.9, fontSize: 'clamp(2.5rem, 8vw, 7rem)' }}
-            >
-              {meta.title.split(' ').map((word, i, arr) =>
-                i === arr.length - 1 ? (
-                  <span key={i} className="block" style={{ WebkitTextStroke: '1.5px #8B5CF6', color: 'transparent' }}>
-                    {word}
-                  </span>
-                ) : (
-                  <span key={i}>{word} </span>
-                )
-              )}
+            {/* Title */}
+            <h1 className="kinetic-headline max-w-4xl font-heading text-[clamp(1.9rem,5vw+0.5rem,5.5rem)] font-black text-white uppercase [line-height:1.05] sm:[line-height:0.95]">
+              {meta.title}
             </h1>
 
-            {/* Author + meta row */}
-            <div className="flex flex-wrap justify-center items-center gap-8 mt-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full border border-neon-violet/30 p-0.5 shrink-0">
+            {/* Author + meta chips */}
+            <div className="mt-6 grid grid-cols-2 gap-2.5 border-t border-white/8 pt-6 sm:mt-8 sm:flex sm:flex-wrap sm:gap-3 sm:pt-8">
+              <div className="col-span-2 flex items-center gap-3 rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:col-span-1 sm:px-4">
+                <div className="h-8 w-8 shrink-0 rounded-full border border-neon-violet/30 p-0.5">
                   {meta.authorAvatar ? (
                     <SafeImg
                       src={driveImageUrl(meta.authorAvatar)}
                       alt={meta.authorName}
-                      className="w-full h-full object-cover rounded-full grayscale hover:grayscale-0 transition-all"
+                      className="h-full w-full rounded-full object-cover"
                       fallback=""
                     />
                   ) : (
-                    <div className="w-full h-full rounded-full bg-neon-violet/20 flex items-center justify-center font-headline text-sm font-black text-neon-violet">
+                    <div className="flex h-full w-full items-center justify-center rounded-full bg-neon-violet/20 font-heading text-[10px] font-black text-neon-violet">
                       {meta.authorInitials}
                     </div>
                   )}
                 </div>
-                <span className="font-headline font-bold text-white uppercase tracking-widest text-xs">{meta.authorName}</span>
+                <div>
+                  <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">Author</span>
+                  <span className="mt-0.5 block font-heading text-[13px] font-bold text-white sm:text-sm">{meta.authorName}</span>
+                </div>
               </div>
-
               {meta.blogDate && (
-                <div className="flex items-center gap-2 font-mono text-[10px] text-zinc-400 uppercase tracking-widest">
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                  {meta.blogDate}
+                <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
+                  <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">Published</span>
+                  <span className="mt-0.5 block font-heading text-[13px] font-bold text-white sm:text-sm">{meta.blogDate}</span>
                 </div>
               )}
-
-              <div className="flex items-center gap-2 font-mono text-[10px] text-zinc-400 uppercase tracking-widest">
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                {meta.readTimeLabel} read
+              <div className="rounded-xl border border-white/8 bg-white/3 px-3 py-2.5 backdrop-blur-sm sm:px-4">
+                <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">Read Time</span>
+                <span className="mt-0.5 block font-heading text-[13px] font-bold text-white sm:text-sm">{meta.readTimeLabel}</span>
               </div>
-
               {meta.views > 0 && (
-                <div className="flex items-center gap-2 font-mono text-[10px] text-neon-emerald uppercase tracking-widest font-bold">
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                  {meta.views.toLocaleString()} views
+                <div className="rounded-xl border border-neon-lime/15 bg-neon-lime/5 px-3 py-2.5 backdrop-blur-sm sm:px-4">
+                  <span className="block font-mono text-[9px] tracking-[0.2em] text-zinc-600 uppercase sm:text-[10px]">Views</span>
+                  <span className="mt-0.5 block font-heading text-[13px] font-bold text-neon-lime sm:text-sm">{meta.views.toLocaleString()}</span>
                 </div>
               )}
             </div>
 
             {/* Excerpt */}
             {meta.excerpt && (
-              <p className="max-w-3xl text-xl text-zinc-400 font-light leading-relaxed italic">
+              <p className="mt-6 max-w-3xl text-sm leading-[1.9] text-zinc-400 sm:mt-8 sm:text-base lg:text-[17px]">
                 {meta.excerpt}
               </p>
             )}
 
             {/* Tags */}
             {meta.tags.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-2">
+              <div className="mt-5 flex flex-wrap gap-2">
                 {meta.tags.map((tag) => (
-                  <span key={tag} className="rounded-full border border-[#3F3F46] bg-white/3 px-3 py-1 font-mono text-[9px] text-zinc-500">
+                  <span key={tag} className="inline-block rounded-full border border-neon-violet/20 bg-neon-violet/10 px-3 py-1 font-mono text-[10px] font-bold tracking-widest text-neon-violet uppercase">
                     #{tag}
                   </span>
                 ))}
               </div>
             )}
           </div>
-        </header>
+        </section>
 
-        {/* ── Fluid Curve Divider ───────────────────────────────────────────── */}
-        <div className="relative h-20 w-full -mt-8 z-10 overflow-hidden" style={{ background: '#050505' }}>
-          <svg
-            className="absolute bottom-0 w-full h-full"
-            preserveAspectRatio="none"
-            viewBox="0 0 1440 100"
-            style={{ fill: currentBg }}
-          >
-            <path d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,100L1360,100C1280,100,1120,100,960,100C800,100,640,100,480,100C320,100,160,100,80,100L0,100Z" />
-          </svg>
-        </div>
+        {/* ── Section separator ────────────────────────────────────────────── */}
+        <div className="h-px w-full bg-gradient-to-r from-transparent via-white/8 to-transparent" />
 
         {/* ── Main Reading Layout ───────────────────────────────────────────── */}
-        <div className="mx-auto w-full max-w-screen-2xl px-4 py-10 sm:px-6 lg:px-10">
-          <div className={cn('flex gap-8 lg:gap-12', !hasTOC && 'justify-center')}>
+        <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+          <div className={cn(
+            'flex transition-[gap] duration-300',
+            !hasTOC && 'justify-center',
+            hasTOC && (tocCollapsed ? 'gap-4 lg:gap-6' : 'gap-8 lg:gap-12')
+          )}>
 
             {/* ── Article Column ────────────────────────────────────────────── */}
-            <article className={cn('w-full min-w-0 transition-all duration-300', hasTOC && 'lg:w-2/3')}>
+            <article className={cn(
+              'w-full min-w-0 transition-all duration-300',
+              hasTOC && (tocCollapsed ? 'lg:flex-1' : 'lg:w-2/3')
+            )}>
 
               {/* Reading controls */}
               <div className="mb-6 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#27272A] bg-[#131315] px-4 py-2.5">
+                <div className="holographic-card no-lift flex flex-wrap items-center justify-between gap-2 rounded-xl px-4 py-2.5">
                   <span className="flex items-center gap-2 font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
                     <svg className="text-neon-violet h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -897,7 +940,7 @@ export default function BlogDetailClient({
 
                 {/* Reading settings panel */}
                 {showReadingSettings && (
-                  <div className="rounded-xl border border-[#27272A] bg-[#131315] p-5 shadow-2xl">
+                  <div className="holographic-card no-lift rounded-xl p-5 shadow-2xl">
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
                       <div className="space-y-2.5">
                         <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">Typeface</p>
@@ -1054,6 +1097,7 @@ export default function BlogDetailClient({
                           setFontSize('md'); setFontFamily('sans'); setBgTheme('dark');
                           setLineHeight('relaxed'); setLetterSpacing('normal'); setParaSpacing('normal');
                           setTextAlign('left'); setContentWidth('wide'); setFocusMode(false);
+                          setTocCollapsed(false);
                         }}
                         className="rounded-lg border border-[#3F3F46] bg-white/4 px-3 py-1.5 text-[11px] text-gray-500 transition-all hover:border-white/20 hover:text-gray-300"
                       >
@@ -1068,7 +1112,7 @@ export default function BlogDetailClient({
               <div
                 ref={contentRef}
                 className={cn(
-                  'blog-content mx-auto rounded-2xl border border-[#27272A] bg-[#131315]/60 p-6 transition-all duration-300 md:p-8 lg:p-10',
+                  'holographic-card no-lift blog-content mx-auto rounded-2xl p-6 transition-all duration-300 md:p-8 lg:p-10',
                   CONTENT_WIDTHS[contentWidth],
                   focusMode && 'shadow-[0_0_0_100vw_rgba(0,0,0,0.5)]'
                 )}
@@ -1085,7 +1129,7 @@ export default function BlogDetailClient({
               />
 
               {/* Article footer: reactions + tags + share */}
-              <div className="mt-8 rounded-2xl border border-[#27272A] bg-[#131315] p-6">
+              <div className="holographic-card no-lift mt-8 rounded-2xl p-6">
                 <div className="mb-5 flex flex-wrap items-center justify-between gap-4 border-b border-white/6 pb-5">
                   <div className="flex items-center gap-3">
                     <button
@@ -1188,31 +1232,47 @@ export default function BlogDetailClient({
             {hasTOC && (
               <aside
                 className={cn(
-                  'hidden shrink-0 transition-all duration-300 lg:block',
-                  tocCollapsed ? 'w-11' : 'lg:w-1/3',
-                  focusMode && 'opacity-25 hover:opacity-100'
+                  'hidden shrink-0 transition-[width] duration-300 ease-out lg:block',
+                  tocCollapsed ? 'lg:w-12' : 'lg:w-1/3'
                 )}
               >
-                <div className="sticky top-20 space-y-10">
+                <div className={cn(
+                  'sticky top-20 space-y-6 transition-opacity duration-300',
+                  focusMode && !tocCollapsed && 'opacity-25 hover:opacity-100'
+                )}>
                   {/* TOC Glass Panel */}
                   {tocCollapsed ? (
-                    <div className="flex flex-col items-center gap-3 rounded-2xl border border-[#27272A] bg-[#131315] py-4">
+                    <div className="holographic-card no-lift flex flex-col items-center gap-3 rounded-2xl px-1 py-4">
                       <button
                         onClick={() => setTocCollapsed(false)}
                         title="Expand contents"
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-all hover:bg-white/8 hover:text-neon-violet"
+                        aria-label="Expand table of contents"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-all hover:bg-neon-violet/10 hover:text-neon-violet"
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
                         </svg>
                       </button>
-                      <div className="relative h-40 w-1 overflow-hidden rounded-full bg-white/8">
+                      <div className="h-px w-6 bg-white/10" />
+                      <div
+                        className="relative h-32 w-1 overflow-hidden rounded-full bg-white/8"
+                        title={`${Math.round(scrollProgress)}% read`}
+                      >
                         <div
                           className="bg-neon-violet absolute top-0 left-0 w-full rounded-full transition-all duration-300"
                           style={{ height: `${scrollProgress}%` }}
                         />
                       </div>
-                      <span className="text-[10px] text-zinc-600 tabular-nums">{Math.round(scrollProgress)}%</span>
+                      <span className="font-mono text-[9px] text-zinc-500 tabular-nums">{Math.round(scrollProgress)}%</span>
+                      <div className="h-px w-6 bg-white/10" />
+                      <span
+                        className="font-mono text-[9px] font-bold tracking-widest text-neon-violet/70 tabular-nums"
+                        title={`Section ${activeIdx >= 0 ? activeIdx + 1 : 0} of ${tableOfContents.length}`}
+                      >
+                        {String(activeIdx >= 0 ? activeIdx + 1 : 0).padStart(2, '0')}
+                        <span className="text-zinc-700">/</span>
+                        {String(tableOfContents.length).padStart(2, '0')}
+                      </span>
                     </div>
                   ) : (
                     <div
@@ -1271,17 +1331,36 @@ export default function BlogDetailClient({
                           <h4 className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest">Broadcast_Signal</h4>
                           <div className="flex gap-3">
                             {[
-                              { icon: 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z', tip: 'Share' },
-                              { icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4', tip: 'Code' },
-                              { icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1', tip: 'Copy link' },
-                            ].map(({ icon, tip }) => (
+                              {
+                                icon: 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z',
+                                tip: 'Share on Twitter',
+                                action: () => handleShare('twitter'),
+                              },
+                              {
+                                icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',
+                                tip: 'Scroll to first code block',
+                                action: () => {
+                                  const firstPre = contentRef.current?.querySelector('pre');
+                                  if (firstPre) {
+                                    const stickyNav = document.querySelector('[data-sticky-nav]');
+                                    const offset = (stickyNav?.offsetHeight ?? 60) + 16;
+                                    window.scrollTo({ top: firstPre.getBoundingClientRect().top + window.scrollY - offset, behavior: 'smooth' });
+                                  }
+                                },
+                              },
+                              {
+                                icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1',
+                                tip: 'Copy link',
+                                action: handleCopy,
+                              },
+                            ].map(({ icon, tip, action }) => (
                               <button
                                 key={tip}
                                 title={tip}
-                                onClick={tip === 'Copy link' ? handleCopy : undefined}
-                                className="w-10 h-10 bg-[#050505] border border-[#27272A] flex items-center justify-center hover:border-neon-violet/50 transition-all group"
+                                onClick={action}
+                                className="w-10 h-10 rounded-lg bg-white/3 border border-white/10 flex items-center justify-center hover:border-neon-violet/50 hover:bg-neon-violet/8 transition-all group"
                               >
-                                <svg className="h-4 w-4 text-zinc-400 group-hover:text-neon-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                                <svg className="h-4 w-4 text-zinc-400 group-hover:text-neon-violet transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
                                 </svg>
                               </button>
@@ -1292,13 +1371,13 @@ export default function BlogDetailClient({
                     </div>
                   )}
 
-                  {/* Related Logs */}
-                  {relatedBlogs.length > 0 && (
-                    <div className="space-y-6">
-                      <h3 className="font-mono text-[10px] text-neon-emerald uppercase tracking-[0.6em] font-bold px-2">
-                        Parallel_Transmissions
+                  {/* Related Logs — hidden when sidebar collapsed */}
+                  {!tocCollapsed && relatedBlogs.length > 0 && (
+                    <div className="space-y-4 pt-4">
+                      <h3 className="font-mono text-[10px] text-neon-emerald uppercase tracking-[0.4em] font-bold px-2">
+                        Related Articles
                       </h3>
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {relatedBlogs.map((b) => (
                           <RelatedBlogCard key={b.id} blog={b} />
                         ))}
@@ -1313,66 +1392,79 @@ export default function BlogDetailClient({
 
         {/* ── Related Articles (mobile / no TOC fallback) ───────────────────── */}
         {relatedBlogs.length > 0 && !hasTOC && (
-          <div className="border-t border-[#27272A]/50 py-14 md:py-16">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <div className="mb-8 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <section className="relative overflow-hidden py-12 sm:py-16 lg:py-20">
+            <div className="absolute top-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+            <div className="pointer-events-none absolute inset-0 z-0">
+              <div className="bg-neon-violet/5 absolute top-1/4 left-1/2 h-[400px] w-[600px] -translate-x-1/2 rounded-full blur-[150px]" />
+            </div>
+            <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <div className="mb-7 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="bg-neon-violet h-px w-7" />
-                    <span className="font-mono text-[10px] tracking-[0.35em] text-neon-violet uppercase">Keep Reading</span>
+                  <div className="flex items-center gap-3">
+                    <span className="bg-neon-lime h-px w-6 shrink-0" />
+                    <span className="font-mono text-[10px] font-bold tracking-[0.4em] uppercase sm:text-[11px] text-neon-lime">Keep Reading</span>
                   </div>
-                  <h2 className="font-headline text-3xl font-black text-white uppercase tracking-tighter sm:text-4xl">
-                    Parallel_Transmissions
+                  <h2 className="kinetic-headline mt-3 font-heading text-2xl font-black text-white uppercase sm:text-3xl lg:text-4xl">
+                    Related Articles
                   </h2>
                 </div>
                 <Link
                   href={`/blogs?category=${encodeURIComponent(meta.category)}`}
-                  className="font-mono text-[10px] tracking-wider text-zinc-600 uppercase transition-colors hover:text-neon-violet"
+                  className="w-fit shrink-0 rounded-full border border-white/10 bg-white/4 px-5 py-2.5 font-heading text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-colors hover:border-neon-violet/40 hover:text-neon-violet sm:px-7 sm:py-3 sm:text-[11px]"
                 >
-                  More in {getCategoryLabel(meta.category)} →
+                  More {getCategoryLabel(meta.category)} →
                 </Link>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {relatedBlogs.map((b) => <RelatedBlogCard key={b.id} blog={b} />)}
               </div>
             </div>
-          </div>
+          </section>
         )}
 
-        {/* ── Back-to-blogs strip ───────────────────────────────────────────── */}
-        <div className="border-t border-[#27272A]/50 py-10">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-              <div>
-                <p className="font-headline text-base font-black text-white uppercase tracking-tighter">
-                  Enjoyed this log?
-                </p>
-                <p className="font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
-                  Explore more from the NEUPC engineering archives.
-                </p>
+        {/* ── CTA ──────────────────────────────────────────────────────────── */}
+        <section className="relative overflow-hidden py-12 sm:py-16 lg:py-24">
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+            <div className="grid-overlay absolute inset-0 opacity-15" />
+            <div className="bg-neon-lime/4 absolute top-1/2 left-1/2 h-[400px] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-full blur-[130px]" />
+          </div>
+          <div className="absolute top-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+
+          <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="rounded-2xl border border-neon-lime/15 bg-gradient-to-br from-neon-lime/5 via-transparent to-neon-violet/5 p-6 sm:rounded-3xl sm:p-10 lg:p-14">
+              <div className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-3 md:items-center">
+                <div className="md:col-span-2">
+                  <p className="mb-2 font-mono text-[10px] font-bold tracking-[0.4em] text-neon-lime uppercase sm:text-[11px]">
+                    /// Stay Connected
+                  </p>
+                  <h2 className="font-heading text-2xl font-black leading-tight text-white uppercase sm:text-3xl lg:text-4xl">
+                    Never miss an article
+                  </h2>
+                  <p className="mt-3 max-w-lg text-sm leading-relaxed text-zinc-400 sm:mt-4">
+                    Join NEUPC to get early access to engineering blogs, workshops, and contests — and be part of a thriving community of programmers.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center md:flex-col md:items-end">
+                  <JoinButton
+                    href="/join"
+                    className="group inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-neon-lime px-6 py-3 font-heading text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.5)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.7)] sm:min-h-0 sm:px-8 sm:py-3.5 sm:text-[11px]"
+                  >
+                    Join the Club
+                    <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
+                  </JoinButton>
+                  <Link
+                    href="/blogs"
+                    className="text-center font-mono text-[10px] tracking-[0.25em] text-zinc-500 uppercase underline-offset-4 transition-colors hover:text-zinc-200 hover:underline sm:text-[11px]"
+                  >
+                    Browse All Blogs →
+                  </Link>
+                </div>
               </div>
-              <Link
-                href="/blogs"
-                className="inline-flex items-center gap-2 rounded-full border border-[#3F3F46] px-6 py-3 font-headline text-[10px] font-bold tracking-widest text-zinc-400 uppercase transition-all hover:border-neon-violet/35 hover:text-neon-violet"
-              >
-                ← Back to Archives
-              </Link>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* ── Scroll to Top ─────────────────────────────────────────────────── */}
-        {showScrollTop && (
-          <button
-            onClick={scrollToTop}
-            className="fixed right-6 bottom-6 z-40 flex h-14 w-14 items-center justify-center rounded-full border border-[#27272A] bg-[#131315]/90 text-zinc-400 shadow-xl backdrop-blur-sm transition-all hover:border-neon-violet/50 hover:bg-neon-violet/10 hover:text-neon-violet sm:right-8"
-            title="Back to top"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-            </svg>
-          </button>
-        )}
+        <ScrollToTop />
       </main>
 
       <CodePlayground
