@@ -73,13 +73,23 @@ export default async function VerifyEmailPage({ searchParams }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-[70vh] w-full max-w-2xl items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-      <VerifyEmailClient 
-        token={token}
-        initialValid={valid}
-        user={user}
-        verifyAction={verifyTokenAction}
-      />
-    </div>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#05060B] px-4 py-24 sm:px-6">
+      {/* Ambient background — matches login */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="grid-overlay absolute inset-0 opacity-25" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_40%,rgba(124,92,255,0.07),transparent)]" />
+        <div className="bg-neon-violet/10 absolute -top-40 -left-32 h-125 w-125 rounded-full blur-[140px]" />
+        <div className="bg-neon-lime/8 absolute -bottom-40 -right-32 h-100 w-100 rounded-full blur-[120px]" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-md">
+        <VerifyEmailClient
+          token={token}
+          initialValid={valid}
+          user={user}
+          verifyAction={verifyTokenAction}
+        />
+      </div>
+    </main>
   );
 }

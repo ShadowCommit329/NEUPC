@@ -1531,7 +1531,7 @@ export default function AchievementsClient({
           variants={stagger}
           initial="hidden"
           animate="visible"
-          className="mx-auto w-full max-w-screen-xl"
+          className="mx-auto w-full max-w-7xl"
         >
           <div className="max-w-2xl space-y-6 sm:max-w-3xl sm:space-y-8">
 
@@ -1604,7 +1604,7 @@ export default function AchievementsClient({
       {/* ══════════════════════ FEATURED CAROUSEL ══════════════════════ */}
       {featuredAchievements.length > 0 && (
         <section className="bg-[#05060B] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-          <div className="mx-auto max-w-screen-xl">
+          <div className="mx-auto max-w-7xl">
             <SectionEyebrow
               tag="Recognition / 001"
               title="Featured"
@@ -1617,7 +1617,7 @@ export default function AchievementsClient({
 
       {/* ══════════════════════ VICTORY LOG (Achievements) ══════════════════════ */}
       <section id="achievements" className="bg-[#05060B] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-        <div className="mx-auto max-w-screen-xl space-y-10 sm:space-y-12">
+        <div className="mx-auto max-w-7xl space-y-10 sm:space-y-12">
           <SectionEyebrow
             tag="Operations Log / 002"
             title="Victory"
@@ -1771,7 +1771,7 @@ export default function AchievementsClient({
           id="participation"
           className="bg-[#05060B] px-4 py-16 sm:px-6 sm:py-20 lg:px-8"
         >
-          <div className="mx-auto max-w-screen-xl space-y-10 sm:space-y-12">
+          <div className="mx-auto max-w-7xl space-y-10 sm:space-y-12">
             <SectionEyebrow
               tag="Contest Records / 003"
               title="Participation"

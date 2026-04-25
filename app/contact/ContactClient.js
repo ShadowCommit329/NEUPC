@@ -347,7 +347,7 @@ export default function ContactClient({
           variants={stagger}
           initial="hidden"
           animate="visible"
-          className="mx-auto w-full max-w-screen-xl"
+          className="mx-auto w-full max-w-7xl"
         >
           <div className="max-w-2xl space-y-6 sm:max-w-3xl sm:space-y-8">
 
@@ -425,7 +425,7 @@ export default function ContactClient({
 
       {/* ── Main Contact Grid ──────────────────────────────────────────────── */}
       <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-        <div className="mx-auto max-w-screen-xl">
+        <div className="mx-auto max-w-7xl">
 
           <div className="grid gap-8 lg:grid-cols-12 lg:gap-10">
 
@@ -759,7 +759,7 @@ export default function ContactClient({
 
       {/* ── FAQ Section ────────────────────────────────────────────────────── */}
       <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-        <div className="mx-auto max-w-screen-xl">
+        <div className="mx-auto max-w-7xl">
 
           <motion.div
             variants={stagger}
@@ -810,7 +810,7 @@ export default function ContactClient({
 
       {/* ── CTA Strip — same pattern as events page join prompt ───────────── */}
       <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-        <div className="mx-auto max-w-screen-xl">
+        <div className="mx-auto max-w-7xl">
           <motion.div
             variants={fadeUp}
             initial="hidden"

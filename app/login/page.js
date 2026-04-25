@@ -37,7 +37,7 @@ async function LoginPage() {
         {/* Eyebrow — same pattern as Hero */}
         <div className="mb-8 flex items-center gap-3">
           <span className="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-neon-lime" />
-          <span className="font-mono text-[9px] font-medium tracking-[0.28em] text-zinc-500 uppercase">
+          <span className="font-mono text-[9px] font-medium tracking-[0.3em] text-zinc-500 uppercase">
             Dept of CSE · Netrokona University
           </span>
         </div>

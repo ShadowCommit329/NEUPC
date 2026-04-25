@@ -173,7 +173,7 @@ export default function TermsPage() {
           {/* Eyebrow */}
           <div className="mb-6 flex items-center gap-3">
             <span className="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-neon-lime" />
-            <span className="font-mono text-[9px] font-bold tracking-[0.35em] text-zinc-500 uppercase">
+            <span className="font-mono text-[9px] font-bold tracking-[0.3em] text-zinc-500 uppercase">
               Legal_Document · Last updated: Feb 28, 2026
             </span>
           </div>

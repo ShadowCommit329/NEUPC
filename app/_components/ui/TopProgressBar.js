@@ -62,7 +62,7 @@ export default function TopProgressBar() {
 
       {/* Progress bar */}
       <div
-        className="from-primary-500 via-secondary-400 to-primary-500 relative h-full origin-left bg-linear-to-r"
+        className="from-neon-lime via-neon-violet to-neon-lime relative h-full origin-left bg-linear-to-r shadow-[0_0_12px_rgba(182,243,107,0.55)]"
         style={{
           width: `${progress}%`,
           transition: isComplete
@@ -75,7 +75,7 @@ export default function TopProgressBar() {
         <div className="absolute inset-0 animate-[shimmer_1.5s_ease-in-out_infinite] bg-linear-to-r from-transparent via-white/30 to-transparent" />
 
         {/* Leading glow dot */}
-        <div className="absolute top-1/2 right-0 h-3 w-3 translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_10px_2px_rgba(99,102,241,0.7)]" />
+        <div className="absolute top-1/2 right-0 h-2.5 w-2.5 translate-x-1/2 -translate-y-1/2 rounded-full bg-neon-lime shadow-[0_0_10px_2px_rgba(182,243,107,0.8)]" />
       </div>
     </div>
   );

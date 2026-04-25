@@ -181,7 +181,7 @@ function SectionLabel({ tag, title, accent }) {
 
 function Hero({ stats }) {
   return (
-    <section className="relative isolate flex min-h-[80vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
+    <section className="relative isolate flex min-h-[75vh] items-center overflow-hidden px-4 pt-24 pb-16 sm:min-h-[80vh] sm:px-6 sm:pt-28 sm:pb-20 lg:px-8">
 
       {/* Ambient background — exact events pattern */}
       <div className="pointer-events-none absolute inset-0 -z-10">
@@ -195,7 +195,7 @@ function Hero({ stats }) {
         variants={stagger}
         initial="hidden"
         animate="visible"
-        className="mx-auto w-full max-w-screen-xl"
+        className="mx-auto w-full max-w-7xl"
       >
         <div className="max-w-2xl space-y-6 sm:max-w-3xl sm:space-y-8">
 
@@ -519,7 +519,7 @@ export default function CommitteeClient({
 
       {/* ── Advisory Board ───────────────────────────────────────────────── */}
       <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8 md:py-28">
-        <div className="mx-auto max-w-screen-xl">
+        <div className="mx-auto max-w-7xl">
           <SectionLabel tag="Guidance & Mentorship" title="Advisory" accent="Board" />
           <motion.div
             variants={stagger}
@@ -539,7 +539,7 @@ export default function CommitteeClient({
 
       {/* ── Core Executive ───────────────────────────────────────────────── */}
       <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8 md:py-28">
-        <div className="mx-auto max-w-screen-xl">
+        <div className="mx-auto max-w-7xl">
           <SectionLabel tag="Leadership" title="Core" accent="Executive" />
           {propCore.length > 0 ? (
             <motion.div
@@ -564,7 +564,7 @@ export default function CommitteeClient({
       {/* ── Executive Council ─────────────────────────────────────────────── */}
       {propExecs.length > 0 && (
         <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8 md:py-28">
-          <div className="mx-auto max-w-screen-xl">
+          <div className="mx-auto max-w-7xl">
             <SectionLabel tag="Operations" title="Executive" accent="Council" />
             <motion.div
               variants={stagger}

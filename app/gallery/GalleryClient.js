@@ -390,7 +390,7 @@ export default function GalleryClient({
           variants={stagger}
           initial="hidden"
           animate="visible"
-          className="mx-auto w-full max-w-screen-xl"
+          className="mx-auto w-full max-w-7xl"
         >
           <div className="max-w-2xl space-y-6 sm:max-w-3xl sm:space-y-8">
 
@@ -464,7 +464,7 @@ export default function GalleryClient({
 
       {/* ── Search & Filter ───────────────────────────────────────────────── */}
       <section className="px-4 pb-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-screen-xl">
+        <div className="mx-auto max-w-7xl">
           <motion.div
             variants={fadeUp}
             initial="hidden"
@@ -629,7 +629,7 @@ export default function GalleryClient({
 
       {/* ── Gallery Grid ──────────────────────────────────────────────────── */}
       <section className="px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
-        <div className="mx-auto max-w-screen-xl">
+        <div className="mx-auto max-w-7xl">
 
           {/* Section header */}
           <motion.div
@@ -745,7 +745,7 @@ export default function GalleryClient({
             >
               <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0c0e16] shadow-2xl">
                 {/* Image */}
-                <div className="relative aspect-video bg-[#05060b]">
+                <div className="relative aspect-video bg-[#05060B]">
                   <SafeImg
                     src={driveImageUrl(lightbox.image)}
                     alt={lightbox.title || 'Gallery photo'}

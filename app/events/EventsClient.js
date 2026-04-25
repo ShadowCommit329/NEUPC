@@ -484,7 +484,7 @@ export default function EventsClient({ events = [], settings = {} }) {
           variants={stagger}
           initial="hidden"
           animate="visible"
-          className="mx-auto w-full max-w-screen-xl"
+          className="mx-auto w-full max-w-7xl"
         >
           <div className="max-w-2xl space-y-6 sm:max-w-3xl sm:space-y-8">
 
@@ -563,7 +563,7 @@ export default function EventsClient({ events = [], settings = {} }) {
       {/* ── Featured event ────────────────────────────────────────────────── */}
       {featured && (
         <section className="px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
-          <div className="mx-auto max-w-screen-xl space-y-7 sm:space-y-9">
+          <div className="mx-auto max-w-7xl space-y-7 sm:space-y-9">
 
             <motion.div
               variants={stagger}
@@ -592,7 +592,7 @@ export default function EventsClient({ events = [], settings = {} }) {
 
       {/* ── All events grid ───────────────────────────────────────────────── */}
       <section ref={gridRef} className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8" style={{ scrollMarginTop: '80px' }}>
-        <div className="mx-auto max-w-screen-xl space-y-8 sm:space-y-10">
+        <div className="mx-auto max-w-7xl space-y-8 sm:space-y-10">
 
           {/* Section header */}
           <motion.div
@@ -756,7 +756,7 @@ export default function EventsClient({ events = [], settings = {} }) {
       {/* ── Archive ───────────────────────────────────────────────────────── */}
       {archive.length > 0 && (
         <section className="px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-          <div className="mx-auto max-w-screen-xl">
+          <div className="mx-auto max-w-7xl">
 
             <motion.div
               variants={stagger}

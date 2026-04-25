@@ -9,7 +9,7 @@
 
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 
 const RoleContext = createContext();
 
@@ -62,18 +62,21 @@ export function RoleProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialUserRoles]);
 
-  // Persist role changes to localStorage
-  const updateRole = (role) => {
+  // Persist role changes to localStorage. Stable identity so consumer effects
+  // (e.g., AccountPageClient) don't re-run on every parent render.
+  const updateRole = useCallback((role) => {
     setActiveRole(role);
-    localStorage.setItem('activeRole', role);
-  };
+    if (role) localStorage.setItem('activeRole', role);
+    else localStorage.removeItem('activeRole');
+  }, []);
+
+  const value = useMemo(
+    () => ({ activeRole, setActiveRole: updateRole, userRoles }),
+    [activeRole, updateRole, userRoles]
+  );
 
   return (
-    <RoleContext.Provider
-      value={{ activeRole, setActiveRole: updateRole, userRoles }}
-    >
-      {children}
-    </RoleContext.Provider>
+    <RoleContext.Provider value={value}>{children}</RoleContext.Provider>
   );
 }
 
