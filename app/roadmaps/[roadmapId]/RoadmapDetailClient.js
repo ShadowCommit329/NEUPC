@@ -39,6 +39,27 @@ const COPY_SVG =
 const CHECK_SVG =
   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
 
+function injectHeadingIds(htmlString) {
+  if (!htmlString) return htmlString;
+  const seen = {};
+  return htmlString.replace(
+    /(<h([23])([^>]*)>)([\s\S]*?)(<\/h\2>)/gi,
+    (match, openTag, level, attrs, inner, closeTag) => {
+      if (/\bid=["']/.test(attrs)) return match;
+      const text = inner.replace(/<[^>]+>/g, '').trim();
+      let slug = text
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '') || `heading-${level}`;
+      if (seen[slug]) slug = `${slug}-${++seen[slug]}`;
+      else seen[slug] = 1;
+      return `<h${level}${attrs} id="${slug}">${inner}${closeTag}`;
+    }
+  );
+}
+
 function highlightCodeBlocks(htmlString) {
   if (!htmlString) return htmlString;
   const knownLangs = lowlight.listLanguages();
@@ -77,6 +98,41 @@ function highlightCodeBlocks(htmlString) {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
+
+const FONT_SIZES = [
+  { id: 'sm', label: 'S', value: '0.875rem' },
+  { id: 'md', label: 'M', value: '1rem' },
+  { id: 'lg', label: 'L', value: '1.125rem' },
+  { id: 'xl', label: 'XL', value: '1.25rem' },
+  { id: 'xxl', label: '2X', value: '1.375rem' },
+];
+
+const FONT_FAMILIES = [
+  { id: 'sans', label: 'Sans', style: '"Inter", system-ui, sans-serif' },
+  { id: 'serif', label: 'Serif', style: 'Georgia, "Times New Roman", serif' },
+  { id: 'novel', label: 'Novel', style: '"Palatino Linotype", Palatino, Georgia, serif' },
+  { id: 'mono', label: 'Mono', style: '"JetBrains Mono", Consolas, monospace' },
+];
+
+const BG_THEMES = [
+  { id: 'dark', bg: '#0A0A0B', label: 'Dark' },
+  { id: 'midnight', bg: '#02040d', label: 'Midnight' },
+  { id: 'warm', bg: '#0f0c09', label: 'Warm' },
+  { id: 'sepia', bg: '#1a1208', label: 'Sepia' },
+  { id: 'forest', bg: '#07100c', label: 'Forest' },
+  { id: 'slate', bg: '#0a0d14', label: 'Slate' },
+];
+
+const LINE_HEIGHTS = { compact: '1.6', relaxed: '1.85', spacious: '2.15' };
+const LETTER_SPACINGS = { tight: '-0.01em', normal: '0em', wide: '0.04em' };
+const PARA_SPACINGS = { tight: '0.5rem', normal: '1rem', loose: '1.75rem' };
+
+const CONTENT_WIDTHS = {
+  narrow: 'max-w-2xl',
+  medium: 'max-w-3xl',
+  wide: 'max-w-5xl',
+  full: 'max-w-none',
+};
 
 const SHARE_PLATFORMS = [
   {
@@ -117,7 +173,7 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
       data-section-id={section.id}
       onClick={onClick}
       className={cn(
-        'group relative flex w-full items-center justify-between gap-2 py-2 pr-2 text-left transition-all duration-150',
+        'group relative flex w-full items-center justify-between gap-2 rounded-md py-2 pr-2 text-left transition-all duration-150 touch-manipulation active:bg-white/5',
         level === 3 ? 'pl-8' : 'pl-3',
         isActive
           ? 'text-neon-violet'
@@ -210,6 +266,16 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
   useScrollLock(showMobileTOC);
   const [copied, setCopied]                   = useState(false);
   const [tableOfContents, setTableOfContents] = useState([]);
+  const [fontSize, setFontSize]               = useState('md');
+  const [fontFamily, setFontFamily]           = useState('sans');
+  const [bgTheme, setBgTheme]                 = useState('dark');
+  const [lineHeight, setLineHeight]           = useState('relaxed');
+  const [letterSpacing, setLetterSpacing]     = useState('normal');
+  const [paraSpacing, setParaSpacing]         = useState('normal');
+  const [textAlign, setTextAlign]             = useState('left');
+  const [contentWidth, setContentWidth]       = useState('full');
+  const [focusMode, setFocusMode]             = useState(false);
+  const [showReadingSettings, setShowReadingSettings] = useState(false);
   const contentRef = useRef(null);
   const tocNavRef  = useRef(null);
 
@@ -265,7 +331,10 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
   }, [roadmap.id, meta.views]);
 
   // ── Syntax highlighting ───────────────────────────────────────────────────
-  const enhancedContent = useMemo(() => highlightCodeBlocks(meta.content), [meta.content]);
+  const enhancedContent = useMemo(
+    () => highlightCodeBlocks(injectHeadingIds(meta.content)),
+    [meta.content]
+  );
 
   // ── Copy button delegation ────────────────────────────────────────────────
   useEffect(() => {
@@ -328,6 +397,32 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
       ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [activeSection]);
 
+  // ── Reading preferences: load/save ────────────────────────────────────────
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('neupc-reading-prefs');
+      if (!raw) return;
+      const p = JSON.parse(raw);
+      if (p.fontSize) setFontSize(p.fontSize);
+      if (p.fontFamily) setFontFamily(p.fontFamily);
+      if (p.bgTheme) setBgTheme(p.bgTheme);
+      if (p.lineHeight) setLineHeight(p.lineHeight);
+      if (p.letterSpacing) setLetterSpacing(p.letterSpacing);
+      if (p.paraSpacing) setParaSpacing(p.paraSpacing);
+      if (p.textAlign) setTextAlign(p.textAlign);
+      if (p.contentWidth) setContentWidth(p.contentWidth);
+      if (typeof p.tocCollapsed === 'boolean') setTocCollapsed(p.tocCollapsed);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('neupc-reading-prefs', JSON.stringify({
+        fontSize, fontFamily, bgTheme, lineHeight, letterSpacing, paraSpacing, textAlign, contentWidth, tocCollapsed,
+      }));
+    } catch { /* ignore */ }
+  }, [fontSize, fontFamily, bgTheme, lineHeight, letterSpacing, paraSpacing, textAlign, contentWidth, tocCollapsed]);
+
   const scrollToSection = useCallback((id) => {
     const el = document.getElementById(id);
     if (el) {
@@ -380,6 +475,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
   }
 
   const hasTOC = tableOfContents.length > 0;
+  const currentBg = BG_THEMES.find((t) => t.id === bgTheme)?.bg ?? '#0A0A0B';
   const activeIdx = tableOfContents.findIndex((t) => t.id === activeSection);
   let h2Count = 0;
   const tocItems = tableOfContents.map((s, i) => {
@@ -388,7 +484,10 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
   });
 
   return (
-    <main className="relative min-h-screen bg-[#0A0A0B] text-white">
+    <main
+      className="relative min-h-screen text-white transition-colors duration-500"
+      style={{ background: currentBg }}
+    >
 
       {/* ── Reading Progress Bar ─────────────────────────────────────────────── */}
       <div className="fixed top-0 right-0 left-0 z-50 h-0.5 bg-white/5">
@@ -405,7 +504,8 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
       {/* ── Sticky Mini Nav ──────────────────────────────────────────────────── */}
       <div
         data-sticky-nav
-        className="sticky top-0 z-40 border-b border-[#27272A]/50 bg-[#0A0A0B]/80 backdrop-blur-xl"
+        className="sticky top-0 z-40 border-b border-[#27272A]/50 backdrop-blur-xl transition-colors duration-500"
+        style={{ backgroundColor: `${currentBg}cc` }}
       >
         <div className="mx-auto w-full max-w-screen-2xl px-4 py-3 sm:px-6 lg:px-10">
           <div className="flex items-center justify-between">
@@ -433,7 +533,9 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
               {hasTOC && (
                 <button
                   onClick={() => setShowMobileTOC(!showMobileTOC)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all hover:border-neon-violet/30 hover:text-neon-violet xl:hidden"
+                  aria-label="Open learning path"
+                  aria-expanded={showMobileTOC}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all touch-manipulation hover:border-neon-violet/30 hover:text-neon-violet active:bg-white/10 xl:hidden"
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
@@ -449,16 +551,20 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
       {showMobileTOC && hasTOC && (
         <div className="fixed inset-0 z-50 xl:hidden">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowMobileTOC(false)} />
-          <div className="holographic-card no-lift absolute top-16 right-4 left-4 overflow-hidden rounded-2xl shadow-2xl">
-            <div className="flex items-center justify-between border-b border-[#27272A] px-5 py-4">
+          <div className="holographic-card no-lift absolute top-20 right-4 left-4 flex max-h-[calc(100dvh-6rem)] flex-col overflow-hidden rounded-2xl shadow-2xl">
+            <div className="flex shrink-0 items-center justify-between border-b border-[#27272A] px-5 py-4">
               <h3 className="font-mono text-[10px] font-bold tracking-[0.6em] text-neon-violet uppercase">Learning_Path</h3>
-              <button onClick={() => setShowMobileTOC(false)} className="text-zinc-500 hover:text-white">
+              <button
+                onClick={() => setShowMobileTOC(false)}
+                aria-label="Close learning path"
+                className="flex h-9 w-9 items-center justify-center rounded-md text-zinc-500 transition-colors touch-manipulation hover:text-white active:bg-white/10"
+              >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <nav className="max-h-80 overflow-y-auto px-3 py-3">
+            <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-3" style={{ WebkitOverflowScrolling: 'touch' }}>
               {tocItems.map((s) => (
                 <TOCItem
                   key={s.id} section={s} level={s.level}
@@ -599,7 +705,7 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
         <div className={cn(
           'flex transition-[gap] duration-300',
           !hasTOC && 'justify-center',
-          hasTOC && (tocCollapsed ? 'gap-4 lg:gap-6' : 'gap-8 lg:gap-12')
+          hasTOC && (tocCollapsed ? 'gap-4 xl:gap-6' : 'gap-8 xl:gap-12')
         )}>
 
           {/* ── Left sidebar: TOC ─────────────────────────────────────────────── */}
@@ -608,7 +714,10 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
               'hidden shrink-0 transition-[width] duration-300 ease-out xl:block',
               tocCollapsed ? 'xl:w-12' : 'xl:w-64'
             )}>
-              <div className="sticky top-20">
+              <div className={cn(
+                'sticky top-20 transition-opacity duration-300',
+                focusMode && !tocCollapsed && 'opacity-25 hover:opacity-100'
+              )}>
                 {tocCollapsed ? (
                   <div className="holographic-card no-lift flex flex-col items-center gap-3 rounded-2xl px-1 py-4">
                     <button
@@ -681,6 +790,48 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
                           style={{ width: `${scrollProgress}%` }}
                         />
                       </div>
+
+                      <div className="mt-6 space-y-3">
+                        <h4 className="font-mono text-[9px] font-bold tracking-widest text-zinc-500 uppercase">Broadcast_Signal</h4>
+                        <div className="flex gap-2">
+                          {[
+                            {
+                              icon: 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z',
+                              tip: 'Share on Twitter',
+                              action: () => handleShare('twitter'),
+                            },
+                            {
+                              icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',
+                              tip: 'Scroll to first code block',
+                              action: () => {
+                                const firstPre = contentRef.current?.querySelector('pre');
+                                if (firstPre) {
+                                  const stickyNav = document.querySelector('[data-sticky-nav]');
+                                  const offset = (stickyNav?.offsetHeight ?? 60) + 16;
+                                  window.scrollTo({ top: firstPre.getBoundingClientRect().top + window.scrollY - offset, behavior: 'smooth' });
+                                }
+                              },
+                            },
+                            {
+                              icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1',
+                              tip: 'Copy link',
+                              action: handleCopy,
+                            },
+                          ].map(({ icon, tip, action }) => (
+                            <button
+                              key={tip}
+                              title={tip}
+                              aria-label={tip}
+                              onClick={action}
+                              className="group flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/3 transition-all touch-manipulation hover:border-neon-violet/50 hover:bg-neon-violet/8 active:bg-white/8"
+                            >
+                              <svg className="h-4 w-4 text-zinc-400 transition-colors group-hover:text-neon-violet" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d={icon} />
+                              </svg>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -689,7 +840,229 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
           )}
 
           {/* ── Article ───────────────────────────────────────────────────────── */}
-          <article className={cn('w-full min-w-0 transition-all duration-300', hasTOC && (tocCollapsed ? 'lg:flex-1' : 'lg:w-2/3'))}>
+          <article className={cn('w-full min-w-0 transition-all duration-300', hasTOC && (tocCollapsed ? 'xl:flex-1' : 'xl:w-2/3'))}>
+
+            {/* Reading controls */}
+            <div className="mb-6 space-y-3">
+              <div className="holographic-card no-lift flex flex-wrap items-center justify-between gap-2 rounded-xl px-4 py-2.5">
+                <span className="flex items-center gap-2 font-mono text-[10px] tracking-wider text-zinc-500 uppercase">
+                  <svg className="text-neon-violet h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  <span className="hidden sm:inline">Reading_Config</span>
+                  <span className="hidden items-center gap-1 rounded-md bg-white/6 px-2 py-0.5 text-[10px] text-zinc-600 tabular-nums sm:flex">
+                    <span style={{ fontFamily: FONT_FAMILIES.find((f) => f.id === fontFamily)?.style }}>
+                      {FONT_FAMILIES.find((f) => f.id === fontFamily)?.label}
+                    </span>
+                    <span className="text-zinc-700">·</span>
+                    <span>{FONT_SIZES.find((f) => f.id === fontSize)?.label}</span>
+                  </span>
+                </span>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-0.5">
+                    {FONT_SIZES.map((fs) => (
+                      <button
+                        key={fs.id}
+                        onClick={() => setFontSize(fs.id)}
+                        className={cn(
+                          'rounded px-2 py-0.5 text-xs font-semibold transition-all touch-manipulation',
+                          fontSize === fs.id ? 'bg-neon-violet/20 text-neon-violet' : 'text-zinc-500 hover:text-zinc-300 active:bg-white/5'
+                        )}
+                      >
+                        {fs.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="h-4 w-px bg-white/10" />
+                  <button
+                    onClick={() => setShowReadingSettings((p) => !p)}
+                    aria-expanded={showReadingSettings}
+                    className={cn(
+                      'flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-all touch-manipulation',
+                      showReadingSettings
+                        ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
+                        : 'border-[#3F3F46] bg-white/5 text-zinc-500 hover:text-zinc-300 active:bg-white/10'
+                    )}
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span className="hidden sm:inline">Customize</span>
+                  </button>
+                </div>
+              </div>
+
+              {showReadingSettings && (
+                <div className="holographic-card no-lift rounded-xl p-5 shadow-2xl">
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="space-y-2.5">
+                      <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">Typeface</p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {FONT_FAMILIES.map((f) => (
+                          <button
+                            key={f.id}
+                            onClick={() => setFontFamily(f.id)}
+                            className={cn(
+                              'rounded-lg border px-2 py-2 text-xs transition-all touch-manipulation',
+                              fontFamily === f.id
+                                ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
+                                : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
+                            )}
+                            style={{ fontFamily: f.style }}
+                          >
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">Size & Align</p>
+                      <div className="flex gap-1">
+                        {FONT_SIZES.map((fs) => (
+                          <button
+                            key={fs.id}
+                            onClick={() => setFontSize(fs.id)}
+                            className={cn(
+                              'flex-1 rounded-lg border py-1.5 text-[11px] font-semibold transition-all touch-manipulation',
+                              fontSize === fs.id
+                                ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
+                                : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
+                            )}
+                          >
+                            {fs.label}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex gap-1.5">
+                        {[
+                          { id: 'left', label: 'Left', d: 'M3 6h18M3 12h12M3 18h15' },
+                          { id: 'justify', label: 'Justify', d: 'M3 6h18M3 12h18M3 18h18' },
+                        ].map((a) => (
+                          <button
+                            key={a.id}
+                            onClick={() => setTextAlign(a.id)}
+                            className={cn(
+                              'flex flex-1 items-center justify-center gap-1.5 rounded-lg border py-2 text-xs transition-all touch-manipulation',
+                              textAlign === a.id
+                                ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
+                                : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
+                            )}
+                          >
+                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d={a.d} />
+                            </svg>
+                            {a.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">Spacing</p>
+                      {[
+                        { label: 'Line height', state: lineHeight, set: setLineHeight, keys: Object.keys(LINE_HEIGHTS) },
+                        { label: 'Letter spacing', state: letterSpacing, set: setLetterSpacing, keys: Object.keys(LETTER_SPACINGS) },
+                        { label: 'Paragraph gap', state: paraSpacing, set: setParaSpacing, keys: Object.keys(PARA_SPACINGS) },
+                      ].map(({ label, state, set, keys }) => (
+                        <div key={label}>
+                          <p className="mb-1.5 text-[10px] text-zinc-600">{label}</p>
+                          <div className="flex gap-1">
+                            {keys.map((k) => (
+                              <button
+                                key={k}
+                                onClick={() => set(k)}
+                                className={cn(
+                                  'flex-1 rounded-lg border py-1.5 text-[11px] capitalize transition-all touch-manipulation',
+                                  state === k
+                                    ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
+                                    : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
+                                )}
+                              >
+                                {k.slice(0, 3)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-semibold tracking-[0.15em] text-zinc-500 uppercase">Theme & Layout</p>
+                      <div className="flex flex-wrap gap-2">
+                        {BG_THEMES.map((t) => (
+                          <button
+                            key={t.id}
+                            onClick={() => setBgTheme(t.id)}
+                            title={t.label}
+                            aria-label={`Background theme ${t.label}`}
+                            className={cn(
+                              'h-8 w-8 rounded-lg transition-all touch-manipulation',
+                              bgTheme === t.id
+                                ? 'ring-neon-violet scale-110 ring-2 ring-offset-1 ring-offset-[#131315]'
+                                : 'ring-1 ring-white/15 hover:ring-white/30'
+                            )}
+                            style={{ background: t.bg }}
+                          />
+                        ))}
+                      </div>
+                      <div>
+                        <p className="mb-1.5 text-[10px] text-zinc-600">Content width</p>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {Object.keys(CONTENT_WIDTHS).map((id) => (
+                            <button
+                              key={id}
+                              onClick={() => setContentWidth(id)}
+                              className={cn(
+                                'rounded-lg border py-1.5 text-xs capitalize transition-all touch-manipulation',
+                                contentWidth === id
+                                  ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
+                                  : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
+                              )}
+                            >
+                              {id}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setFocusMode((p) => !p)}
+                        aria-pressed={focusMode}
+                        className={cn(
+                          'flex w-full items-center justify-between rounded-lg border px-3 py-2 text-xs transition-all touch-manipulation',
+                          focusMode
+                            ? 'border-neon-violet/30 bg-neon-violet/10 text-neon-violet'
+                            : 'border-[#27272A] bg-white/3 text-zinc-500 hover:text-zinc-300 active:bg-white/5'
+                        )}
+                      >
+                        <span>Focus mode</span>
+                        <div className={cn(
+                          'relative flex h-4 w-7 items-center rounded-full border transition-all',
+                          focusMode ? 'border-neon-violet/50 bg-neon-violet/30' : 'border-white/15 bg-white/5'
+                        )}>
+                          <div className={cn(
+                            'absolute h-3 w-3 rounded-full transition-all duration-200',
+                            focusMode ? 'bg-neon-violet left-3.5' : 'left-0.5 bg-gray-600'
+                          )} />
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-center justify-between border-t border-white/6 pt-3">
+                    <p className="text-[10px] text-zinc-600">Settings saved in your browser</p>
+                    <button
+                      onClick={() => {
+                        setFontSize('md'); setFontFamily('sans'); setBgTheme('dark');
+                        setLineHeight('relaxed'); setLetterSpacing('normal'); setParaSpacing('normal');
+                        setTextAlign('left'); setContentWidth('full'); setFocusMode(false);
+                        setTocCollapsed(false);
+                      }}
+                      className="rounded-lg border border-[#3F3F46] bg-white/4 px-3 py-1.5 text-[11px] text-gray-500 transition-all touch-manipulation hover:border-white/20 hover:text-gray-300 active:bg-white/10"
+                    >
+                      Reset defaults
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Prerequisites */}
             {meta.prerequisites.length > 0 && (
@@ -715,7 +1088,20 @@ export default function RoadmapDetailClient({ roadmap: propRoadmap = {}, related
             {enhancedContent ? (
               <div
                 ref={contentRef}
-                className="holographic-card no-lift blog-content mx-auto rounded-2xl p-4 transition-all duration-300 sm:p-6 md:p-8 lg:p-10"
+                className={cn(
+                  'holographic-card no-lift blog-content mx-auto rounded-2xl p-4 transition-all duration-300 sm:p-6 md:p-8 lg:p-10',
+                  CONTENT_WIDTHS[contentWidth],
+                  focusMode && 'shadow-[0_0_0_100vw_rgba(0,0,0,0.5)]'
+                )}
+                style={{
+                  '--blog-fs': FONT_SIZES.find((f) => f.id === fontSize)?.value ?? '1rem',
+                  '--blog-ff': FONT_FAMILIES.find((f) => f.id === fontFamily)?.style,
+                  '--blog-ls': LETTER_SPACINGS[letterSpacing],
+                  '--blog-ps': PARA_SPACINGS[paraSpacing],
+                  '--blog-bg': currentBg,
+                  lineHeight: LINE_HEIGHTS[lineHeight],
+                  textAlign,
+                }}
                 dangerouslySetInnerHTML={{ __html: enhancedContent }}
               />
             ) : (

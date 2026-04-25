@@ -254,7 +254,7 @@ function TOCItem({ section, level, isActive, isPast, sectionNum, onClick }) {
       data-section-id={section.id}
       onClick={onClick}
       className={cn(
-        'group relative flex w-full items-center justify-between gap-2 py-2 pr-2 text-left transition-all duration-150',
+        'group relative flex w-full items-center justify-between gap-2 rounded-md py-2 pr-2 text-left transition-all duration-150 touch-manipulation active:bg-white/5',
         level === 3 ? 'pl-8' : 'pl-3',
         isActive
           ? 'text-neon-violet'
@@ -711,7 +711,9 @@ export default function BlogDetailClient({
                 {hasTOC && (
                   <button
                     onClick={() => setShowMobileTOC(!showMobileTOC)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all hover:border-neon-violet/30 hover:text-neon-violet xl:hidden"
+                    aria-label="Open table of contents"
+                    aria-expanded={showMobileTOC}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#3F3F46] bg-white/5 text-zinc-400 transition-all touch-manipulation hover:border-neon-violet/30 hover:text-neon-violet active:bg-white/10 xl:hidden"
                   >
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
@@ -727,16 +729,20 @@ export default function BlogDetailClient({
         {showMobileTOC && hasTOC && (
           <div className="fixed inset-0 z-50 xl:hidden">
             <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowMobileTOC(false)} />
-            <div className="holographic-card no-lift absolute top-16 right-4 left-4 overflow-hidden rounded-2xl shadow-2xl">
-              <div className="flex items-center justify-between border-b border-[#27272A] px-5 py-4">
+            <div className="holographic-card no-lift absolute top-20 right-4 left-4 flex max-h-[calc(100dvh-6rem)] flex-col overflow-hidden rounded-2xl shadow-2xl">
+              <div className="flex shrink-0 items-center justify-between border-b border-[#27272A] px-5 py-4">
                 <h3 className="font-mono text-[10px] font-bold tracking-[0.6em] text-neon-violet uppercase">Protocol_Overview</h3>
-                <button onClick={() => setShowMobileTOC(false)} className="text-zinc-500 hover:text-white">
+                <button
+                  onClick={() => setShowMobileTOC(false)}
+                  aria-label="Close table of contents"
+                  className="flex h-9 w-9 items-center justify-center rounded-md text-zinc-500 transition-colors touch-manipulation hover:text-white active:bg-white/10"
+                >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
-              <nav className="max-h-80 overflow-y-auto px-3 py-3">
+              <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-3" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {tocItems.map((s) => (
                   <TOCItem
                     key={s.id} section={s} level={s.level}
@@ -879,13 +885,13 @@ export default function BlogDetailClient({
           <div className={cn(
             'flex transition-[gap] duration-300',
             !hasTOC && 'justify-center',
-            hasTOC && (tocCollapsed ? 'gap-4 lg:gap-6' : 'gap-8 lg:gap-12')
+            hasTOC && (tocCollapsed ? 'gap-4 xl:gap-6' : 'gap-8 xl:gap-12')
           )}>
 
             {/* ── Article Column ────────────────────────────────────────────── */}
             <article className={cn(
               'w-full min-w-0 transition-all duration-300',
-              hasTOC && (tocCollapsed ? 'lg:flex-1' : 'lg:w-2/3')
+              hasTOC && (tocCollapsed ? 'xl:flex-1' : 'xl:w-2/3')
             )}>
 
               {/* Reading controls */}
@@ -1232,8 +1238,8 @@ export default function BlogDetailClient({
             {hasTOC && (
               <aside
                 className={cn(
-                  'hidden shrink-0 transition-[width] duration-300 ease-out lg:block',
-                  tocCollapsed ? 'lg:w-12' : 'lg:w-1/3'
+                  'hidden shrink-0 transition-[width] duration-300 ease-out xl:block',
+                  tocCollapsed ? 'xl:w-12' : 'xl:w-1/3'
                 )}
               >
                 <div className={cn(
