@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { cn } from '../_lib/utils';
 import InlinePagination from '../_components/ui/InlinePagination';
+import FeaturedCarousel from '../_components/ui/FeaturedCarousel';
 
 const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
   ssr: false,
@@ -242,159 +243,168 @@ const PARTICIPATION_CATEGORY_EMOJI = {
 // Featured Achievements Carousel
 // ---------------------------------------------------------------------------
 
-function FeaturedAchievementsCarousel({ items }) {
-  const [idx, setIdx] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const total = items.length;
-  const prev = () => setIdx((i) => (i - 1 + total) % total);
-  const next = () => setIdx((i) => (i + 1) % total);
-
-  useEffect(() => {
-    if (total <= 1 || paused) return;
-    const t = setInterval(() => setIdx((i) => (i + 1) % total), 5500);
-    return () => clearInterval(t);
-  }, [total, paused]);
-
-  const achievement = items[idx];
-  const _rs = getResultStyle(achievement.result);
-  const _participants = Array.isArray(achievement.participants)
-    ? achievement.participants
-    : [];
+function FeaturedAchievementBanner({ achievement, onSelect }) {
+  const rs = getResultStyle(achievement.result);
   const cats = achievement.category
     ? achievement.category
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean)
     : [];
+  const participants = Array.isArray(achievement.participants)
+    ? achievement.participants
+    : [];
+  const image = achievement.featured_photo?.url;
 
   return (
-    <div
-      className="group relative mb-10 overflow-hidden rounded-3xl border border-white/15 bg-white/4 shadow-2xl shadow-black/30 backdrop-blur-sm transition-all duration-500 hover:border-white/30"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+    <motion.div
+      variants={fadeUp}
+      initial="hidden"
+      whileInView="visible"
+      viewport={viewport}
+      className="group relative overflow-hidden rounded-2xl border border-neon-lime/10 bg-[#05060b]"
     >
-      <div className="pointer-events-none absolute -top-28 -right-28 h-80 w-80 rounded-full bg-amber-500/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-28 -left-28 h-80 w-80 rounded-full bg-cyan-500/8 blur-3xl" />
+      <div className="relative aspect-[4/5] w-full sm:aspect-[16/10] lg:aspect-[21/9]">
+        {/* Backdrop fill */}
+        {image && (
+          <Image
+            src={image}
+            alt=""
+            aria-hidden
+            fill
+            className="scale-110 object-cover opacity-40 blur-2xl"
+            sizes="100vw"
+            unoptimized
+          />
+        )}
 
-      <div className="relative h-96 overflow-hidden sm:h-112 md:h-128">
+        {/* Foreground image */}
         <Image
-          src={achievement.featured_photo?.url ?? '/placeholder-event.png'}
-          alt={achievement.title}
+          src={image ?? '/placeholder-event.png'}
+          alt={achievement.title || 'Featured achievement'}
           fill
-          className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.06]"
+          className="object-contain object-center"
           sizes="100vw"
           unoptimized
         />
-        <div className="absolute inset-0 bg-linear-to-t from-black/48 via-black/12 to-black/3" />
-        <div className="absolute inset-0 bg-linear-to-r from-black/10 via-transparent to-black/8" />
 
-        <div className="absolute top-4 left-4 flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/6 px-3 py-1 text-[11px] font-bold text-amber-200 shadow-lg shadow-black/25 backdrop-blur-2xl">
-            ⭐ Featured
+        {/* Bottom scrim */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-[#05060b] via-[#05060b]/85 to-transparent" />
+
+        {/* Top-left meta */}
+        <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2 sm:top-5 sm:left-5">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-neon-lime/30 bg-black/50 px-3 py-1 font-mono text-[9px] font-bold tracking-widest text-neon-lime uppercase backdrop-blur-md sm:text-[10px]">
+            <span className="h-1.5 w-1.5 rounded-full bg-neon-lime" />
+            Featured Victory
           </span>
           {achievement.year && (
-            <span className="rounded-lg border border-white/22 bg-white/5 px-2.5 py-1 text-xs font-bold text-white shadow-md shadow-black/25 backdrop-blur-2xl">
+            <span className="rounded-full border border-white/15 bg-black/50 px-3 py-1 font-mono text-[9px] font-bold tracking-widest text-zinc-200 uppercase backdrop-blur-md sm:text-[10px]">
               {achievement.year}
             </span>
           )}
         </div>
 
-        {total > 1 && (
-          <span className="absolute top-4 right-4 rounded-lg border border-white/20 bg-white/5 px-2.5 py-1 text-xs font-semibold text-white tabular-nums shadow-md shadow-black/25 backdrop-blur-2xl">
-            {idx + 1} / {total}
-          </span>
-        )}
-
-        <div className="absolute inset-x-0 bottom-0 p-2 sm:p-3">
-          <div className="relative max-w-full overflow-hidden rounded-xl border border-white/16 bg-white/2 px-3 py-2 shadow-[0_8px_20px_rgba(0,0,0,0.15)] backdrop-blur-lg sm:px-4 sm:py-2.5">
-            <div className="pointer-events-none absolute inset-0 bg-linear-to-br from-white/4 via-white/1 to-transparent" />
-            <div className="relative z-10 flex flex-col gap-1.5">
-              {cats.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {cats.slice(0, 2).map((cat) => (
-                    <span
-                      key={cat}
-                      className="rounded-full border border-white/20 bg-white/3 px-2 py-0.5 text-[9px] font-semibold text-white drop-shadow-sm"
-                    >
-                      {cat}
-                    </span>
-                  ))}
-                </div>
+        {/* Floating content */}
+        <div className="absolute inset-x-3 bottom-3 sm:inset-x-5 sm:bottom-5 lg:inset-x-8 lg:bottom-8">
+          <div className="max-w-2xl space-y-3 sm:space-y-4">
+            {/* Result chip + categories */}
+            <div className="flex flex-wrap items-center gap-2">
+              {achievement.result && rs && (
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] font-bold tracking-widest uppercase backdrop-blur-md sm:text-[11px]',
+                    rs.badge
+                  )}
+                >
+                  <span aria-hidden>{rs.emoji}</span>
+                  <ResultText text={achievement.result} />
+                </span>
               )}
+              {cats.slice(0, 2).map((c) => (
+                <span
+                  key={c}
+                  className="rounded-full border border-white/15 bg-black/50 px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-widest text-zinc-200 uppercase backdrop-blur-md sm:text-[10px]"
+                >
+                  {c}
+                </span>
+              ))}
+            </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm leading-tight font-bold text-white drop-shadow-md sm:text-base">
-                  {achievement.title}
-                </h3>
-                {achievement.contest_name && (
-                  <span className="text-xs text-white/85 drop-shadow-sm">
-                    {achievement.contest_url ? (
-                      <a
-                        href={achievement.contest_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline underline-offset-1 hover:text-white"
-                      >
-                        {achievement.contest_name}
-                      </a>
-                    ) : (
-                      achievement.contest_name
-                    )}
-                  </span>
+            {/* Title */}
+            <h3 className="kinetic-headline font-heading text-2xl font-black leading-[1.05] text-white uppercase drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)] sm:text-3xl lg:text-5xl">
+              {achievement.title}
+            </h3>
+
+            {/* Contest name */}
+            {achievement.contest_name && (
+              <p className="flex items-center gap-2 font-mono text-[10px] tracking-[0.2em] text-zinc-300 uppercase sm:text-[11px]">
+                <svg className="h-3 w-3 shrink-0 text-neon-lime" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+                {achievement.contest_url ? (
+                  <a
+                    href={achievement.contest_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-neon-lime"
+                  >
+                    {achievement.contest_name}
+                  </a>
+                ) : (
+                  achievement.contest_name
                 )}
-              </div>
+              </p>
+            )}
+
+            {/* Description — desktop only */}
+            {achievement.description && (
+              <p className="hidden max-w-xl text-sm leading-relaxed text-zinc-300 sm:block sm:text-base">
+                {achievement.description.length > 160 ? `${achievement.description.slice(0, 160).trim()}…` : achievement.description}
+              </p>
+            )}
+
+            {/* CTA + team row */}
+            <div className="flex flex-wrap items-center gap-3 pt-1 sm:gap-4">
+              <button
+                type="button"
+                onClick={() => onSelect?.(achievement)}
+                className="group/cta inline-flex min-h-[44px] items-center gap-2 rounded-full bg-neon-lime px-6 py-3 font-heading text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.8)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-lime focus-visible:ring-offset-2 focus-visible:ring-offset-[#05060b] sm:px-7 sm:text-[11px]"
+              >
+                Read Story
+                <span className="transition-transform group-hover/cta:translate-x-1">→</span>
+              </button>
+              {(achievement.team_name || participants.length > 0) && (
+                <p className="flex items-center gap-1.5 font-mono text-[10px] tracking-wider text-zinc-400 sm:text-[11px]">
+                  <span aria-hidden>{achievement.is_team ? '👥' : '👤'}</span>
+                  <span className="truncate max-w-[18rem]">
+                    {achievement.team_name ||
+                      participants
+                        .slice(0, 3)
+                        .map((p) => p.name || p)
+                        .filter(Boolean)
+                        .join(', ')}
+                    {participants.length > 3 && ` +${participants.length - 3}`}
+                  </span>
+                </p>
+              )}
             </div>
           </div>
         </div>
-
-        {total > 1 && (
-          <>
-            <button
-              onClick={prev}
-              aria-label="Previous"
-              className="absolute top-1/2 left-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:bg-black/80"
-            >
-              <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-                <path
-                  fillRule="evenodd"
-                  d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
-            <button
-              onClick={next}
-              aria-label="Next"
-              className="absolute top-1/2 right-3 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 hover:bg-black/80"
-            >
-              <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-                <path
-                  fillRule="evenodd"
-                  d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
-
-            <div className="absolute right-5 bottom-4 flex items-center gap-1.5">
-              {items.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setIdx(i)}
-                  aria-label={`Slide ${i + 1}`}
-                  className={cn(
-                    'h-1.5 rounded-full transition-all duration-300',
-                    i === idx
-                      ? 'w-5 bg-white'
-                      : 'w-1.5 bg-white/35 hover:bg-white/60'
-                  )}
-                />
-              ))}
-            </div>
-          </>
-        )}
       </div>
-    </div>
+    </motion.div>
+  );
+}
+
+function FeaturedAchievementsCarousel({ items, onSelect }) {
+  return (
+    <FeaturedCarousel
+      items={items}
+      ariaLabel="Featured achievements"
+      getKey={(a) => a.id}
+      renderItem={(a) => (
+        <FeaturedAchievementBanner achievement={a} onSelect={onSelect} />
+      )}
+    />
   );
 }
 
@@ -1610,7 +1620,10 @@ export default function AchievementsClient({
               title="Featured"
               accent="Victory"
             />
-            <FeaturedAchievementsCarousel items={featuredAchievements} />
+            <FeaturedAchievementsCarousel
+              items={featuredAchievements}
+              onSelect={setSelectedAchievement}
+            />
           </div>
         </section>
       )}

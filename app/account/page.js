@@ -60,13 +60,22 @@ export default async function AccountPage() {
 
   return (
     <AccountPageClient redirectPath={redirectPath}>
-      <div className="min-h-screen px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-5xl">
-          <AccountHeader
-            session={session.user}
-            accountStatus={user?.account_status}
-          />
-          <UserAvatar session={session.user} />
+      <main className="relative min-h-screen overflow-hidden bg-[#060810] px-4 pt-32 pb-16 sm:px-6 sm:pt-36 lg:px-8">
+        {/* Decorative gradient blobs (matches public-page hero language) */}
+        <div className="pointer-events-none absolute inset-0 z-0">
+          <div className="from-primary-500/10 absolute -top-20 -left-20 h-96 w-96 rounded-full bg-linear-to-br to-transparent blur-3xl" />
+          <div className="from-secondary-500/10 absolute -right-20 -bottom-20 h-96 w-96 rounded-full bg-linear-to-tl to-transparent blur-3xl" />
+        </div>
+
+        <div className="relative z-10 mx-auto max-w-5xl">
+          {/* Hero: avatar above gradient title (centered, matches PageHero) */}
+          <div className="mb-16">
+            <UserAvatar session={session.user} />
+            <AccountHeader
+              session={session.user}
+              accountStatus={user?.account_status}
+            />
+          </div>
           <AvailableRoles
             availableRoles={availableRoles}
             accountStatus={user?.account_status}
@@ -88,7 +97,7 @@ export default async function AccountPage() {
             userRoles={userRoles}
           />
         </div>
-      </div>
+      </main>
     </AccountPageClient>
   );
 }

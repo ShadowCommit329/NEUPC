@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import InlinePagination from '../_components/ui/InlinePagination';
 import SafeImg from '../_components/ui/SafeImg';
+import FeaturedCarousel from '../_components/ui/FeaturedCarousel';
 import { cn, driveImageUrl } from '../_lib/utils';
 
 const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
@@ -270,88 +271,117 @@ function FeaturedBanner({ event }) {
   const st = STATUS_STYLES[event.status] ?? STATUS_STYLES.upcoming;
 
   return (
-    <motion.div
+    <motion.article
       variants={fadeUp}
       initial="hidden"
       whileInView="visible"
       viewport={viewport}
-      className="glass-panel overflow-hidden rounded-2xl border border-neon-lime/10"
+      className="group relative overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] shadow-[0_0_0_1px_rgba(182,243,107,0.06),0_32px_64px_-16px_rgba(0,0,0,0.7)]"
     >
-      <div className="grid lg:grid-cols-2">
-        {/* Image panel */}
-        <div className="relative min-h-56 sm:min-h-72 lg:min-h-[400px]">
-          {image ? (
-            <SafeImg
-              src={image}
-              alt={event.title || 'Featured event'}
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/3 text-zinc-700">
-              <svg className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={0.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-          )}
-          {/* Fade to panel bg on desktop (right side), bottom on mobile */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#05060b]/80 via-[#05060b]/10 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:via-[#05060b]/10 lg:to-[#05060b]/90" />
+      {/* Neon-lime top accent line */}
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-neon-lime/60 to-transparent z-10" />
 
-          {/* Status badge */}
-          <div className={cn(
-            'absolute top-3 left-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[9px] font-bold tracking-widest uppercase backdrop-blur-md sm:top-4 sm:left-4 sm:text-[10px]',
+      {/* Cover */}
+      <div className="relative aspect-[3/2] w-full overflow-hidden sm:aspect-[16/8]">
+        {/* Blurred fill so letterbox looks intentional */}
+        {image && (
+          <SafeImg
+            src={image}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 h-full w-full scale-110 object-cover opacity-25 blur-3xl"
+          />
+        )}
+        {image ? (
+          <SafeImg
+            src={image}
+            alt={event.title || 'Featured event'}
+            className="absolute inset-0 h-full w-full object-contain transition-transform duration-700 group-hover:scale-[1.02]"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <svg className="h-16 w-16 text-zinc-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={0.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+        )}
+
+        {/* Gradient lip — melds cover into content panel */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#08090f] to-transparent" />
+
+        {/* Top-left badges */}
+        <div className="absolute top-4 left-4 flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-neon-lime/25 bg-black/60 px-3 py-1 font-mono text-[9px] font-bold tracking-[0.2em] text-neon-lime uppercase backdrop-blur-xl sm:text-[10px]">
+            <span className="h-1.5 w-1.5 rounded-full bg-neon-lime shadow-[0_0_6px_2px_rgba(182,243,107,0.7)]" />
+            Featured
+          </span>
+          <span className={cn(
+            'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[9px] font-bold tracking-[0.2em] uppercase backdrop-blur-xl sm:text-[10px]',
             st.badge
           )}>
             <span className={cn('h-1.5 w-1.5 rounded-full', st.dot)} />
             {st.label}
-          </div>
+          </span>
+        </div>
+      </div>
+
+      {/* Content — pulled up slightly into the cover gradient */}
+      <div className="relative -mt-6 px-6 pb-7 sm:-mt-8 sm:px-8 sm:pb-9 lg:px-10 lg:pb-10">
+        {/* Meta row */}
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+          {event.start_date && (
+            <span className="font-mono text-[10px] tracking-[0.25em] text-neon-lime uppercase sm:text-[11px]">
+              {fmtDate(event.start_date)}
+              {fmtTime(event.start_date) ? ` · ${fmtTime(event.start_date)}` : ''}
+            </span>
+          )}
+          {event.category && (
+            <>
+              <span className="h-3 w-px bg-white/15" />
+              <span className="font-mono text-[10px] tracking-[0.2em] text-zinc-500 uppercase sm:text-[11px]">
+                {event.category}
+              </span>
+            </>
+          )}
         </div>
 
-        {/* Content panel */}
-        <div className="flex flex-col justify-center gap-4 p-6 sm:gap-5 sm:p-8 lg:p-12">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-neon-lime/30 bg-neon-lime/10 px-3 py-0.5 font-mono text-[9px] font-bold tracking-widest text-neon-lime uppercase sm:text-[10px]">
-              Featured
-            </span>
-            {event.start_date && (
-              <span className="font-mono text-[10px] tracking-wider text-zinc-500">
-                {fmtDate(event.start_date)}
-                {fmtTime(event.start_date) ? ` · ${fmtTime(event.start_date)}` : ''}
-              </span>
-            )}
-          </div>
+        {/* Title */}
+        <h3 className="kinetic-headline font-heading text-[1.6rem] font-black leading-[1.05] text-white uppercase sm:text-4xl lg:text-5xl">
+          {event.title}
+        </h3>
 
-          <h3 className="kinetic-headline font-heading text-2xl font-black leading-tight text-white uppercase sm:text-3xl lg:text-4xl">
-            {event.title}
-          </h3>
+        {/* Neon-lime underline accent */}
+        <div className="mt-4 h-px w-12 bg-neon-lime/50 sm:mt-5" />
 
-          {event.description && (
-            <p className="line-clamp-3 text-sm leading-relaxed text-zinc-400 sm:text-base">
-              {event.description}
-            </p>
-          )}
+        {/* Description */}
+        {event.description && (
+          <p className="mt-4 max-w-2xl text-sm leading-[1.75] text-zinc-400 sm:mt-5 sm:text-[15px]">
+            {event.description.length > 220 ? `${event.description.slice(0, 220).trim()}…` : event.description}
+          </p>
+        )}
+
+        {/* CTA row */}
+        <div className="mt-6 flex flex-wrap items-center gap-4 sm:mt-7">
+          <Link
+            href={getHref(event)}
+            className="group/cta relative inline-flex min-h-[44px] items-center gap-2.5 rounded-full bg-neon-lime px-7 py-3 font-heading text-[10px] font-bold tracking-[0.18em] text-black uppercase shadow-[0_0_24px_-4px_rgba(182,243,107,0.5)] transition-all duration-300 hover:shadow-[0_0_40px_-2px_rgba(182,243,107,0.75)] hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-lime focus-visible:ring-offset-2 focus-visible:ring-offset-[#08090f] sm:text-[11px]"
+          >
+            Learn More
+            <span className="transition-transform duration-300 group-hover/cta:translate-x-1">→</span>
+          </Link>
 
           {event.location && (
-            <p className="flex items-center gap-2 font-mono text-[10px] tracking-wider text-zinc-500">
-              <svg className="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <span className="flex items-center gap-2 font-mono text-[10px] tracking-wider text-zinc-500 sm:text-[11px]">
+              <svg className="h-3.5 w-3.5 shrink-0 text-neon-lime/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              {event.location}
-            </p>
+              <span className="truncate max-w-[240px]">{event.location}</span>
+            </span>
           )}
-
-          <div className="pt-1">
-            <Link
-              href={getHref(event)}
-              className="inline-flex items-center gap-2 rounded-full bg-neon-lime px-6 py-3 font-heading text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.8)] sm:px-8 sm:py-3.5 sm:text-[11px]"
-            >
-              Learn More
-              <span className="transition-transform group-hover:translate-x-1">→</span>
-            </Link>
-          </div>
         </div>
       </div>
-    </motion.div>
+    </motion.article>
   );
 }
 
@@ -401,12 +431,17 @@ export default function EventsClient({ events = [], settings = {} }) {
     ...Array.from(new Set(events.map(e => e.category).filter(Boolean))).sort(),
   ], [events]);
 
-  const featured = useMemo(() =>
-    events.find(e => e.is_featured && ['upcoming','ongoing'].includes(e.status)) ||
-    events.find(e => e.is_featured) ||
-    events.find(e => ['upcoming','ongoing'].includes(e.status)) ||
-    events[0] || null,
-  [events]);
+  const featuredEvents = useMemo(() => {
+    const flagged = events.filter(e => e.is_featured);
+    if (flagged.length > 0) {
+      const rank = (e) => (['upcoming','ongoing'].includes(e.status) ? 0 : 1);
+      return [...flagged].sort((a, b) => rank(a) - rank(b));
+    }
+    const fallback =
+      events.find(e => ['upcoming','ongoing'].includes(e.status)) ||
+      events[0];
+    return fallback ? [fallback] : [];
+  }, [events]);
 
   const filtered = useMemo(() => {
     let list = [...events];
@@ -560,8 +595,8 @@ export default function EventsClient({ events = [], settings = {} }) {
         </div>
       </section>
 
-      {/* ── Featured event ────────────────────────────────────────────────── */}
-      {featured && (
+      {/* ── Featured events ───────────────────────────────────────────────── */}
+      {featuredEvents.length > 0 && (
         <section className="px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
           <div className="mx-auto max-w-7xl space-y-7 sm:space-y-9">
 
@@ -574,7 +609,7 @@ export default function EventsClient({ events = [], settings = {} }) {
               <motion.div variants={fadeUp} className="flex items-center gap-3">
                 <span className="bg-neon-lime h-px w-7" />
                 <span className="font-mono text-[10px] tracking-[0.35em] text-neon-lime uppercase sm:text-[11px]">
-                  Featured Event
+                  {featuredEvents.length > 1 ? 'Featured Events' : 'Featured Event'}
                 </span>
               </motion.div>
               <motion.h2
@@ -585,7 +620,12 @@ export default function EventsClient({ events = [], settings = {} }) {
               </motion.h2>
             </motion.div>
 
-            <FeaturedBanner event={featured} />
+            <FeaturedCarousel
+              items={featuredEvents}
+              ariaLabel="Featured events"
+              getKey={(e) => e.id ?? e.slug ?? e.title}
+              renderItem={(event) => <FeaturedBanner event={event} />}
+            />
           </div>
         </section>
       )}

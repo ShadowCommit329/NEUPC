@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import SafeImg from '@/app/_components/ui/SafeImg';
 import InlinePagination from '@/app/_components/ui/InlinePagination';
+import FeaturedCarousel from '@/app/_components/ui/FeaturedCarousel';
 import { cn, driveImageUrl } from '@/app/_lib/utils';
 
 const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
@@ -176,79 +177,92 @@ function FeaturedBanner({ roadmap }) {
   const icon = getCategoryIcon(roadmap.category);
 
   return (
-    <motion.div
+    <motion.article
       variants={fadeUp}
       initial="hidden"
       whileInView="visible"
       viewport={viewport}
-      className="glass-panel overflow-hidden rounded-2xl border border-neon-lime/10"
+      className="group relative overflow-hidden rounded-2xl border border-white/8 bg-[#08090f] shadow-[0_0_0_1px_rgba(182,243,107,0.06),0_32px_64px_-16px_rgba(0,0,0,0.7)]"
     >
-      <div className="grid lg:grid-cols-2">
-        {/* Image panel */}
-        <div className="relative min-h-56 sm:min-h-72 lg:min-h-[400px]">
-          {image ? (
-            <SafeImg
-              src={image}
-              alt={roadmap.title}
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/3 text-6xl text-zinc-700">
-              {icon}
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#05060b]/80 via-[#05060b]/10 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:via-[#05060b]/10 lg:to-[#05060b]/90" />
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-neon-lime/60 to-transparent z-10" />
 
-          {/* Category badge */}
-          {roadmap.category && (
-            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 rounded-full border border-neon-lime/30 bg-neon-lime/10 px-3 py-1 font-mono text-[9px] font-bold tracking-widest text-neon-lime uppercase backdrop-blur-md sm:text-[10px]">
-              {roadmap.category}
-            </div>
-          )}
-          {/* Featured badge */}
-          <div className="absolute top-3 right-3 sm:top-4 sm:right-4 rounded-full bg-neon-lime/90 px-2.5 py-0.5 font-mono text-[9px] font-bold tracking-widest text-black uppercase backdrop-blur-sm">
+      {/* Cover */}
+      <div className="relative aspect-[3/2] w-full overflow-hidden sm:aspect-[16/8]">
+        {image && (
+          <SafeImg
+            src={image}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 h-full w-full scale-110 object-cover opacity-25 blur-3xl"
+          />
+        )}
+        {image ? (
+          <SafeImg
+            src={image}
+            alt={roadmap.title}
+            className="absolute inset-0 h-full w-full object-contain transition-transform duration-700 group-hover:scale-[1.02]"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-7xl text-zinc-700">
+            {icon}
+          </div>
+        )}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#08090f] to-transparent" />
+
+        {/* Badges */}
+        <div className="absolute top-4 left-4 flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-neon-lime/25 bg-black/60 px-3 py-1 font-mono text-[9px] font-bold tracking-[0.2em] text-neon-lime uppercase backdrop-blur-xl sm:text-[10px]">
+            <span className="h-1.5 w-1.5 rounded-full bg-neon-lime shadow-[0_0_6px_2px_rgba(182,243,107,0.7)]" />
             Featured
-          </div>
-        </div>
-
-        {/* Content panel */}
-        <div className="flex flex-col justify-center gap-4 p-6 sm:gap-5 sm:p-8 lg:p-12">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-neon-lime/30 bg-neon-lime/10 px-3 py-0.5 font-mono text-[9px] font-bold tracking-widest text-neon-lime uppercase sm:text-[10px]">
-              Priority Core Path
+          </span>
+          {roadmap.category && (
+            <span className="rounded-full border border-white/15 bg-black/60 px-3 py-1 font-mono text-[9px] font-bold tracking-[0.2em] text-zinc-300 uppercase backdrop-blur-xl sm:text-[10px]">
+              {roadmap.category}
             </span>
-            {roadmap.duration && (
-              <span className="font-mono text-[10px] tracking-wider text-zinc-500">
-                ⏱ {roadmap.duration}
-              </span>
-            )}
-          </div>
-
-          <h3 className="kinetic-headline font-heading text-2xl font-black leading-tight text-white uppercase sm:text-3xl lg:text-4xl">
-            {roadmap.title}
-          </h3>
-
-          {roadmap.description && (
-            <p className="line-clamp-3 text-sm leading-relaxed text-zinc-400 sm:text-base">
-              {roadmap.description}
-            </p>
           )}
-
-          <div className="flex flex-wrap items-center gap-3 pt-1">
-            <DifficultyBadge difficulty={roadmap.difficulty} />
-          </div>
-
-          <div className="pt-1">
-            <Link
-              href={`/roadmaps/${roadmap.slug}`}
-              className="inline-flex items-center gap-2 rounded-full bg-neon-lime px-6 py-3 font-heading text-[10px] font-bold tracking-widest text-black uppercase shadow-[0_0_30px_-8px_rgba(182,243,107,0.6)] transition-shadow hover:shadow-[0_0_50px_-4px_rgba(182,243,107,0.8)] sm:px-8 sm:py-3.5 sm:text-[11px]"
-            >
-              Explore Roadmap →
-            </Link>
-          </div>
         </div>
       </div>
-    </motion.div>
+
+      {/* Content */}
+      <div className="relative -mt-6 px-6 pb-7 sm:-mt-8 sm:px-8 sm:pb-9 lg:px-10 lg:pb-10">
+        {/* Meta */}
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+          {roadmap.duration && (
+            <span className="font-mono text-[10px] tracking-[0.25em] text-neon-lime uppercase sm:text-[11px]">
+              ⏱ {roadmap.duration}
+            </span>
+          )}
+          {roadmap.duration && roadmap.difficulty && (
+            <span className="h-3 w-px bg-white/15" />
+          )}
+          {roadmap.difficulty && (
+            <DifficultyBadge difficulty={roadmap.difficulty} />
+          )}
+        </div>
+
+        <h3 className="kinetic-headline font-heading text-[1.6rem] font-black leading-[1.05] text-white uppercase sm:text-4xl lg:text-5xl">
+          {roadmap.title}
+        </h3>
+
+        <div className="mt-4 h-px w-12 bg-neon-lime/50 sm:mt-5" />
+
+        {roadmap.description && (
+          <p className="mt-4 max-w-2xl text-sm leading-[1.75] text-zinc-400 sm:mt-5 sm:text-[15px]">
+            {roadmap.description.length > 220 ? `${roadmap.description.slice(0, 220).trim()}…` : roadmap.description}
+          </p>
+        )}
+
+        <div className="mt-6 sm:mt-7">
+          <Link
+            href={`/roadmaps/${roadmap.slug}`}
+            className="group/cta inline-flex min-h-[44px] items-center gap-2.5 rounded-full bg-neon-lime px-7 py-3 font-heading text-[10px] font-bold tracking-[0.18em] text-black uppercase shadow-[0_0_24px_-4px_rgba(182,243,107,0.5)] transition-all duration-300 hover:shadow-[0_0_40px_-2px_rgba(182,243,107,0.75)] hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-lime focus-visible:ring-offset-2 focus-visible:ring-offset-[#08090f] sm:text-[11px]"
+          >
+            Explore Roadmap
+            <span className="transition-transform duration-300 group-hover/cta:translate-x-1">→</span>
+          </Link>
+        </div>
+      </div>
+    </motion.article>
   );
 }
 
@@ -496,14 +510,19 @@ export default function RoadmapsClient({ roadmaps: propRoadmaps = [], settings =
               <motion.div variants={fadeUp} className="flex items-center gap-3">
                 <span className="bg-neon-lime h-px w-7" />
                 <span className="font-mono text-[10px] tracking-[0.35em] text-neon-lime uppercase sm:text-[11px]">
-                  Featured Roadmap
+                  {featuredRoadmaps.length > 1 ? 'Featured Roadmaps' : 'Featured Roadmap'}
                 </span>
               </motion.div>
               <motion.h2 variants={fadeUp} className="kinetic-headline mt-2 font-heading text-3xl font-black text-white uppercase sm:text-4xl">
                 Don&apos;t Miss This
               </motion.h2>
             </motion.div>
-            <FeaturedBanner roadmap={featuredRoadmaps[0]} />
+            <FeaturedCarousel
+              items={featuredRoadmaps}
+              ariaLabel="Featured roadmaps"
+              getKey={(r) => r.id ?? r.slug ?? r.title}
+              renderItem={(roadmap) => <FeaturedBanner roadmap={roadmap} />}
+            />
           </div>
         </section>
       )}

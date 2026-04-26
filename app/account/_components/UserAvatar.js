@@ -40,16 +40,18 @@ export default function UserAvatar({ session }) {
     }
   };
 
+  const frameClass =
+    'h-28 w-28 sm:h-32 sm:w-32 rounded-full border-4 border-white/10 ring-2 ring-primary-500/30 overflow-hidden shadow-2xl shadow-primary-500/10 backdrop-blur-xl';
+
   return (
-    <div className="mb-8 flex justify-center">
-      <div className="relative h-24 w-24 sm:h-32 sm:w-32">
+    <div className="mb-6 flex justify-center">
+      <div className={`relative ${frameClass}`}>
         {isValidImage && !useFallback ? (
           avatarSrc.startsWith('/api/image/') ? (
-            /* Drive-hosted avatar: use plain <img> (no next/image domain config needed) */
             <img
               src={avatarSrc}
               alt={name}
-              className="h-full w-full rounded-full border-4 border-white/20 object-cover shadow-xl"
+              className="h-full w-full object-cover"
               onError={handleImageError}
             />
           ) : (
@@ -57,23 +59,22 @@ export default function UserAvatar({ session }) {
               src={avatarSrc}
               alt={name}
               fill
-              sizes="(max-width: 640px) 96px, 128px"
-              className="rounded-full border-4 border-white/20 object-cover shadow-xl"
+              sizes="(max-width: 640px) 112px, 128px"
+              className="object-cover"
               onError={handleImageError}
               priority
             />
           )
         ) : !imgError && useFallback ? (
-          /* Fallback robohash avatar */
           <img
             src={fallbackSrc}
             alt={name}
-            className="h-full w-full rounded-full border-4 border-white/20 object-cover shadow-xl"
+            className="h-full w-full object-cover"
             onError={handleImageError}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center rounded-full border-4 border-white/20 bg-linear-to-br from-gray-700 to-gray-800 shadow-xl">
-            <span className="text-2xl font-bold text-white/80 sm:text-3xl">
+          <div className="from-primary-500/30 to-secondary-500/30 flex h-full w-full items-center justify-center bg-linear-to-br">
+            <span className="text-3xl font-bold text-white sm:text-4xl">
               {initials}
             </span>
           </div>
