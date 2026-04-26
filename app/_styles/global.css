@@ -8,37 +8,25 @@
   line-height: 0.85;
 }
 
-/* glass-panel — dark default, light override */
 .glass-panel {
   background: rgba(12, 14, 22, 0.55);
   -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
   border: 1px solid rgba(182, 243, 107, 0.08);
 }
-:root:not(.dark) .glass-panel {
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(8, 131, 149, 0.12);
-}
 
 .soft-glow-lime {
   box-shadow: 0 0 80px -20px rgba(182, 243, 107, 0.35);
 }
-:root:not(.dark) .soft-glow-lime {
-  box-shadow: 0 0 80px -20px rgba(8, 131, 149, 0.2);
-}
 
 .soft-glow-violet {
   box-shadow: 0 0 80px -20px rgba(124, 92, 255, 0.35);
-}
-:root:not(.dark) .soft-glow-violet {
-  box-shadow: 0 0 80px -20px rgba(124, 92, 255, 0.2);
 }
 
 .void-glow-violet {
   box-shadow: 0 0 60px 0 rgba(139, 92, 246, 0.1);
 }
 
-/* holographic-card — dark default, light override */
 .holographic-card {
   background: linear-gradient(
     135deg,
@@ -62,47 +50,21 @@
 .holographic-card.no-lift:hover {
   transform: none;
 }
-:root:not(.dark) .holographic-card {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.07);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-}
-:root:not(.dark) .holographic-card:hover {
-  background: #ffffff;
-  border-color: rgba(8, 131, 149, 0.3);
-  box-shadow: 0 8px 32px -8px rgba(8, 131, 149, 0.18);
-  transform: translateY(-4px);
-}
 
-/* text-stroke adapts: dark = lime outline, light = teal outline */
 .text-stroke-lime {
   -webkit-text-stroke: 1.5px #b6f36b;
 }
-:root:not(.dark) .text-stroke-lime {
-  -webkit-text-stroke: 1.5px #088395;
-}
 
-/* neon-text — dark = lime glow, light = teal */
 .neon-text {
   color: #b6f36b;
   text-shadow: 0 0 18px rgba(182, 243, 107, 0.45);
 }
-:root:not(.dark) .neon-text {
-  color: #066575;
-  text-shadow: none;
-}
 
-/* grid-overlay — barely visible in light mode */
 .grid-overlay {
   background-image:
     linear-gradient(rgba(182, 243, 107, 0.05) 1px, transparent 1px),
     linear-gradient(90deg, rgba(182, 243, 107, 0.05) 1px, transparent 1px);
   background-size: 48px 48px;
-}
-:root:not(.dark) .grid-overlay {
-  background-image:
-    linear-gradient(rgba(8, 131, 149, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(8, 131, 149, 0.06) 1px, transparent 1px);
 }
 
 .pulse-dot {
@@ -131,17 +93,6 @@
   color: #6b7089;
   border: 1px solid rgba(238, 241, 250, 0.06);
 }
-:root:not(.dark) .ph {
-  background:
-    repeating-linear-gradient(
-      135deg,
-      rgba(8, 131, 149, 0.06) 0 1px,
-      transparent 1px 10px
-    ),
-    #f3f8f9;
-  color: #4a6370;
-  border: 1px solid rgba(8, 131, 149, 0.1);
-}
 
 .ph-lime {
   background:
@@ -155,18 +106,6 @@
   border: 1px solid rgba(182, 243, 107, 0.25);
   box-shadow: inset 0 0 80px rgba(182, 243, 107, 0.08);
 }
-:root:not(.dark) .ph-lime {
-  background:
-    repeating-linear-gradient(
-      135deg,
-      rgba(8, 131, 149, 0.1) 0 1px,
-      transparent 1px 10px
-    ),
-    #eef7f8;
-  color: #066575;
-  border: 1px solid rgba(8, 131, 149, 0.2);
-  box-shadow: inset 0 0 60px rgba(8, 131, 149, 0.04);
-}
 
 .ph-violet {
   background:
@@ -179,98 +118,13 @@
   color: #7c5cff;
   border: 1px solid rgba(124, 92, 255, 0.28);
 }
-:root:not(.dark) .ph-violet {
-  background:
-    repeating-linear-gradient(
-      135deg,
-      rgba(124, 92, 255, 0.1) 0 1px,
-      transparent 1px 10px
-    ),
-    #f3f2ff;
-  color: #5b3fe8;
-  border: 1px solid rgba(124, 92, 255, 0.2);
-}
 
-/* ─── Stat numeral glow (mode-aware) ─────────────────────────────── */
 .stat-numeral {
   text-shadow: 0 0 24px rgba(182, 243, 107, 0.35);
 }
-:root:not(.dark) .stat-numeral {
-  text-shadow: 0 0 18px rgba(15, 118, 110, 0.25);
-}
-
-/* ─── Light-mode overrides for neon utility classes ───────────────────
-   In dark mode, neon lime/violet on near-black provides strong contrast.
-   In light mode those same colors become invisible on white-ish surfaces,
-   so we substitute darker, accessible equivalents while preserving the
-   two-color brand language (teal stands in for lime, violet stays violet).
----------------------------------------------------------------------- */
-:root:not(.dark) {
-  /* Text */
-  .text-neon-lime { color: #0f766e !important; }
-  .text-neon-violet { color: #6d28d9 !important; }
-  .text-neon-lime\/70 { color: rgba(15, 118, 110, 0.75) !important; }
-  .text-neon-lime\/25 { color: rgba(15, 118, 110, 0.5) !important; }
-
-  /* Backgrounds (solid + alpha) */
-  .bg-neon-lime { background-color: #0f766e !important; }
-  .bg-neon-lime\/10 { background-color: rgba(15, 118, 110, 0.08) !important; }
-  .bg-neon-lime\/5  { background-color: rgba(15, 118, 110, 0.05) !important; }
-  .bg-neon-lime\/60 { background-color: rgba(15, 118, 110, 0.55) !important; }
-  .bg-neon-lime\/90 { background-color: rgba(15, 118, 110, 0.92) !important; }
-  .bg-neon-violet\/10 { background-color: rgba(109, 40, 217, 0.08) !important; }
-  .bg-neon-violet\/5  { background-color: rgba(109, 40, 217, 0.05) !important; }
-  .bg-neon-violet\/90 { background-color: rgba(109, 40, 217, 0.92) !important; }
-  .bg-deep-void,
-  .bg-deep-void\/80,
-  .bg-deep-void\/50,
-  .bg-deep-void\/40 { background-color: rgba(241, 245, 249, 0.85) !important; }
-
-  /* Borders */
-  .border-neon-lime { border-color: #0f766e !important; }
-  .border-neon-lime\/15 { border-color: rgba(15, 118, 110, 0.18) !important; }
-  .border-neon-lime\/20 { border-color: rgba(15, 118, 110, 0.22) !important; }
-  .border-neon-lime\/25 { border-color: rgba(15, 118, 110, 0.28) !important; }
-  .border-neon-lime\/30 { border-color: rgba(15, 118, 110, 0.32) !important; }
-  .border-l-neon-lime { border-left-color: #0f766e !important; }
-  .border-neon-violet\/20 { border-color: rgba(109, 40, 217, 0.2) !important; }
-  .border-neon-violet\/30 { border-color: rgba(109, 40, 217, 0.3) !important; }
-  .border-l-neon-violet { border-left-color: #6d28d9 !important; }
-
-  /* Hover variants */
-  .hover\:border-neon-lime:hover { border-color: #0f766e !important; }
-  .hover\:border-neon-lime\/50:hover { border-color: rgba(15, 118, 110, 0.5) !important; }
-  .hover\:text-neon-lime:hover { color: #0f766e !important; }
-  .hover\:text-neon-violet:hover { color: #6d28d9 !important; }
-  .hover\:bg-neon-lime:hover { background-color: #0f766e !important; }
-
-  /* Gradient stops */
-  .from-neon-lime { --tw-gradient-from: #0f766e var(--tw-gradient-from-position) !important; }
-  .from-neon-lime\/30 { --tw-gradient-from: rgba(15, 118, 110, 0.3) var(--tw-gradient-from-position) !important; }
-  .from-neon-lime\/5  { --tw-gradient-from: rgba(15, 118, 110, 0.06) var(--tw-gradient-from-position) !important; }
-  .to-neon-violet { --tw-gradient-to: #6d28d9 var(--tw-gradient-to-position) !important; }
-  .to-neon-violet\/5 { --tw-gradient-to: rgba(109, 40, 217, 0.06) var(--tw-gradient-to-position) !important; }
-  .via-neon-lime\/20 { --tw-gradient-stops: var(--tw-gradient-from), rgba(15,118,110,0.2) var(--tw-gradient-via-position), var(--tw-gradient-to) !important; }
-  .via-neon-violet\/30 { --tw-gradient-stops: var(--tw-gradient-from), rgba(109,40,217,0.3) var(--tw-gradient-via-position), var(--tw-gradient-to) !important; }
-}
 
 @layer base {
-  /* Light mode tokens */
   :root {
-    --foreground-rgb: 15, 23, 42;
-    --background-rgb: 235, 244, 246;
-    --accent: #088395;
-    --accent-2: #7C5CFF;
-    --card-bg: #ffffff;
-    --card-border: rgba(0,0,0,0.07);
-    --muted: #64748b;
-    --muted-2: #94a3b8;
-    --heading: #0f172a;
-    --surface-token: #f1f5f9;
-  }
-
-  /* Dark mode tokens */
-  .dark {
     --foreground-rgb: 226, 232, 240;
     --background-rgb: 5, 6, 11;
     --accent: #B6F36B;
@@ -283,14 +137,9 @@
     --surface-token: #12151f;
   }
 
-  /* Smooth scroll with reduced-motion respect */
   html {
     scroll-behavior: smooth;
     color-scheme: dark;
-  }
-
-  html:not(.dark) {
-    color-scheme: light;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -315,21 +164,6 @@
       radial-gradient(circle at 50% 100%, #0a0c14 0%, #05060b 100%);
     font-family: var(--font-inter), 'Inter', sans-serif;
     @apply antialiased;
-  }
-
-  html:not(.dark) body {
-    background:
-      radial-gradient(
-        900px 600px at 10% -5%,
-        rgba(8, 131, 149, 0.08),
-        transparent 60%
-      ),
-      radial-gradient(
-        700px 500px at 90% 10%,
-        rgba(124, 92, 255, 0.06),
-        transparent 60%
-      ),
-      radial-gradient(circle at 50% 100%, #f8fcfd 0%, #ebf4f6 100%);
   }
 
   /* Refined selection color */

@@ -47,7 +47,7 @@ const NAV_CONFIG = {
       ],
     },
   ],
-  cta: { href: '/account', label: 'Get Started' },
+  cta: { href: '/login', label: 'Get Started' },
 };
 
 function isNavActive(pathname, href) {
