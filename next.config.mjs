@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const isDev = process.env.NODE_ENV === 'development';
+
 const nextConfig = {
   // Production logging
   logging: {
@@ -95,11 +97,24 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' https://giscus.app",
+              [
+                "script-src 'self' 'unsafe-inline'",
+                isDev ? "'unsafe-eval'" : null,
+                'https://giscus.app',
+              ]
+                .filter(Boolean)
+                .join(' '),
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https://fgfvuckrafohyjiuidnw.supabase.co https://lh3.googleusercontent.com https://avatars.githubusercontent.com https://img.youtube.com https://i.ytimg.com https://image.thum.io https://codeforces.org https://img.atcoder.jp https://assets.leetcode.com https://leetcode.com https://toph.co https://cses.fi https://www.codechef.com https://www.topcoder.com https://www.hackerrank.com https://hrcdn.net https://open.kattis.com https://lightoj.com https://onlinejudge.org https://www.spoj.com https://vjudge.net https://csacademy.com https://www.eolymp.com https://usaco.org https://dmoj.ca https://codedrills.io https://www.hackerearth.com https://binarysearch.com https://projecteuler.net https://www.codingame.com https://exercism.org https://www.interviewbit.com https://practice.geeksforgeeks.org https://brilliant.org https://kaggle.com https://www.beecrowd.com.br",
-              "connect-src 'self' https://fgfvuckrafohyjiuidnw.supabase.co https://accounts.google.com",
+              [
+                "connect-src 'self'",
+                isDev ? 'ws:' : null,
+                'https://fgfvuckrafohyjiuidnw.supabase.co',
+                'https://accounts.google.com',
+              ]
+                .filter(Boolean)
+                .join(' '),
               "frame-src 'self' https:",
               "frame-ancestors 'none'",
               "base-uri 'self'",
