@@ -209,7 +209,7 @@ export default function PrivacyPage() {
           {HIGHLIGHTS.map((h) => (
             <div
               key={h.label}
-              className="holographic-card no-lift rounded-sm p-4 text-center"
+              className="holographic-card no-lift rounded-xl p-4 text-center"
             >
               <span className="material-symbols-outlined text-[20px] text-neon-violet/70">{h.icon}</span>
               <p className="mt-2 font-mono text-[9px] font-bold tracking-widest text-zinc-300 uppercase leading-snug">

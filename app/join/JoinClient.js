@@ -4,43 +4,21 @@ import { signIn } from 'next-auth/react';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { Zap, Users, BarChart2, BadgeCheck } from 'lucide-react';
+import {
+  pageFadeUp as fadeUp,
+  pageStagger as stagger,
+  pageCardReveal as cardReveal,
+  pageViewport as viewport,
+} from '../_components/motion/motion';
 
 const ScrollToTop = dynamic(() => import('../_components/ui/ScrollToTop'), {
   ssr: false,
 });
 
-// ─── Motion variants — synced with Events / Achievements / Homepage ──────────
-
-const stagger = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.12, delayChildren: 0.08 } },
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 24, filter: 'blur(6px)' },
-  visible: {
-    opacity: 1,
-    y: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-
-const cardReveal = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-
 const cardsStagger = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
 };
-
-const viewport = { once: true, margin: '-40px 0px' };
 
 // ─── Default features ────────────────────────────────────────────────────────
 
