@@ -5,7 +5,6 @@
 
 import '@/app/_styles/global.css';
 
-import { Suspense } from 'react';
 import {
   Space_Grotesk,
   Inter,
@@ -13,6 +12,7 @@ import {
   Sora,
   Lora,
 } from 'next/font/google';
+import { Suspense } from 'react';
 import AsyncHeader from './_components/sections/AsyncHeader';
 import AsyncFooter from './_components/sections/AsyncFooter';
 import TopProgressBar from './_components/ui/TopProgressBar';
@@ -157,17 +157,21 @@ export default async function RootLayout({ children }) {
         <TopProgressBar />
         <ToasterProvider />
         <AppShell>
-          <Suspense fallback={<NavbarSkeleton />}>
-            <AsyncHeader />
-          </Suspense>
+          <div data-public-header>
+            <Suspense fallback={<NavbarSkeleton />}>
+              <AsyncHeader />
+            </Suspense>
+          </div>
           <UserRoleProvider role={session?.user?.role || null} isLoggedIn={!!session}>
             <main className="w-full grow">
               <PageTransition>{children}</PageTransition>
             </main>
           </UserRoleProvider>
-          <Suspense fallback={null}>
-            <AsyncFooter />
-          </Suspense>
+          <div data-public-footer>
+            <Suspense fallback={null}>
+              <AsyncFooter />
+            </Suspense>
+          </div>
         </AppShell>
       </body>
     </html>

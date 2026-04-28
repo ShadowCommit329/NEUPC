@@ -77,6 +77,13 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
   const [collapsed, setCollapsed] = useState(false);
   const [collapsePrefLoaded, setCollapsePrefLoaded] = useState(false);
   const pathname = usePathname();
+
+  // Hide the public site header and footer on sub-dashboard routes (not /account itself)
+  useEffect(() => {
+    if (pathname === '/account') return;
+    document.documentElement.setAttribute('data-dashboard', '');
+    return () => document.documentElement.removeAttribute('data-dashboard');
+  }, [pathname]);
   const { activeRole, setActiveRole } = useRole();
 
   // Load persisted collapse preference after mount to keep hydration deterministic.

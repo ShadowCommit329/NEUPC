@@ -1,6 +1,9 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useIsMember } from '../_components/ui/UserRoleProvider';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { Zap, Users, BarChart2, BadgeCheck } from 'lucide-react';
@@ -97,6 +100,13 @@ function FeatureCard({ feature }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function JoinClient({ features: propFeatures = [], settings = {} }) {
+  const isLoggedIn = useIsMember();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoggedIn) router.replace('/account');
+  }, [isLoggedIn, router]);
+
   const handleGoogleSignIn = () => signIn('google', { callbackUrl: '/account' });
 
   const features =

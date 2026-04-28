@@ -3,8 +3,6 @@
  * @module JoinPage
  */
 
-import { auth } from '@/app/_lib/auth';
-import { redirect } from 'next/navigation';
 import {
   getJoinPageData,
   getAllPublicSettings,
@@ -29,13 +27,6 @@ export const metadata = buildMetadata({
 });
 
 export default async function Page() {
-  const session = await auth();
-
-  // Redirect to account if user is already logged in
-  if (session?.user) {
-    redirect('/account');
-  }
-
   const [joinData, settings] = await Promise.all([
     getJoinPageData(),
     getAllPublicSettings(),

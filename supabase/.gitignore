@@ -3,6 +3,8 @@
 .temp
 snippets
 
+/.temp/
+
 # dotenvx
 .env.keys
 .env.local

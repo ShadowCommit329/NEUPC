@@ -2503,6 +2503,12 @@
   color: #e6edf3;
 }
 
+/* Hide public header/footer on dashboard pages */
+html[data-dashboard] [data-public-header],
+html[data-dashboard] [data-public-footer] {
+  display: none;
+}
+
 /* Safe-area padding for notched / dynamic-island devices */
 @utility pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 1rem);
