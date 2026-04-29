@@ -69,8 +69,8 @@ export function getSidebarNavigation(activeRole, stats, session) {
     // ─── Guest ────────────────────────────────────────────────────────────
     guest: [
       {
-        key: 'overview',
-        label: 'Overview',
+        key: 'dashboard',
+        label: '',
         items: [
           {
             id: 'dashboard',
@@ -78,6 +78,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
             icon: Home,
             href: '/account/guest',
           },
+        ],
+      },
+      {
+        key: 'activity',
+        label: 'Activity',
+        items: [
           {
             id: 'notifications',
             label: 'Notifications',
@@ -86,15 +92,23 @@ export function getSidebarNavigation(activeRole, stats, session) {
             badge: stats.notifications,
             badgeType: 'alert',
           },
+          {
+            id: 'participation',
+            label: 'My Participation',
+            icon: Trophy,
+            href: '/account/guest/participation',
+            badge: stats.participationCount,
+            condition: ({ stats }) => stats.participationCount > 0,
+          },
         ],
       },
       {
-        key: 'explore',
-        label: 'Explore',
+        key: 'discover',
+        label: 'Discover',
         items: [
           {
             id: 'events',
-            label: 'Browse Events',
+            label: 'Events',
             icon: Calendar,
             href: '/account/guest/events',
             badge: stats.upcomingEvents,
@@ -105,26 +119,6 @@ export function getSidebarNavigation(activeRole, stats, session) {
             label: 'Resources',
             icon: BookOpen,
             href: '/account/guest/resources',
-          },
-          {
-            id: 'participation',
-            label: 'My Participations',
-            icon: Trophy,
-            href: '/account/guest/participation',
-            badge: stats.participationCount,
-            condition: ({ stats }) => stats.participationCount > 0,
-          },
-        ],
-      },
-      {
-        key: 'membership',
-        label: 'Membership',
-        items: [
-          {
-            id: 'membership-application',
-            label: 'Apply for Membership',
-            icon: FileText,
-            href: '/account/guest/membership-application',
           },
         ],
       },

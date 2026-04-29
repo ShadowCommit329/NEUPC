@@ -42,6 +42,8 @@ logs/
 .github/copilot-instructions.md
 .github/hooks/
 .github/agents/
+/.github/
+
 
 # production
 /build

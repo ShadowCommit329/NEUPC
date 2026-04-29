@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -14,9 +14,32 @@ import {
   ChevronsUpDown,
   Check,
 } from 'lucide-react';
+import {
+  useFloating,
+  autoUpdate,
+  offset,
+  flip,
+  shift,
+  size,
+  useClick,
+  useDismiss,
+  useRole,
+  useInteractions,
+  FloatingPortal,
+  FloatingFocusManager,
+} from '@floating-ui/react';
 import { signOutAction } from '@/app/_lib/actions';
 import { cn, driveImageUrl, getInitials } from '@/app/_lib/utils';
 import { ROLE_THEMES, ROLE_LABELS } from './roleTheme';
+
+const ROLE_DESCRIPTIONS = {
+  guest: 'Browse and participate',
+  member: 'Full member benefits',
+  mentor: 'Guide members',
+  executive: 'Run operations',
+  admin: 'Manage platform',
+  advisor: 'Advisory board',
+};
 
 // ─── Tooltip (collapsed mode) ─────────────────────────────────────────────────
 function Tooltip({ children, label, show }) {
@@ -26,7 +49,7 @@ function Tooltip({ children, label, show }) {
       {children}
       <div
         role="tooltip"
-        className="pointer-events-none absolute top-1/2 left-full z-[100] ml-3 -translate-y-1/2 rounded-lg border border-white/10 bg-gray-900 px-3 py-1.5 text-xs font-medium whitespace-nowrap text-gray-200 opacity-0 shadow-xl transition-all duration-200 group-hover/tooltip:opacity-100"
+        className="pointer-events-none absolute top-1/2 left-full z-100 ml-3 -translate-y-1/2 rounded-lg border border-white/10 bg-gray-900 px-3 py-1.5 text-xs font-medium whitespace-nowrap text-gray-200 opacity-0 shadow-xl transition-all duration-200 group-hover/tooltip:opacity-100"
       >
         {label}
         <div className="absolute top-1/2 -left-1 h-2 w-2 -translate-y-1/2 rotate-45 border-b border-l border-white/10 bg-gray-900" />
@@ -44,9 +67,11 @@ function NavItem({ item, isActive, collapsed, theme, onClick }) {
         href={item.href}
         onClick={onClick}
         className={cn(
-          'group/nav relative flex items-center rounded-lg outline-none transition-colors duration-150',
+          'group/nav relative flex items-center rounded-lg transition-colors duration-150 outline-none',
           'focus-visible:ring-2 focus-visible:ring-white/30',
-          collapsed ? 'min-h-9 justify-center p-2.5' : 'min-h-9 gap-3 px-3 py-2',
+          collapsed
+            ? 'min-h-9 justify-center p-2.5'
+            : 'min-h-9 gap-3 px-3 py-2',
           isActive
             ? cn('font-semibold', theme.active)
             : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
@@ -67,7 +92,7 @@ function NavItem({ item, isActive, collapsed, theme, onClick }) {
             {item.badge != null && item.badge !== 0 && (
               <span
                 className={cn(
-                  'flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none',
+                  'flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-none font-bold',
                   item.badgeType === 'alert'
                     ? 'bg-sky-500 text-white'
                     : 'bg-white/[0.08] text-gray-400'
@@ -126,107 +151,217 @@ function NavGroup({ group, pathname, collapsed, theme, onItemClick }) {
 }
 
 // ─── Role Switcher ────────────────────────────────────────────────────────────
-function RoleSwitcher({ activeRole, userRoles, theme, onSwitch, collapsed }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  const hasMultiple = userRoles && userRoles.length > 1;
+// Compact pill for the brand header row (never full-width)
+function RoleOptionsList({ userRoles, activeRole, onPick }) {
+  return (
+    <div className="space-y-0.5 p-1.5">
+      {userRoles.map((role) => {
+        const rt = ROLE_THEMES[role] || ROLE_THEMES.guest;
+        const isCurrent = role === activeRole;
+        return (
+          <button
+            key={role}
+            onClick={() => onPick(role)}
+            className={cn(
+              'relative flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors outline-none',
+              'focus-visible:ring-2 focus-visible:ring-white/30',
+              isCurrent
+                ? rt.active
+                : 'text-gray-300 hover:bg-white/[0.04] hover:text-gray-100'
+            )}
+          >
+            {isCurrent && (
+              <span
+                className={cn(
+                  'absolute top-1/2 left-0 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-linear-to-b',
+                  rt.gradient
+                )}
+              />
+            )}
+            <span
+              className={cn('h-1.5 w-1.5 shrink-0 rounded-full', rt.dot)}
+            />
+            <div className="min-w-0 flex-1">
+              <p
+                className={cn(
+                  'text-[12.5px] leading-tight font-semibold',
+                  isCurrent ? '' : 'text-gray-200'
+                )}
+              >
+                {ROLE_LABELS[role] || role}
+              </p>
+              <p
+                className={cn(
+                  'mt-0.5 truncate text-[10.5px]',
+                  isCurrent ? 'opacity-70' : 'text-gray-500'
+                )}
+              >
+                {ROLE_DESCRIPTIONS[role] || ''}
+              </p>
+            </div>
+            {isCurrent && (
+              <Check className="h-3.5 w-3.5 shrink-0 opacity-80" />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+// Floating-UI driven hook shared by both triggers
+function useRoleMenu({ placement }) {
+  const [open, setOpen] = useState(false);
+
+  const { refs, floatingStyles, context } = useFloating({
+    open,
+    onOpenChange: setOpen,
+    placement,
+    whileElementsMounted: autoUpdate,
+    middleware: [
+      offset(8),
+      flip({ padding: 8, fallbackAxisSideDirection: 'end' }),
+      shift({ padding: 8 }),
+      size({
+        padding: 8,
+        apply({ availableHeight, elements }) {
+          Object.assign(elements.floating.style, {
+            maxHeight: `${Math.max(180, availableHeight)}px`,
+          });
+        },
+      }),
+    ],
+  });
+
+  const click = useClick(context);
+  const dismiss = useDismiss(context, { outsidePress: true, escapeKey: true });
+  const role = useRole(context, { role: 'menu' });
+  const { getReferenceProps, getFloatingProps } = useInteractions([
+    click,
+    dismiss,
+    role,
+  ]);
+
+  return {
+    open,
+    setOpen,
+    refs,
+    floatingStyles,
+    context,
+    getReferenceProps,
+    getFloatingProps,
+  };
+}
+
+function RoleMenuPanel({ context, refs, floatingStyles, getFloatingProps, children }) {
+  return (
+    <FloatingPortal>
+      <FloatingFocusManager context={context} modal={false}>
+        <div
+          ref={refs.setFloating}
+          style={floatingStyles}
+          {...getFloatingProps()}
+          className="z-100 w-52 outline-none"
+        >
+          <div className="animate-in fade-in zoom-in-95 overflow-hidden rounded-xl border border-white/12 bg-gray-900 shadow-2xl duration-150">
+            <div className="border-b border-white/[0.07] px-3.5 py-2">
+              <p className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                Switch Role
+              </p>
+            </div>
+            {children}
+          </div>
+        </div>
+      </FloatingFocusManager>
+    </FloatingPortal>
+  );
+}
+
+function RoleBadge({ activeRole, userRoles, theme, onSwitch }) {
+  const hasMultiple = userRoles && userRoles.length > 1;
+  const menu = useRoleMenu({ placement: 'bottom-end' });
 
   if (!activeRole) return null;
 
-  if (!hasMultiple) {
-    if (collapsed) return null;
-    return (
-      <div className={cn('flex items-center gap-1.5 rounded-md border px-2 py-1', theme.badge)}>
-        <span className={cn('h-1.5 w-1.5 rounded-full', theme.dot)} />
-        <span className="text-[10px] font-semibold tracking-widest uppercase">
-          {ROLE_LABELS[activeRole] || activeRole}
-        </span>
-      </div>
-    );
-  }
-
-  if (collapsed) {
-    return (
-      <div ref={ref} className="relative">
-        <Tooltip label={`Switch role (${ROLE_LABELS[activeRole]})`} show>
-          <button
-            onClick={() => setOpen(!open)}
-            className={cn('flex h-6 w-6 items-center justify-center rounded-md border transition-colors', theme.badge)}
-          >
-            <span className={cn('h-2 w-2 rounded-full', theme.dot)} />
-          </button>
-        </Tooltip>
-        {open && (
-          <div className="absolute top-0 left-full z-[100] ml-2 w-40 overflow-hidden rounded-xl border border-white/10 bg-gray-900/95 shadow-2xl backdrop-blur-xl">
-            {userRoles.map((role) => {
-              const rt = ROLE_THEMES[role] || ROLE_THEMES.guest;
-              const isCurrent = role === activeRole;
-              return (
-                <button
-                  key={role}
-                  onClick={() => { setOpen(false); onSwitch(role); }}
-                  className={cn(
-                    'flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-xs transition-colors',
-                    isCurrent ? 'bg-white/[0.06] font-semibold text-white' : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
-                  )}
-                >
-                  <span className={cn('h-2 w-2 rounded-full', rt.dot)} />
-                  <span className="flex-1">{ROLE_LABELS[role] || role}</span>
-                  {isCurrent && <Check className="h-3.5 w-3.5 text-white/60" />}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
-  }
+  const label = ROLE_LABELS[activeRole] || activeRole;
 
   return (
-    <div className="relative" ref={ref}>
+    <>
       <button
-        onClick={() => setOpen(!open)}
-        className={cn('flex w-full items-center gap-2 rounded-md border px-2 py-1.5 transition-all hover:brightness-110', theme.badge)}
+        ref={hasMultiple ? menu.refs.setReference : undefined}
+        {...(hasMultiple ? menu.getReferenceProps() : {})}
+        className={cn(
+          'flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] leading-none font-semibold tracking-widest uppercase transition-colors outline-none',
+          'focus-visible:ring-2 focus-visible:ring-white/30',
+          theme.badge,
+          hasMultiple ? 'cursor-pointer hover:brightness-110' : 'cursor-default'
+        )}
       >
-        <span className={cn('h-1.5 w-1.5 rounded-full', theme.dot)} />
-        <span className="flex-1 text-left text-[10px] font-semibold tracking-widest uppercase">
-          {ROLE_LABELS[activeRole] || activeRole}
-        </span>
-        <ChevronsUpDown className="h-3 w-3 opacity-50" />
+        <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', theme.dot)} />
+        {label}
+        {hasMultiple && (
+          <ChevronsUpDown
+            className={cn(
+              'h-2.5 w-2.5 shrink-0 opacity-60 transition-transform duration-150',
+              menu.open && 'rotate-180'
+            )}
+          />
+        )}
       </button>
-      {open && (
-        <div className="absolute inset-x-0 z-[100] mt-1 overflow-hidden rounded-xl border border-white/10 bg-gray-900/95 shadow-2xl backdrop-blur-xl">
-          <div className="px-3 py-2 text-[10px] font-semibold tracking-widest text-gray-500 uppercase">Switch role</div>
-          {userRoles.map((role) => {
-            const rt = ROLE_THEMES[role] || ROLE_THEMES.guest;
-            const isCurrent = role === activeRole;
-            return (
-              <button
-                key={role}
-                onClick={() => { setOpen(false); onSwitch(role); }}
-                className={cn(
-                  'flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors',
-                  isCurrent ? 'bg-white/[0.06] font-semibold text-white' : 'text-gray-400 hover:bg-white/[0.04] hover:text-gray-200'
-                )}
-              >
-                <span className={cn('h-2 w-2 rounded-full', rt.dot)} />
-                <span className="flex-1">{ROLE_LABELS[role] || role}</span>
-                {isCurrent && <Check className="h-3.5 w-3.5 text-white/50" />}
-              </button>
-            );
-          })}
-        </div>
+
+      {hasMultiple && menu.open && (
+        <RoleMenuPanel {...menu}>
+          <RoleOptionsList
+            userRoles={userRoles}
+            activeRole={activeRole}
+            onPick={(role) => {
+              menu.setOpen(false);
+              onSwitch(role);
+            }}
+          />
+        </RoleMenuPanel>
       )}
-    </div>
+    </>
+  );
+}
+
+function RoleSwitcherCollapsed({ activeRole, userRoles, theme, onSwitch }) {
+  const hasMultiple = userRoles && userRoles.length > 1;
+  const menu = useRoleMenu({ placement: 'right-start' });
+
+  if (!activeRole || !hasMultiple) return null;
+
+  return (
+    <>
+      <Tooltip label={`Role: ${ROLE_LABELS[activeRole]}`} show={!menu.open}>
+        <button
+          ref={menu.refs.setReference}
+          {...menu.getReferenceProps()}
+          className={cn(
+            'flex h-7 w-7 items-center justify-center rounded-md border transition-colors outline-none',
+            'focus-visible:ring-2 focus-visible:ring-white/30',
+            menu.open
+              ? 'border-white/25 bg-white/10'
+              : cn('hover:border-white/15 hover:bg-white/[0.06]', theme.badge)
+          )}
+        >
+          <span className={cn('h-2 w-2 rounded-full', theme.dot)} />
+        </button>
+      </Tooltip>
+
+      {menu.open && (
+        <RoleMenuPanel {...menu}>
+          <RoleOptionsList
+            userRoles={userRoles}
+            activeRole={activeRole}
+            onPick={(role) => {
+              menu.setOpen(false);
+              onSwitch(role);
+            }}
+          />
+        </RoleMenuPanel>
+      )}
+    </>
   );
 }
 
@@ -238,7 +373,9 @@ function MembershipCard({ role }) {
       <p className="mb-0.5 text-[10px] font-semibold tracking-widest text-sky-400 uppercase">
         Membership
       </p>
-      <p className="mb-0.5 text-[13px] font-semibold text-white">Become a Member</p>
+      <p className="mb-0.5 text-[13px] font-semibold text-white">
+        Become a Member
+      </p>
       <p className="mb-3 text-[11.5px] leading-relaxed text-gray-400">
         Unlock contests, certificates, mentorship &amp; more.
       </p>
@@ -319,45 +456,53 @@ export default function AccountSidebar({
           className="absolute top-5 -right-3 z-50 hidden h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-gray-900 text-gray-500 shadow-lg transition-all hover:border-white/20 hover:bg-gray-800 hover:text-gray-300 lg:flex"
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {collapsed ? <ChevronRight className="h-3 w-3" /> : <PanelLeftClose className="h-3 w-3" />}
+          {collapsed ? (
+            <ChevronRight className="h-3 w-3" />
+          ) : (
+            <PanelLeftClose className="h-3 w-3" />
+          )}
         </button>
 
         {/* ── Brand ────────────────────────────────────────────────────────── */}
         <div
           className={cn(
             'shrink-0 border-b border-white/[0.06]',
-            collapsed ? 'flex flex-col items-center gap-2 px-3 py-4' : 'flex items-center justify-between px-4 py-[14px]'
+            collapsed
+              ? 'flex flex-col items-center gap-2 px-3 py-4'
+              : 'flex items-center justify-between px-4 py-[14px]'
           )}
         >
           {collapsed ? (
             <>
-              <span className="text-[14px] font-bold tracking-tight text-white select-none">
-                N<span className={theme.accentText}>P</span>
-              </span>
-              <RoleSwitcher
+              <Link href="/" className="transition-opacity hover:opacity-80">
+                <span className="text-[14px] font-bold tracking-tight text-white select-none">
+                  N<span className={theme.accentText}>P</span>
+                </span>
+              </Link>
+              <RoleSwitcherCollapsed
                 activeRole={activeRole}
                 userRoles={userRoles}
                 theme={theme}
                 onSwitch={handleRoleSwitch}
-                collapsed
               />
             </>
           ) : (
             <>
               <div>
-                <span className="text-[15px] font-bold tracking-tight text-white select-none">
-                  NEU<span className={theme.accentText}>PC</span>
-                </span>
+                <Link href="/" className="transition-opacity hover:opacity-80">
+                  <span className="text-[15px] font-bold tracking-tight text-white select-none">
+                    NEU<span className={theme.accentText}>PC</span>
+                  </span>
+                </Link>
                 <p className="mt-0.5 text-[10px] font-medium tracking-widest text-gray-500 uppercase">
                   {ROLE_LABELS[activeRole] || 'Panel'} Panel
                 </p>
               </div>
-              <RoleSwitcher
+              <RoleBadge
                 activeRole={activeRole}
                 userRoles={userRoles}
                 theme={theme}
                 onSwitch={handleRoleSwitch}
-                collapsed={false}
               />
             </>
           )}
@@ -365,7 +510,10 @@ export default function AccountSidebar({
 
         {/* ── User identity card ───────────────────────────────────────────── */}
         {!collapsed && (
-          <div className="shrink-0 border-b border-white/[0.06] px-4 py-3.5">
+          <Link
+            href={`/account/${activeRole}/profile`}
+            className="shrink-0 border-b border-white/[0.06] px-4 py-3.5 transition-colors hover:bg-white/[0.03] active:bg-white/[0.06]"
+          >
             <div className="flex items-center gap-3">
               <div className="relative shrink-0">
                 {hasAvatar ? (
@@ -387,16 +535,21 @@ export default function AccountSidebar({
                 <div className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-gray-950 bg-emerald-400" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-semibold leading-5 text-gray-100">
+                <p className="truncate text-[13px] leading-5 font-semibold text-gray-100">
                   {session?.name || 'User'}
                 </p>
                 <p className="flex items-center gap-1.5 text-[11.5px] text-gray-500">
-                  <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', theme.dot)} />
+                  {/* <span
+                    className={cn(
+                      'h-1.5 w-1.5 shrink-0 rounded-full',
+                      theme.dot
+                    )}
+                  /> */}
                   {ROLE_LABELS[activeRole] || 'Guest'} · Active
                 </p>
               </div>
             </div>
-          </div>
+          </Link>
         )}
 
         {/* Collapsed: avatar only */}
@@ -427,7 +580,7 @@ export default function AccountSidebar({
         {/* ── Navigation ───────────────────────────────────────────────────── */}
         <nav
           className={cn(
-            'flex-1 overflow-y-auto overflow-x-hidden py-1',
+            'flex-1 overflow-x-hidden overflow-y-auto py-1',
             collapsed ? 'px-2' : 'px-3',
             '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
           )}
@@ -451,7 +604,9 @@ export default function AccountSidebar({
         <div
           className={cn(
             'shrink-0 border-t border-white/[0.06]',
-            collapsed ? 'flex flex-col items-center gap-1 px-2 py-3' : 'flex items-center justify-between px-4 py-3'
+            collapsed
+              ? 'flex flex-col items-center gap-1 px-2 py-3'
+              : 'flex items-center justify-between px-4 py-3'
           )}
         >
           <Tooltip label="Help" show={collapsed}>
