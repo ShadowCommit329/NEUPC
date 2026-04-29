@@ -9,7 +9,6 @@
  */
 
 import { requireRole } from '@/app/_lib/auth-guard';
-import GuestTopbar from './_components/GuestTopbar';
 import './_components/guest-design.css';
 
 export default async function GuestLayout({ children }) {
@@ -17,8 +16,8 @@ export default async function GuestLayout({ children }) {
 
   return (
     <div className="guest-panel">
-      <div className="gp-main">
-        <GuestTopbar />
+      <a href="#guest-main" className="gp-skip">Skip to content</a>
+      <div className="gp-main" id="guest-main">
         {children}
       </div>
     </div>

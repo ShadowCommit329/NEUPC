@@ -11,6 +11,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import { useRole } from './RoleContext';
 import AccountSidebar from './AccountSidebar';
+import DashboardTopbar from './DashboardTopbar';
 import { getSidebarNavigation } from '@/app/_lib/sidebarConfig';
 
 // Valid role segments in the URL
@@ -74,7 +75,11 @@ function useHeartbeat() {
 
 export default function AccountLayoutClient({ children, session, userRoles }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  // Lazy init from localStorage to prevent post-mount layout shift
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('sidebar-collapsed') === 'true';
+  });
   const [collapsePrefLoaded, setCollapsePrefLoaded] = useState(false);
   const pathname = usePathname();
 
@@ -86,14 +91,8 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
   }, [pathname]);
   const { activeRole, setActiveRole } = useRole();
 
-  // Load persisted collapse preference after mount to keep hydration deterministic.
-  useEffect(() => {
-    const stored = localStorage.getItem('sidebar-collapsed');
-    if (stored != null) {
-      setCollapsed(stored === 'true');
-    }
-    setCollapsePrefLoaded(true);
-  }, []);
+  // Mark prefs as loaded post-mount (init was eager via lazy useState)
+  useEffect(() => { setCollapsePrefLoaded(true); }, []);
 
   // Persist collapse preference
   useEffect(() => {
@@ -130,18 +129,18 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [sidebarOpen]);
 
-  // Prevent body scroll when sidebar is open on mobile
+  // Prevent body scroll + restore scroll position when mobile sidebar is open
   useEffect(() => {
-    if (sidebarOpen) {
-      document.documentElement.style.overflow = 'hidden';
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
-    }
+    if (!sidebarOpen) return;
+    const scrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
     return () => {
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      window.scrollTo(0, scrollY);
     };
   }, [sidebarOpen]);
 
@@ -163,14 +162,22 @@ export default function AccountLayoutClient({ children, session, userRoles }) {
         hideSidebar={hideSidebar}
         sidebarNavigation={sidebarNavigation}
         activeRole={currentRole}
-        session={session}
         userRoles={userRoles}
+        session={session}
         collapsed={collapsed}
         setCollapsed={setCollapsed}
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-x-hidden">{children}</main>
+      <main className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
+        {!hideSidebar && (
+          <DashboardTopbar
+            activeRole={currentRole}
+            notificationCount={SIDEBAR_STATS.notifications}
+          />
+        )}
+        <div className="flex-1">{children}</div>
+      </main>
     </div>
   );
 }

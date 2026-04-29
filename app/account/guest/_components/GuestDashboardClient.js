@@ -90,7 +90,7 @@ export default function GuestDashboardClient({ session }) {
       <PageHead
         eyebrow="Guest dashboard"
         title={`Welcome back, ${userName}`}
-        sub={`You've attended ${stats.participationCount} events. Keep the streak going — there are ${stats.upcomingEvents} new events this month.`}
+        sub={`${stats.upcomingEvents} new events this month · ${stats.participationCount} attended so far`}
         actions={
           <>
             <Btn href="/events">
@@ -116,7 +116,7 @@ export default function GuestDashboardClient({ session }) {
         ))}
       </StatRow>
 
-      <div className="grid gap-4 mb-4 lg:grid-cols-[1.5fr_1fr]">
+      <div className="grid gap-4 mb-4 grid-cols-1 lg:grid-cols-[1.6fr_1fr] xl:gap-5">
         {/* Upcoming events */}
         <div className="gp-card">
           <CardHead
@@ -196,18 +196,25 @@ export default function GuestDashboardClient({ session }) {
               </Btn>
             }
           />
-          <div>
-            {notifications.map((n, i) => {
+          <ul className="divide-y" style={{ borderColor: 'var(--gp-line)' }}>
+            {notifications.map((n) => {
               const Ico = NOTIF_ICON[n.type] || Bell;
               return (
-                <div
+                <li
                   key={n.id}
-                  className="flex gap-3 px-4 py-3"
+                  className="gp-row-link relative flex items-start gap-3 px-4 py-3"
                   style={{
-                    borderBottom: i < notifications.length - 1 ? '1px solid var(--gp-line)' : 'none',
+                    borderColor: 'var(--gp-line)',
                     background: n.unread ? 'oklch(0.18 0.005 240 / 0.4)' : 'transparent',
                   }}
                 >
+                  {n.unread && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-full"
+                      style={{ background: 'var(--gp-accent)' }}
+                    />
+                  )}
                   <div
                     className="flex h-7 w-7 shrink-0 items-center justify-center"
                     style={{ borderRadius: 7, background: 'var(--gp-surface-3)', color: NOTIF_TINT[n.type] }}
@@ -216,19 +223,19 @@ export default function GuestDashboardClient({ session }) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div style={{ fontSize: 12.5, fontWeight: 500, marginBottom: 2 }}>{n.title}</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--gp-text-3)', lineHeight: 1.4 }}>{n.message}</div>
+                    <div className="line-clamp-2" style={{ fontSize: 11.5, color: 'var(--gp-text-3)', lineHeight: 1.4 }}>{n.message}</div>
                     <div className="gp-mono" style={{ fontSize: 10.5, color: 'var(--gp-text-4)', marginTop: 4 }}>
                       {n.time}
                     </div>
                   </div>
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         </div>
       </div>
 
-      <div className="grid gap-4 mb-4 lg:grid-cols-[1.2fr_1fr]">
+      <div className="grid gap-4 mb-4 grid-cols-1 lg:grid-cols-[1.3fr_1fr] xl:gap-5">
         {/* Application progress */}
         <div className="gp-card">
           <CardHead
@@ -332,46 +339,45 @@ export default function GuestDashboardClient({ session }) {
       {/* Explore */}
       <div className="gp-card mb-4">
         <CardHead title="Explore" />
-        <div>
-          {publicFeatures.map((f, i) => {
+        <ul className="divide-y" style={{ borderColor: 'var(--gp-line)' }}>
+          {publicFeatures.map((f) => {
             const Ico = FEATURE_ICON[f.iconKey] || Calendar;
             return (
-              <Link
-                key={f.id}
-                href={f.link}
-                className="group flex items-center gap-3 px-4 py-3"
-                style={{ borderBottom: i < publicFeatures.length - 1 ? '1px solid var(--gp-line)' : 'none' }}
-              >
-                <div
-                  className="flex h-8 w-8 shrink-0 items-center justify-center"
-                  style={{ borderRadius: 8, background: 'var(--gp-surface-2)', color: 'var(--gp-text-2)' }}
+              <li key={f.id}>
+                <Link
+                  href={f.link}
+                  className="gp-row-link group flex items-center gap-3 px-4 py-3"
                 >
-                  <Ico size={15} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div style={{ fontSize: 13, fontWeight: 500 }}>{f.title}</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--gp-text-3)' }}>{f.description}</div>
-                </div>
-                <ChevronRight size={16} style={{ color: 'var(--gp-text-4)' }} />
-              </Link>
+                  <div
+                    className="flex h-8 w-8 shrink-0 items-center justify-center transition-colors"
+                    style={{ borderRadius: 8, background: 'var(--gp-surface-2)', color: 'var(--gp-text-2)' }}
+                  >
+                    <Ico size={15} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>{f.title}</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--gp-text-3)' }}>{f.description}</div>
+                  </div>
+                  <ChevronRight size={16} className="transition-transform group-hover:translate-x-0.5" style={{ color: 'var(--gp-text-4)' }} />
+                </Link>
+              </li>
             );
           })}
-        </div>
+        </ul>
       </div>
 
       {/* Quick actions */}
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid gap-2 grid-cols-1 sm:grid-cols-3 xl:gap-3">
         {quickActions.map((a) => {
           const Ico = QA_ICON[a.iconKey] || Calendar;
           return (
             <Link
               key={a.id}
               href={a.link}
-              className="gp-card flex items-center gap-3 px-4 py-3.5"
-              style={{ textDecoration: 'none' }}
+              className="gp-card gp-card-interactive group flex items-center gap-3 px-4 py-3.5 no-underline"
             >
               <div
-                className="flex h-8 w-8 shrink-0 items-center justify-center"
+                className="flex h-8 w-8 shrink-0 items-center justify-center transition-colors"
                 style={{ borderRadius: 8, background: 'var(--gp-surface-2)', color: 'var(--gp-text-2)' }}
               >
                 <Ico size={15} />
@@ -379,7 +385,7 @@ export default function GuestDashboardClient({ session }) {
               <span className="flex-1" style={{ fontSize: 13, fontWeight: 500 }}>
                 {a.label}
               </span>
-              <ChevronRight size={16} style={{ color: 'var(--gp-text-4)' }} />
+              <ChevronRight size={16} className="transition-transform group-hover:translate-x-0.5" style={{ color: 'var(--gp-text-4)' }} />
             </Link>
           );
         })}

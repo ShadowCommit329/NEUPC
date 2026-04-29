@@ -52,14 +52,12 @@ export function Stat({ icon: Icon, label, value, unit, trend }) {
 }
 
 export function StatRow({ cols = 4, children }) {
+  const colClass =
+    cols === 2 ? 'grid-cols-1 sm:grid-cols-2'
+    : cols === 3 ? 'grid-cols-2 sm:grid-cols-3'
+    : 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4';
   return (
-    <div
-      className="grid gap-3"
-      style={{
-        gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-        marginBottom: 20,
-      }}
-    >
+    <div className={`grid gap-3 sm:gap-4 mb-5 ${colClass}`}>
       {children}
     </div>
   );
