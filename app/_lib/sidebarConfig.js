@@ -40,9 +40,6 @@ import {
   BarChart3,
   Sparkles,
   GraduationCap,
-  Layers,
-  Activity,
-  HelpCircle,
 } from 'lucide-react';
 
 /**
@@ -146,7 +143,7 @@ export function getSidebarNavigation(activeRole, stats, session) {
     member: [
       {
         key: 'overview',
-        label: 'Overview',
+        label: '',
         items: [
           {
             id: 'dashboard',
@@ -156,7 +153,7 @@ export function getSidebarNavigation(activeRole, stats, session) {
           },
           {
             id: 'notifications',
-            label: 'Notifications',
+            label: 'Inbox',
             icon: Bell,
             href: '/account/member/notifications',
             badge: stats.notifications,
@@ -183,15 +180,9 @@ export function getSidebarNavigation(activeRole, stats, session) {
             href: '/account/member/problem-solving',
           },
           {
-            id: 'bootcamps',
-            label: 'Bootcamps',
-            icon: GraduationCap,
-            href: '/account/member/bootcamps',
-          },
-          {
             id: 'discussions',
-            label: 'Help Desk',
-            icon: HelpCircle,
+            label: 'Discussions',
+            icon: MessageSquare,
             href: '/account/member/discussions',
           },
         ],
@@ -200,6 +191,12 @@ export function getSidebarNavigation(activeRole, stats, session) {
         key: 'resources',
         label: 'Learning',
         items: [
+          {
+            id: 'bootcamps',
+            label: 'Bootcamps',
+            icon: GraduationCap,
+            href: '/account/member/bootcamps',
+          },
           {
             id: 'resources',
             label: 'Resources',
@@ -294,7 +291,7 @@ export function getSidebarNavigation(activeRole, stats, session) {
           {
             id: 'discussions',
             label: 'Help Desk',
-            icon: HelpCircle,
+            icon: MessageSquare,
             href: '/account/executive/discussions',
           },
         ],
@@ -408,7 +405,7 @@ export function getSidebarNavigation(activeRole, stats, session) {
           {
             id: 'discussions',
             label: 'Help Desk',
-            icon: HelpCircle,
+            icon: MessageSquare,
             href: '/account/admin/discussions',
           },
         ],
@@ -555,7 +552,7 @@ export function getSidebarNavigation(activeRole, stats, session) {
           {
             id: 'discussions',
             label: 'Help Desk',
-            icon: HelpCircle,
+            icon: MessageSquare,
             href: '/account/mentor/discussions',
           },
         ],
@@ -652,7 +649,7 @@ export function getSidebarNavigation(activeRole, stats, session) {
           {
             id: 'discussions',
             label: 'Help Desk',
-            icon: HelpCircle,
+            icon: MessageSquare,
             href: '/account/advisor/discussions',
           },
         ],

@@ -7,7 +7,6 @@
  */
 
 import { requireRole } from '@/app/_lib/auth-guard';
-import { getMemberProfileByUserId } from '@/app/_lib/data-service';
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import MemberProfileClient from './_components/MemberProfileClient';
 
@@ -17,21 +16,37 @@ export default async function MemberProfilePage() {
   const { user } = await requireRole('member');
 
   const [memberProfile, { data: userHandles }] = await Promise.all([
-    getMemberProfileByUserId(user.id).catch(() => null),
+    supabaseAdmin
+      .from('member_profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle(),
     supabaseAdmin
       .from('user_handles')
-      .select('platform, handle')
+      .select('handle, platform:platform_id(code)')
       .eq('user_id', user.id),
   ]);
 
-  // Merge handles into memberProfile for backward compatibility
+  const memberProfileData = memberProfile?.data ?? null;
+
   const handlesMap = {};
   (userHandles || []).forEach((h) => {
-    handlesMap[`${h.platform}_handle`] = h.handle;
+    if (h.platform?.code) handlesMap[`${h.platform.code}_handle`] = h.handle;
   });
 
-  const enrichedProfile = memberProfile
-    ? { ...memberProfile, ...handlesMap }
+  const enrichedProfile = memberProfileData
+    ? {
+        ...memberProfileData,
+        session:
+          memberProfileData.session ??
+          memberProfileData.academic_session ??
+          null,
+        academic_session:
+          memberProfileData.academic_session ??
+          memberProfileData.session ??
+          null,
+        ...handlesMap,
+      }
     : null;
 
   return (

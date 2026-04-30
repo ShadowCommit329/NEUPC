@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useRef, useCallback, useEffect } from 'react';
 import {
   User,
   Bell,
@@ -23,8 +23,17 @@ import {
   Moon,
   Sun,
   Monitor,
+  Camera,
+  Upload,
+  Trash2,
+  Move,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { updateMemberInfoAction } from '@/app/_lib/member-profile-actions';
+import { uploadAvatarAction, removeAvatarAction } from '@/app/_lib/avatar-actions';
 import { signOutAction } from '@/app/_lib/actions';
 
 // ─── Sidebar nav items ─────────────────────────────────────────────────────────
@@ -210,6 +219,302 @@ function Input({ name, defaultValue, placeholder, readOnly, prefix, type = 'text
   );
 }
 
+// ─── Avatar Crop Modal ────────────────────────────────────────────────────────
+function AvatarCropModal({ src, onApply, onCancel }) {
+  const canvasRef   = useRef(null);
+  const imgRef      = useRef(null);
+  const dragging    = useRef(false);
+  const lastPos     = useRef({ x: 0, y: 0 });
+  const [offset, setOffset]   = useState({ x: 0, y: 0 });
+  const [zoom,   setZoom]     = useState(1);
+  const SIZE = 280; // output square px
+
+  // draw whenever offset/zoom changes
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    const img    = imgRef.current;
+    if (!canvas || !img) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, SIZE, SIZE);
+
+    const naturalMin = Math.min(img.naturalWidth, img.naturalHeight);
+    const baseScale  = SIZE / naturalMin;
+    const scale      = baseScale * zoom;
+    const w = img.naturalWidth  * scale;
+    const h = img.naturalHeight * scale;
+    const cx = SIZE / 2 + offset.x - w / 2;
+    const cy = SIZE / 2 + offset.y - h / 2;
+
+    // clip to circle
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(img, cx, cy, w, h);
+    ctx.restore();
+
+    // ring
+    ctx.beginPath();
+    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2 - 1, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }, [offset, zoom]);
+
+  useEffect(() => { draw(); }, [draw]);
+
+  // pointer events for drag
+  function onPointerDown(e) {
+    dragging.current = true;
+    lastPos.current = { x: e.clientX, y: e.clientY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+  function onPointerMove(e) {
+    if (!dragging.current) return;
+    const dx = e.clientX - lastPos.current.x;
+    const dy = e.clientY - lastPos.current.y;
+    lastPos.current = { x: e.clientX, y: e.clientY };
+    setOffset((o) => ({ x: o.x + dx, y: o.y + dy }));
+  }
+  function onPointerUp() { dragging.current = false; }
+
+  function reset() { setOffset({ x: 0, y: 0 }); setZoom(1); }
+
+  function apply() {
+    const canvas = canvasRef.current;
+    canvas.toBlob((blob) => {
+      onApply(new File([blob], 'avatar.png', { type: 'image/png' }));
+    }, 'image/png');
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-md p-0 sm:p-4">
+      <div className="w-full sm:max-w-[360px] rounded-t-3xl sm:rounded-2xl border border-white/[0.08] bg-[#0d0d0d] shadow-2xl overflow-hidden">
+        {/* header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <div>
+            <p className="text-[14px] font-semibold text-white/90">Crop &amp; position</p>
+            <p className="text-[11px] text-white/30 mt-0.5">Drag to reposition · pinch or scroll to zoom</p>
+          </div>
+          <button type="button" onClick={onCancel}
+            className="flex size-7 items-center justify-center rounded-full bg-white/[0.06] text-white/40 hover:bg-white/10 hover:text-white/70 transition">
+            <X className="size-3.5" />
+          </button>
+        </div>
+
+        {/* hidden img for drawing */}
+        <img ref={imgRef} src={src} onLoad={draw} className="hidden" alt="" crossOrigin="anonymous" />
+
+        {/* canvas — full width with dark surround */}
+        <div className="relative mx-5 mb-4 flex justify-center">
+          <div className="relative">
+            <canvas
+              ref={canvasRef}
+              width={SIZE}
+              height={SIZE}
+              className="rounded-full cursor-grab active:cursor-grabbing touch-none ring-1 ring-white/10"
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+            />
+            {/* corner hint */}
+            <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-1 text-[10px] text-white/20">
+              <Move className="size-3" /> drag
+            </span>
+          </div>
+        </div>
+
+        {/* zoom */}
+        <div className="mx-5 mt-7 mb-1 flex items-center gap-3">
+          <button type="button" onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(2)))}
+            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white/[0.05] text-white/35 hover:bg-white/10 hover:text-white/70 transition">
+            <ZoomOut className="size-3.5" />
+          </button>
+          <div className="relative flex-1 h-1 rounded-full bg-white/[0.08]">
+            <div
+              className="absolute left-0 top-0 h-1 rounded-full bg-indigo-500/70 transition-all"
+              style={{ width: `${((zoom - 0.5) / 2.5) * 100}%` }}
+            />
+            <input
+              type="range" min={0.5} max={3} step={0.01}
+              value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              className="absolute inset-0 w-full opacity-0 cursor-pointer h-1"
+            />
+          </div>
+          <button type="button" onClick={() => setZoom((z) => Math.min(3, +(z + 0.1).toFixed(2)))}
+            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white/[0.05] text-white/35 hover:bg-white/10 hover:text-white/70 transition">
+            <ZoomIn className="size-3.5" />
+          </button>
+        </div>
+        <p className="mb-4 text-center text-[10px] text-white/20">{Math.round(zoom * 100)}%</p>
+
+        {/* actions */}
+        <div className="flex gap-2 border-t border-white/[0.06] px-5 py-4">
+          <button type="button" onClick={reset}
+            className="flex items-center gap-1.5 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-2.5 text-[12px] text-white/40 hover:bg-white/[0.06] hover:text-white/70 transition">
+            <RotateCcw className="size-3.5" /> Reset
+          </button>
+          <button type="button" onClick={apply}
+            className="flex-1 rounded-xl bg-indigo-600 px-3.5 py-2.5 text-[12px] font-semibold text-white hover:bg-indigo-500 active:bg-indigo-700 transition">
+            Apply crop
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Avatar Uploader ──────────────────────────────────────────────────────────
+function AvatarUploader({ user }) {
+  const router = useRouter();
+  const [uploading,  setUploading]  = useState(false);
+  const [removing,   setRemoving]   = useState(false);
+  const [error,      setError]      = useState(null);
+  const [cropSrc,    setCropSrc]    = useState(null); // data URL → show modal
+  const [pendingRef, setPendingRef] = useState(null); // input element ref for reset
+  const isImage = user.avatar_url?.startsWith('/api/image/');
+
+  const initials =
+    user.avatar_url && user.avatar_url.length <= 3
+      ? user.avatar_url
+      : user.full_name?.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() ?? 'M';
+
+  function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError(null);
+    setPendingRef(e.target);
+    const reader = new FileReader();
+    reader.onload = (ev) => setCropSrc(ev.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  // "Relocate" — reload existing avatar into crop modal
+  function handleRelocate() {
+    setError(null);
+    setCropSrc(user.avatar_url);
+  }
+
+  async function handleCropApply(file) {
+    setCropSrc(null);
+    if (pendingRef) { pendingRef.value = ''; setPendingRef(null); }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.set('file', file);
+      const result = await uploadAvatarAction(fd);
+      if (result?.error) setError(result.error);
+      else router.refresh();
+    } catch { setError('Upload failed.'); }
+    finally { setUploading(false); }
+  }
+
+  function handleCropCancel() {
+    setCropSrc(null);
+    if (pendingRef) { pendingRef.value = ''; setPendingRef(null); }
+  }
+
+  async function handleRemove() {
+    setError(null);
+    setRemoving(true);
+    try {
+      const result = await removeAvatarAction();
+      if (result?.error) setError(result.error);
+      else router.refresh();
+    } catch { setError('Failed to remove.'); }
+    finally { setRemoving(false); }
+  }
+
+  return (
+    <>
+      {cropSrc && (
+        <AvatarCropModal
+          src={cropSrc}
+          onApply={handleCropApply}
+          onCancel={handleCropCancel}
+        />
+      )}
+
+      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+
+          {/* ── large avatar preview ── */}
+          <div className="group relative shrink-0">
+            {isImage ? (
+              <img
+                src={user.avatar_url}
+                alt={user.full_name}
+                className="size-24 rounded-full object-cover ring-2 ring-white/10 shadow-lg"
+              />
+            ) : (
+              <div
+                className="size-24 rounded-full ring-2 ring-white/10 shadow-lg flex items-center justify-center font-bold text-2xl"
+                style={{ background: 'linear-gradient(135deg,#4ade80,#22a360)', color: '#03200f' }}
+              >
+                {initials}
+              </div>
+            )}
+            {/* hover overlay — quick upload */}
+            <label className="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer backdrop-blur-[2px]">
+              {uploading
+                ? <Loader2 className="size-5 animate-spin text-white" />
+                : <Camera className="size-5 text-white" />}
+              <span className="text-[9px] font-medium text-white/80 tracking-wide">
+                {uploading ? 'Uploading…' : 'Change'}
+              </span>
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" disabled={uploading} onChange={handleFileChange} />
+            </label>
+
+            {/* uploading ring */}
+            {uploading && (
+              <span className="pointer-events-none absolute inset-0 rounded-full ring-2 ring-indigo-500/50 animate-pulse" />
+            )}
+          </div>
+
+          {/* ── right column ── */}
+          <div className="flex-1 w-full">
+            <p className="text-[13px] font-semibold text-white/80 mb-0.5">Profile photo</p>
+            <p className="text-[11.5px] text-white/30 mb-4">
+              Square image recommended · JPEG, PNG, WebP, GIF · Max 5 MB
+            </p>
+
+            {/* action buttons */}
+            <div className="flex flex-wrap gap-2">
+              <label className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3.5 py-2 text-[12px] font-medium text-indigo-300 transition hover:bg-indigo-500/20 hover:border-indigo-500/50 disabled:opacity-40">
+                {uploading ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+                {uploading ? 'Uploading…' : 'Upload photo'}
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" disabled={uploading} onChange={handleFileChange} />
+              </label>
+
+              {isImage && (
+                <button type="button" onClick={handleRelocate} disabled={uploading}
+                  className="flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-white/[0.04] px-3.5 py-2 text-[12px] font-medium text-white/50 transition hover:bg-white/[0.08] hover:text-white/80 disabled:opacity-40">
+                  <Move className="size-3.5" /> Crop &amp; reposition
+                </button>
+              )}
+
+              {isImage && (
+                <button type="button" onClick={handleRemove} disabled={removing}
+                  className="flex items-center gap-1.5 rounded-xl border border-red-500/15 bg-red-500/[0.06] px-3.5 py-2 text-[12px] font-medium text-red-400/70 transition hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/25 disabled:opacity-50">
+                  {removing ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+                  {removing ? 'Removing…' : 'Remove'}
+                </button>
+              )}
+            </div>
+
+            {error && (
+              <p className="mt-3 flex items-center gap-1.5 text-[11.5px] text-red-400">
+                <AlertTriangle className="size-3.5 shrink-0" /> {error}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── Section: Account ─────────────────────────────────────────────────────────
 function AccountSection({ user }) {
   const [editing, setEditing] = useState(false);
@@ -281,6 +586,17 @@ function AccountSection({ user }) {
             {user.status_reason}
           </p>
         )}
+      </div>
+
+      {/* Avatar */}
+      <div className="rounded-2xl border border-white/8 bg-white/[0.025]">
+        <div className="border-b border-white/[0.06] px-5 py-4">
+          <p className="text-[13px] font-semibold text-white/80">Avatar</p>
+          <p className="mt-0.5 text-[11.5px] text-white/30">Your photo shown across the platform</p>
+        </div>
+        <div className="px-5 py-4">
+          <AvatarUploader user={user} />
+        </div>
       </div>
 
       {/* Personal info */}

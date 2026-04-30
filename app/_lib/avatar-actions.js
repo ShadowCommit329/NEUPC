@@ -84,6 +84,7 @@ export async function uploadAvatarAction(formData) {
     // Revalidate all pages that display the avatar
     revalidatePath('/account');
     revalidatePath('/account/member/profile');
+    revalidatePath('/account/member/settings');
     revalidatePath('/account/guest/profile');
     revalidatePath('/committee');
     revalidateTag('committee');
@@ -139,6 +140,7 @@ export async function removeAvatarAction() {
 
     revalidatePath('/account');
     revalidatePath('/account/member/profile');
+    revalidatePath('/account/member/settings');
     revalidatePath('/account/guest/profile');
     revalidatePath('/committee');
     revalidateTag('committee');
