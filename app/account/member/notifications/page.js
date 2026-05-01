@@ -23,7 +23,7 @@ export default async function MemberNotificationsPage() {
   ]);
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
+    <div className="mx-auto max-w-6xl px-4 pt-6 pb-10 sm:px-6 sm:pt-8 lg:px-8">
       <MemberNotificationsClient
         notifications={notifications}
         unreadCount={unreadCount}

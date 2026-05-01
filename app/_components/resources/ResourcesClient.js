@@ -16,6 +16,11 @@ import {
   Loader2,
   X,
   ArrowUp,
+  Search,
+  Bookmark,
+  CheckCircle,
+  FolderOpen,
+  SlidersHorizontal,
 } from 'lucide-react';
 import ResourceGrid from '@/app/_components/resources/ResourceGrid';
 import ResourceFilters from '@/app/_components/resources/ResourceFilters';
@@ -198,192 +203,306 @@ export default function ResourcesClient({
     return result;
   }, [totalPages, page]);
 
+  // Sidebar category items (shared between sidebar + mobile chip strip)
+  const allCatItem = { id: '', name: 'All', count: total };
+  const filterItems = [
+    { id: '__bookmarked', name: 'Bookmarked', icon: 'bookmark', count: saved.length },
+    { id: '__completed', name: 'Completed', icon: 'check' },
+  ];
+
+  const activeCatId = filterState.categoryId || '';
+  const activeTypeFilter = filterState.type || '';
+
+  function handleCatClick(catId) {
+    updateFilters({ ...filterState, categoryId: catId, type: '' });
+  }
+  function handleSpecialFilter(key) {
+    const next = activeTypeFilter === key ? '' : key;
+    updateFilters({ ...filterState, type: next, categoryId: '' });
+  }
+
   return (
-    <div className="space-y-5" ref={gridRef}>
-      {/* Filters */}
-      <ResourceFilters
-        value={filterState}
-        categories={categories}
-        onChange={updateFilters}
-      />
+    <div ref={gridRef} className="space-y-3">
 
-      {/* Results summary when filtering */}
-      {hasFilters && total > 0 && (
-        <div
-          className="flex items-center gap-2 rounded-xl border border-blue-500/10 bg-blue-500/[0.03] px-4 py-2.5"
-          role="status"
-          aria-live="polite"
+      {/* ── Mobile/tablet: horizontal chip strip (hidden on lg+) ── */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:hidden [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
+        {/* All chip */}
+        <button
+          onClick={() => handleCatClick('')}
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-all ${
+            !activeCatId && !activeTypeFilter
+              ? 'border-[rgba(124,131,255,0.35)] bg-[rgba(124,131,255,0.12)] text-[#aab0ff]'
+              : 'border-white/[0.06] bg-[#121317] text-white/50 hover:border-white/[0.12] hover:text-white/80'
+          }`}
         >
-          <BookOpen className="h-3.5 w-3.5 text-blue-400/60" />
-          <p className="text-xs text-gray-400">
-            Found <span className="font-semibold text-blue-300">{total}</span>{' '}
-            resource{total !== 1 ? 's' : ''} matching your filters
-          </p>
-        </div>
-      )}
+          All
+          <span className="tabular-nums text-[10.5px] opacity-60">{total}</span>
+        </button>
 
-      {/* Resource Grid */}
-      <ResourceGrid
-        resources={resources}
-        bookmarkedIds={saved}
-        onToggleBookmark={canBookmark ? onToggleBookmark : undefined}
-        detailBasePath={effectiveBasePath}
-        onOpenResource={openModal}
-      />
+        {/* Category chips */}
+        {categories.map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => handleCatClick(cat.id)}
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-all ${
+              activeCatId === cat.id
+                ? 'border-[rgba(124,131,255,0.35)] bg-[rgba(124,131,255,0.12)] text-[#aab0ff]'
+                : 'border-white/[0.06] bg-[#121317] text-white/50 hover:border-white/[0.12] hover:text-white/80'
+            }`}
+          >
+            {cat.name}
+          </button>
+        ))}
 
-      {/* ── Pagination ─────────────────────────────────────────────── */}
-      {total > 0 && totalPages > 1 && (
-        <nav
-          aria-label="Resources pagination"
-          className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-4 py-4 sm:flex-row sm:px-5"
+        {/* Divider dot */}
+        <span className="shrink-0 text-white/15">·</span>
+
+        {/* Bookmarked chip */}
+        <button
+          onClick={() => handleSpecialFilter('bookmarked')}
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-all ${
+            activeTypeFilter === 'bookmarked'
+              ? 'border-[rgba(251,191,36,0.35)] bg-[rgba(251,191,36,0.10)] text-[#fcd34d]'
+              : 'border-white/[0.06] bg-[#121317] text-white/50 hover:border-white/[0.12] hover:text-white/80'
+          }`}
         >
-          {/* Page info */}
-          <p className="text-sm text-gray-500" aria-live="polite">
-            Showing{' '}
-            <span className="font-medium text-gray-300">
-              {rangeStart}&ndash;{rangeEnd}
-            </span>{' '}
-            of <span className="font-medium text-gray-300">{total}</span>{' '}
-            resources
-          </p>
+          <Bookmark className="h-3 w-3" />
+          Bookmarked
+          {saved.length > 0 && <span className="tabular-nums text-[10.5px] opacity-60">{saved.length}</span>}
+        </button>
+      </div>
 
-          {/* Page controls */}
-          <div className="flex items-center gap-1.5">
-            {/* Previous button */}
+      {/* ── Main two-column layout ── */}
+      <div className="flex gap-[18px] items-start">
+
+        {/* ── Category sidebar (desktop only) ── */}
+        <aside className="hidden lg:block w-[200px] shrink-0 rounded-[12px] border border-white/[0.06] bg-[#121317] p-[14px] sticky top-[70px]">
+          <div className="mb-[6px] px-[6px] pb-[6px] text-[10.5px] font-medium uppercase tracking-[0.08em] text-white/25">
+            Categories
+          </div>
+          <div className="flex flex-col gap-[1px]">
+            {/* All */}
             <button
-              onClick={() => goPage(page - 1)}
-              disabled={page <= 1 || pending}
-              aria-label="Go to previous page"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-sm font-medium text-gray-300 transition-all hover:border-white/12 hover:bg-white/[0.06] disabled:pointer-events-none disabled:opacity-40"
+              onClick={() => handleCatClick('')}
+              className={`flex w-full items-center gap-2 rounded-[6px] border-0 px-[8px] py-[6px] text-left text-[12.5px] transition-all ${
+                !activeCatId && !activeTypeFilter
+                  ? 'bg-[#181a1f] font-medium text-white'
+                  : 'bg-transparent text-white/50 hover:bg-[#181a1f] hover:text-white/80'
+              }`}
             >
-              <ChevronLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Previous</span>
+              <span className="flex-1">All</span>
+              <span className="tabular-nums text-[11px] text-white/25">{total}</span>
             </button>
 
-            {/* Page numbers */}
-            <div className="flex items-center gap-1">
-              {pageNumbers.map((item) => {
-                if (typeof item === 'string') {
-                  return (
-                    <span
-                      key={item}
-                      className="flex h-8 w-6 items-center justify-center text-xs text-gray-600"
-                      aria-hidden="true"
-                    >
-                      &hellip;
-                    </span>
-                  );
-                }
-                const isActive = item === page;
-                return (
-                  <button
-                    key={item}
-                    onClick={() => goPage(item)}
-                    disabled={pending}
-                    aria-label={`Go to page ${item}`}
-                    aria-current={isActive ? 'page' : undefined}
-                    className={`flex h-8 min-w-[2rem] items-center justify-center rounded-lg text-sm font-medium tabular-nums transition-all ${
-                      isActive
-                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
-                        : 'text-gray-400 hover:bg-white/[0.06] hover:text-white'
-                    }`}
-                  >
-                    {item}
-                  </button>
-                );
-              })}
+            {/* Categories */}
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => handleCatClick(cat.id)}
+                className={`flex w-full items-center gap-2 rounded-[6px] border-0 px-[8px] py-[6px] text-left text-[12.5px] transition-all ${
+                  activeCatId === cat.id
+                    ? 'bg-[#181a1f] font-medium text-white'
+                    : 'bg-transparent text-white/50 hover:bg-[#181a1f] hover:text-white/80'
+                }`}
+              >
+                <span className="flex-1 truncate">{cat.name}</span>
+                {cat.resource_count != null && (
+                  <span className="tabular-nums text-[11px] text-white/25">{cat.resource_count}</span>
+                )}
+              </button>
+            ))}
+
+            {/* Divider */}
+            <div className="my-[10px] h-px bg-white/[0.06]" />
+            <div className="mb-[6px] px-[6px] text-[10.5px] font-medium uppercase tracking-[0.08em] text-white/25">
+              Filters
             </div>
 
-            {/* Next button */}
+            {/* Bookmarked */}
             <button
-              onClick={() => goPage(page + 1)}
-              disabled={page >= totalPages || pending}
-              aria-label="Go to next page"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-sm font-medium text-gray-300 transition-all hover:border-white/12 hover:bg-white/[0.06] disabled:pointer-events-none disabled:opacity-40"
+              onClick={() => handleSpecialFilter('bookmarked')}
+              className={`flex w-full items-center gap-2 rounded-[6px] border-0 px-[8px] py-[6px] text-left text-[12.5px] transition-all ${
+                activeTypeFilter === 'bookmarked'
+                  ? 'bg-[#181a1f] font-medium text-white'
+                  : 'bg-transparent text-white/50 hover:bg-[#181a1f] hover:text-white/80'
+              }`}
             >
-              <span className="hidden sm:inline">Next</span>
-              <ChevronRight className="h-4 w-4" />
+              <Bookmark className="h-3 w-3 shrink-0" />
+              <span className="flex-1">Bookmarked</span>
+              <span className="tabular-nums text-[11px] text-white/25">{saved.length}</span>
+            </button>
+
+            {/* Completed */}
+            <button
+              onClick={() => handleSpecialFilter('completed')}
+              className={`flex w-full items-center gap-2 rounded-[6px] border-0 px-[8px] py-[6px] text-left text-[12.5px] transition-all ${
+                activeTypeFilter === 'completed'
+                  ? 'bg-[#181a1f] font-medium text-white'
+                  : 'bg-transparent text-white/50 hover:bg-[#181a1f] hover:text-white/80'
+              }`}
+            >
+              <CheckCircle className="h-3 w-3 shrink-0" />
+              <span className="flex-1">Completed</span>
             </button>
           </div>
-        </nav>
-      )}
+        </aside>
 
-      {/* Single page result count */}
-      {total > 0 && totalPages <= 1 && (
-        <div className="flex items-center justify-center py-2" role="status">
-          <p className="text-xs text-gray-600">
-            {total} resource{total !== 1 ? 's' : ''} total
-          </p>
+        {/* ── Main content area ── */}
+        <div className="min-w-0 flex-1 space-y-3">
+          {/* Search + type filter row */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-white/25" />
+              <input
+                value={filterState.q}
+                onChange={(e) => updateFilters({ ...filterState, q: e.target.value })}
+                placeholder="Search resources..."
+                className="w-full rounded-[8px] border border-white/[0.06] bg-[#121317] py-[7px] pr-3 pl-9 text-[12.5px] text-white placeholder-white/25 outline-none transition-all focus:border-white/[0.14] focus:bg-[#181a1f]"
+              />
+              {filterState.q && (
+                <button
+                  onClick={() => updateFilters({ ...filterState, q: '' })}
+                  className="absolute top-1/2 right-2.5 -translate-y-1/2 text-white/30 hover:text-white/60"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            <select
+              value={filterState.type && !['bookmarked','completed'].includes(filterState.type) ? filterState.type : ''}
+              onChange={(e) => updateFilters({ ...filterState, type: e.target.value, categoryId: filterState.categoryId })}
+              className="hidden rounded-[8px] border border-white/[0.06] bg-[#121317] px-3 py-[7px] text-[12.5px] text-white/60 outline-none transition-all focus:border-white/[0.14] focus:bg-[#181a1f] appearance-none cursor-pointer sm:block"
+            >
+              <option value="">All Types</option>
+              <option value="video">Video</option>
+              <option value="youtube">YouTube</option>
+              <option value="rich_text">Article</option>
+              <option value="file">File / PDF</option>
+              <option value="external_link">Link</option>
+              <option value="image">Image</option>
+              <option value="facebook_post">Facebook</option>
+              <option value="linkedin_post">LinkedIn</option>
+            </select>
+          </div>
+
+          {/* Filter match info */}
+          {hasFilters && total > 0 && (
+            <p className="text-[12px] text-white/30" role="status" aria-live="polite">
+              <span className="font-medium text-white/60">{total}</span> resource{total !== 1 ? 's' : ''} found
+            </p>
+          )}
+
+          {/* Resource grid */}
+          <ResourceGrid
+            resources={resources}
+            bookmarkedIds={saved}
+            onToggleBookmark={canBookmark ? onToggleBookmark : undefined}
+            detailBasePath={effectiveBasePath}
+            onOpenResource={openModal}
+          />
+
+          {/* Pagination */}
+          {total > 0 && totalPages > 1 && (
+            <nav
+              aria-label="Resources pagination"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-white/[0.06] bg-[#121317] px-4 py-3"
+            >
+              <p className="text-[12px] text-white/30" aria-live="polite">
+                <span className="font-medium text-white/60">{rangeStart}–{rangeEnd}</span>
+                {' '}of{' '}
+                <span className="font-medium text-white/60">{total}</span>
+              </p>
+
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => goPage(page - 1)}
+                  disabled={page <= 1 || pending}
+                  aria-label="Previous page"
+                  className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-white/[0.06] bg-transparent text-white/40 transition-all hover:border-white/[0.12] hover:bg-[#181a1f] hover:text-white/80 disabled:pointer-events-none disabled:opacity-30"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </button>
+
+                {pageNumbers.map((item) =>
+                  typeof item === 'string' ? (
+                    <span key={item} className="flex h-7 w-5 items-center justify-center text-[11px] text-white/20">…</span>
+                  ) : (
+                    <button
+                      key={item}
+                      onClick={() => goPage(item)}
+                      disabled={pending}
+                      aria-current={item === page ? 'page' : undefined}
+                      className={`flex h-7 min-w-[28px] items-center justify-center rounded-[6px] text-[12px] font-medium tabular-nums transition-all ${
+                        item === page
+                          ? 'bg-[#7c83ff] text-white'
+                          : 'text-white/40 hover:bg-[#181a1f] hover:text-white/80'
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  )
+                )}
+
+                <button
+                  onClick={() => goPage(page + 1)}
+                  disabled={page >= totalPages || pending}
+                  aria-label="Next page"
+                  className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-white/[0.06] bg-transparent text-white/40 transition-all hover:border-white/[0.12] hover:bg-[#181a1f] hover:text-white/80 disabled:pointer-events-none disabled:opacity-30"
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </nav>
+          )}
+
+          {total > 0 && totalPages <= 1 && (
+            <p className="py-1 text-center text-[11.5px] text-white/20" role="status">
+              {total} resource{total !== 1 ? 's' : ''} total
+            </p>
+          )}
+
+          {pending && (
+            <div className="flex items-center justify-center gap-2 py-4" role="status">
+              <Loader2 className="h-4 w-4 animate-spin text-white/30" />
+              <span className="text-[12px] text-white/30">Loading...</span>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Loading overlay */}
-      {pending && (
-        <div
-          className="flex items-center justify-center gap-2 py-4"
-          role="status"
-          aria-label="Loading resources"
-        >
-          <Loader2 className="h-5 w-5 animate-spin text-blue-400" />
-          <span className="text-xs text-gray-500">Loading...</span>
-        </div>
-      )}
-
-      {/* ── Resource detail modal ──────────────────────────────── */}
+      {/* ── Resource detail modal ── */}
       {activeResource && (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-3 py-4 backdrop-blur-sm sm:px-5"
+          className="fixed inset-0 z-70 flex items-center justify-center bg-black/70 px-3 py-4 backdrop-blur-sm"
           onClick={closeModal}
           role="presentation"
           aria-hidden="true"
         >
           <div
             ref={modalRef}
-            className="relative flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0B1120] shadow-2xl"
+            className="relative flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[16px] border border-white/[0.09] bg-[#0d0e11] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-label={`Resource details: ${activeResource.title}`}
           >
-            {/* Sticky modal header */}
-            <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] bg-[#0B1120]/95 px-4 py-3 backdrop-blur-sm sm:px-6">
-              <h2 className="min-w-0 truncate pr-4 text-sm font-semibold text-white">
+            <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] bg-[#0d0e11]/95 px-5 py-3 backdrop-blur-sm">
+              <h2 className="min-w-0 truncate pr-4 text-[13px] font-semibold text-white">
                 {activeResource.title}
               </h2>
               <button
                 type="button"
                 data-close-modal
                 onClick={closeModal}
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-gray-300 transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus:ring-2 focus:ring-blue-500/30 focus:outline-none"
+                className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[6px] border border-white/[0.09] bg-transparent text-white/40 transition-all hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-white focus:outline-none"
                 aria-label="Close resource details"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
-
-            {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
-              <ViewTracker
-                resourceId={activeResource.id}
-                source="member_modal"
-              />
+            <div className="flex-1 overflow-y-auto overscroll-contain p-5">
+              <ViewTracker resourceId={activeResource.id} source="member_modal" />
               <ResourceViewer resource={activeResource} />
-            </div>
-
-            {/* Back to top hint on scroll */}
-            <div className="pointer-events-none absolute right-4 bottom-4 sm:right-6">
-              <button
-                type="button"
-                onClick={() => {
-                  modalRef.current
-                    ?.querySelector('.overflow-y-auto')
-                    ?.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className="pointer-events-auto inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/60 text-gray-400 opacity-0 shadow-lg backdrop-blur-sm transition-all hover:bg-black/80 hover:text-white [.overflow-y-auto:hover~&]:opacity-100"
-                aria-label="Scroll to top"
-              >
-                <ArrowUp className="h-3.5 w-3.5" />
-              </button>
             </div>
           </div>
         </div>

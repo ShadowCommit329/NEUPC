@@ -701,13 +701,11 @@ export default function MemberParticipationClient({
     !myThreads.length;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
+    <div className="space-y-5">
       {/* Page head */}
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h1
-            className="text-[24px] font-semibold leading-[1.1] tracking-[-0.025em] text-white/90"
-          >
+          <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-white/90">
             Participation
           </h1>
           <p className="mt-1 text-[13px] text-white/40">

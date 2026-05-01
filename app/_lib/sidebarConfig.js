@@ -204,16 +204,16 @@ export function getSidebarNavigation(activeRole, stats, session) {
             href: '/account/member/resources',
           },
           {
-            id: 'achievements',
-            label: 'Achievements',
-            icon: Award,
-            href: '/account/member/achievements',
-          },
-          {
             id: 'participation',
             label: 'Participation',
             icon: CheckSquare,
             href: '/account/member/participation',
+          },
+          {
+            id: 'achievements',
+            label: 'Achievements',
+            icon: Award,
+            href: '/account/member/achievements',
           },
           {
             id: 'certificates',

@@ -46,7 +46,7 @@ export default async function MemberResourcesPage({ searchParams }) {
   const pinnedCount = resources.filter((r) => r.is_pinned).length;
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-6 pb-10 sm:px-6 sm:pt-8 lg:px-8">
       <ResourcesPageHeader
         role="member"
         total={total}

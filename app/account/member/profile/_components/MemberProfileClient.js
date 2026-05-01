@@ -604,8 +604,8 @@ export default function MemberProfileClient({ user, memberProfile }) {
 
       {/* Page title */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">Profile</h1>
-        <p className="mt-0.5 text-[13px] text-white/35">Your public NEUPC identity</p>
+        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-white/90">Profile</h1>
+        <p className="mt-1 text-[13px] text-white/40">Your public NEUPC identity</p>
       </div>
 
       {/* Hero */}

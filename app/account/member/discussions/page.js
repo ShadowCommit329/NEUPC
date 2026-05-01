@@ -38,7 +38,7 @@ export default async function MemberDiscussionsPage() {
   ]);
 
   return (
-    <div className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8">
+    <div className="mx-auto max-w-6xl px-4 pt-6 pb-10 sm:px-6 sm:pt-8 lg:px-8">
       <DiscussionErrorBoundary
         title="Help Desk Error"
         message="We encountered an issue loading the Help Desk. Please refresh the page or try again later."

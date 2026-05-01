@@ -339,7 +339,7 @@ export default function MemberCertificatesClient({ certificates, userName }) {
     <>
       <CertModal cert={selected} onClose={() => setSelected(null)} />
 
-      <div className="mx-auto max-w-6xl space-y-5 px-4 pt-6 pb-10 sm:px-6 lg:px-8">
+      <div className="space-y-5">
         {/* Page head */}
         <div className="flex items-end justify-between gap-4">
           <div>

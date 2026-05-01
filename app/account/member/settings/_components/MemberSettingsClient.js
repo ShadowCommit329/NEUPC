@@ -1174,10 +1174,10 @@ export default function MemberSettingsClient({ user }) {
     <div className="mx-auto max-w-6xl space-y-5">
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">
+        <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-white/90">
           Settings
         </h1>
-        <p className="mt-1 text-[13px] text-white/35">
+        <p className="mt-1 text-[13px] text-white/40">
           Manage your account, preferences, and security
         </p>
       </div>

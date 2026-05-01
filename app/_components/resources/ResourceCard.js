@@ -18,6 +18,7 @@ import {
   Share2,
   Edit3,
   Trash2,
+  Star,
 } from 'lucide-react';
 import { RESOURCE_TYPE_LABELS } from '@/app/_lib/resources/constants';
 import { safeExternalHref } from '@/app/_lib/resources/embed-utils';
@@ -324,7 +325,7 @@ export default function ResourceCard({
 
   return (
     <article
-      className={`group relative flex flex-col overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.025] transition-all duration-300 focus-within:border-white/12 focus-within:ring-1 focus-within:ring-blue-500/20 hover:border-white/12 hover:bg-white/[0.05] hover:shadow-xl hover:shadow-black/20 ${
+      className={`group relative flex flex-col rounded-[12px] border border-white/[0.06] bg-[#121317] transition-all duration-150 hover:border-white/[0.09] hover:bg-[#181a1f] ${
         canOpenInModal ? 'cursor-pointer' : ''
       }`}
       onClick={openResource}
@@ -333,264 +334,94 @@ export default function ResourceCard({
       tabIndex={canOpenInModal ? 0 : undefined}
       aria-label={canOpenInModal ? `Open ${resource.title}` : undefined}
     >
-      {/* ── Social post embed OR Thumbnail / Type-gradient placeholder ── */}
-      {isSocialPost && resource?.embed_url ? (
-        <div className="relative shrink-0">
-          {/* Badges overlay */}
-          <div className="absolute top-3 left-3 z-10 flex flex-wrap items-center gap-1.5">
+      {/* ── Card body ── */}
+      <div className="flex flex-1 flex-col gap-[6px] p-4">
+        {/* Top row: type pill + bookmark */}
+        <div className="flex items-center justify-between gap-2 mb-[2px]">
+          <div className="flex items-center gap-1.5">
             <TypeBadge typeStyle={typeStyle} typeLabel={typeLabel} />
             {resource.is_pinned && <PinnedBadge />}
           </div>
-
-          <div className="absolute top-3 right-3 z-10">
-            <VisibilityBadge visibility={resource.visibility} />
-          </div>
-
-          <SocialCardEmbed
-            resourceType={resource.resource_type}
-            embedUrl={resource.embed_url}
-            title={resource.title}
-          />
-
-          {showAdminActions && (
-            <AdminOverlay
-              resource={resource}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
-          )}
-        </div>
-      ) : (
-        <div className="relative h-40 shrink-0 overflow-hidden bg-gray-900/50 sm:h-44">
-          {resource.thumbnail ? (
-            <Image
-              src={resource.thumbnail}
-              alt={resource.title}
-              fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-          ) : isPdfFile && pdfPreviewSrc ? (
-            <iframe
-              src={pdfPreviewSrc}
-              title={resource.title || 'PDF preview'}
-              className="h-full w-full border-0"
-              loading="lazy"
-            />
-          ) : showDriveVideoThumbnail ? (
-            <img
-              src={driveVideoThumbnail}
-              alt={resource.title || 'Video preview'}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              loading="lazy"
-              onLoad={() => setVideoPreviewStatus('ready')}
-              onError={() => setVideoPreviewStatus('failed')}
-            />
-          ) : showInlineVideoPreview ? (
-            <video
-              src={resource.file_url}
-              className="h-full w-full object-cover"
-              muted
-              preload="metadata"
-              playsInline
-              onLoadedData={() => setVideoPreviewStatus('ready')}
-              onCanPlay={() => setVideoPreviewStatus('ready')}
-              onError={() => setVideoPreviewStatus('failed')}
-              onStalled={() => setVideoPreviewStatus('failed')}
-            />
-          ) : showVideoPlaceholder ? (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-red-700/30 to-orange-700/25">
-              <div className="flex flex-col items-center gap-2 text-white/70">
-                <PlayCircle className="h-10 w-10" strokeWidth={1.5} />
-                <span className="text-xs font-medium">
-                  Video preview unavailable
-                </span>
-              </div>
-            </div>
-          ) : autoCover ? (
-            <img
-              src={autoCover}
-              alt={resource.title}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              loading="lazy"
-              onError={(e) => {
-                if (
-                  autoCoverFallback &&
-                  e.currentTarget.src !== autoCoverFallback
-                ) {
-                  e.currentTarget.src = autoCoverFallback;
-                  return;
-                }
-                e.currentTarget.onerror = null;
-              }}
-            />
-          ) : (
-            <div
-              className={`flex h-full items-center justify-center bg-gradient-to-br ${typeStyle.gradient}`}
+          {!showAdminActions && onToggleBookmark && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleBookmark(resource.id); }}
+              className={`cursor-pointer p-1 transition-colors focus:outline-none ${
+                bookmarked ? 'text-[#fbbf24]' : 'text-white/20 hover:text-white/50'
+              }`}
+              aria-label={bookmarked ? `Remove bookmark from ${resource.title}` : `Bookmark ${resource.title}`}
+              aria-pressed={bookmarked}
             >
-              <TypeIcon className="h-12 w-12 text-white/15" strokeWidth={1.5} />
+              <Star className="h-3.5 w-3.5" fill={bookmarked ? 'currentColor' : 'none'} />
+            </button>
+          )}
+          {showAdminActions && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit?.(resource); }}
+                className="flex h-[26px] items-center gap-1 rounded-[5px] border border-white/[0.06] bg-transparent px-2 text-[11px] text-white/40 transition-all hover:border-blue-500/25 hover:bg-blue-500/10 hover:text-blue-300"
+                aria-label={`Edit ${resource.title}`}
+              >
+                <Edit3 className="h-3 w-3" />
+                <span>Edit</span>
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete?.(resource); }}
+                className="flex h-[26px] items-center gap-1 rounded-[5px] border border-red-500/20 bg-transparent px-2 text-[11px] text-red-400/60 transition-all hover:bg-red-500/10 hover:text-red-300"
+                aria-label={`Delete ${resource.title}`}
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
             </div>
           )}
-
-          {/* Bottom gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-
-          {/* Top-left badges */}
-          <div className="absolute top-2.5 left-2.5 flex flex-wrap items-center gap-1.5 sm:top-3 sm:left-3">
-            <TypeBadge typeStyle={typeStyle} typeLabel={typeLabel} />
-            {resource.is_pinned && <PinnedBadge />}
-          </div>
-
-          {/* Top-right visibility */}
-          <div className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3">
-            <VisibilityBadge visibility={resource.visibility} />
-          </div>
-
-          {/* Admin hover overlay */}
-          {showAdminActions && (
-            <AdminOverlay
-              resource={resource}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
-          )}
-        </div>
-      )}
-
-      {/* ── Content area ─────────────────────────────────────────── */}
-      <div className="flex flex-1 flex-col space-y-2.5 p-3.5 sm:space-y-3 sm:p-4">
-        {/* Title + description */}
-        <div className="flex-1">
-          <h3 className="line-clamp-2 text-sm leading-snug font-semibold text-white transition-colors group-hover:text-blue-200 sm:text-[15px]">
-            {resource.title}
-          </h3>
-          {resource.description && (
-            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-gray-500 sm:mt-1.5 sm:text-[13px]">
-              {resource.description}
-            </p>
-          )}
         </div>
 
-        {/* Category + tags */}
-        {(resource.category?.name || tags.length > 0) && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            {resource.category?.name && (
-              <span className="rounded-md border border-white/[0.06] bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium text-gray-300">
-                {resource.category.name}
-              </span>
-            )}
-            {tags.slice(0, 2).map((tag) => (
-              <span
-                key={tag.id || tag.slug || tag.name}
-                className="rounded-md border border-blue-500/12 bg-blue-500/6 px-2 py-0.5 text-[10px] text-blue-400"
-              >
-                #{tag.name}
-              </span>
-            ))}
-            {tags.length > 2 && (
-              <span className="text-[10px] text-gray-600">
-                +{tags.length - 2}
-              </span>
-            )}
-          </div>
+        {/* Title */}
+        <h3 className="line-clamp-2 text-[14px] font-semibold leading-snug tracking-[-0.01em] text-white">
+          {resource.title}
+        </h3>
+
+        {/* Description */}
+        {resource.description && (
+          <p className="line-clamp-2 text-[12.5px] leading-[1.45] text-white/40">
+            {resource.description}
+          </p>
         )}
 
-        {/* Date + actions footer */}
-        <div className="flex items-center justify-between gap-2 border-t border-white/[0.04] pt-2.5 sm:pt-3">
-          {date ? (
-            <time
-              dateTime={resource?.published_at || resource?.created_at}
-              className="flex items-center gap-1.5 text-[11px] text-gray-600"
-            >
-              <Calendar className="h-3 w-3" />
-              {date}
-            </time>
-          ) : (
-            <span />
-          )}
-
-          <div className="flex items-center gap-1.5">
-            {/* View button for modal-openable cards */}
-            {!showAdminActions && canOpenInModal && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openResource();
-                }}
-                className="inline-flex items-center gap-1 rounded-lg border border-white/[0.06] bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-medium text-gray-300 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white focus:ring-2 focus:ring-blue-500/30 focus:outline-none sm:px-3"
-                aria-label={`View ${resource.title}`}
-              >
-                View <ExternalLink className="h-3 w-3" />
-              </button>
+        {/* Footer */}
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-2 border-t border-white/[0.06] pt-[10px]">
+          <div className="flex min-w-0 items-center gap-[6px] flex-wrap">
+            {resource.category?.name && (
+              <span className="text-[11.5px] text-white/30">{resource.category.name}</span>
             )}
-
-            {/* View link for non-modal cards */}
-            {!showAdminActions && !canOpenInModal && href && (
-              <Link
-                href={href}
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 rounded-lg border border-white/[0.06] bg-white/[0.04] px-2.5 py-1.5 text-[11px] font-medium text-gray-300 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white focus:ring-2 focus:ring-blue-500/30 focus:outline-none sm:px-3"
-                aria-label={`View ${resource.title}`}
-              >
-                View <ExternalLink className="h-3 w-3" />
-              </Link>
+            {resource.category?.name && date && (
+              <span className="text-white/20 text-[11px]">·</span>
             )}
-
-            {/* Bookmark toggle */}
-            {!showAdminActions && onToggleBookmark && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleBookmark(resource.id);
-                }}
-                className={`inline-flex items-center rounded-lg border px-2 py-1.5 transition-all focus:ring-2 focus:ring-blue-500/30 focus:outline-none ${
-                  bookmarked
-                    ? 'border-amber-500/25 bg-amber-500/10 text-amber-300'
-                    : 'border-white/[0.06] bg-white/[0.04] text-gray-400 hover:border-white/15 hover:text-white'
-                }`}
-                aria-label={
-                  bookmarked
-                    ? `Remove bookmark from ${resource.title}`
-                    : `Bookmark ${resource.title}`
-                }
-                aria-pressed={bookmarked}
-              >
-                {bookmarked ? (
-                  <BookmarkCheck className="h-3.5 w-3.5" />
-                ) : (
-                  <Bookmark className="h-3.5 w-3.5" />
-                )}
-              </button>
-            )}
-
-            {/* Admin actions in footer */}
-            {showAdminActions && (
-              <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit?.(resource);
-                  }}
-                  className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1.5 text-[11px] font-medium text-gray-300 transition-all hover:border-blue-500/25 hover:bg-blue-500/10 hover:text-blue-300 focus:ring-2 focus:ring-blue-500/30 focus:outline-none sm:px-2.5"
-                  aria-label={`Edit ${resource.title}`}
-                >
-                  <Edit3 className="h-3 w-3" />
-                  <span className="hidden sm:inline">Edit</span>
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete?.(resource);
-                  }}
-                  className="inline-flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/8 px-2 py-1.5 text-[11px] font-medium text-red-300 transition-all hover:bg-red-500/15 focus:ring-2 focus:ring-red-500/30 focus:outline-none sm:px-2.5"
-                  aria-label={`Delete ${resource.title}`}
-                >
-                  <Trash2 className="h-3 w-3" />
-                  <span className="hidden sm:inline">Delete</span>
-                </button>
-              </>
+            {date && (
+              <time dateTime={resource?.published_at || resource?.created_at} className="text-[11.5px] text-white/30">
+                {date}
+              </time>
             )}
           </div>
+
+          {!showAdminActions && canOpenInModal && (
+            <button
+              onClick={(e) => { e.stopPropagation(); openResource(); }}
+              className="flex shrink-0 items-center gap-1 rounded-[5px] border border-white/[0.06] bg-transparent px-2.5 py-1 text-[11px] font-medium text-white/40 transition-all hover:border-white/[0.14] hover:bg-[#1f2127] hover:text-white/80"
+              aria-label={`View ${resource.title}`}
+            >
+              View <ExternalLink className="h-2.5 w-2.5" />
+            </button>
+          )}
+          {!showAdminActions && !canOpenInModal && href && (
+            <Link
+              href={href}
+              onClick={(e) => e.stopPropagation()}
+              className="flex shrink-0 items-center gap-1 rounded-[5px] border border-white/[0.06] bg-transparent px-2.5 py-1 text-[11px] font-medium text-white/40 transition-all hover:border-white/[0.14] hover:bg-[#1f2127] hover:text-white/80"
+              aria-label={`View ${resource.title}`}
+            >
+              View <ExternalLink className="h-2.5 w-2.5" />
+            </Link>
+          )}
         </div>
       </div>
     </article>
