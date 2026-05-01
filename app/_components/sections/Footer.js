@@ -70,7 +70,6 @@ const RESOURCE_LINKS = [
   { href: '/blogs', label: 'Blog' },
   { href: '/roadmaps', label: 'Roadmaps' },
   { href: '/contact', label: 'Contact' },
-  { href: '/join', label: 'Join Us' },
 ];
 
 export default function Footer({

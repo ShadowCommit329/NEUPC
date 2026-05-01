@@ -14,18 +14,15 @@ export default function ResourceGrid({
   if (!resources?.length) {
     return (
       <div
-        className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/8 bg-white/[0.02] px-6 py-16 text-center sm:py-20"
+        className="flex flex-col items-center justify-center rounded-[12px] border border-dashed border-white/[0.06] bg-[#121317] px-6 py-16 text-center"
         role="status"
       >
-        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/8 bg-white/[0.04]">
-          <Search className="h-6 w-6 text-gray-600" />
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-[10px] border border-white/[0.06] bg-[#181a1f]">
+          <Search className="h-5 w-5 text-white/20" />
         </div>
-        <p className="text-sm font-semibold text-gray-300">
-          No resources found
-        </p>
-        <p className="mt-1.5 max-w-xs text-xs leading-relaxed text-gray-600">
-          Try adjusting your search or filters to find what you&apos;re looking
-          for.
+        <p className="text-[13px] font-medium text-white/60">No resources found</p>
+        <p className="mt-1 max-w-xs text-[12px] leading-relaxed text-white/25">
+          Try adjusting your search or filters.
         </p>
       </div>
     );
@@ -33,7 +30,7 @@ export default function ResourceGrid({
 
   return (
     <div
-      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2"
       role="list"
       aria-label={`${resources.length} resource${resources.length !== 1 ? 's' : ''}`}
     >

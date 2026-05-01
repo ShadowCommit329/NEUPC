@@ -1,97 +1,67 @@
 /**
  * @file Account loading skeleton — reusable shimmer UI shown during
- *   route transitions within the /account/* segment. Supports multiple
- *   layout variants (dashboard, table, cards, form, profile).
+ *   route transitions within the /account/* segment. Matches the
+ *   member panel design system: surface #121317, hairline border
+ *   rgba(255,255,255,0.06), 12px radius, 24px page title.
  * @module AccountLoading
  */
 
 'use client';
 
-/**
- * Shimmer skeleton block.
- * @param {{ className: string }} props
- */
+const SURFACE = 'border border-white/[0.06] bg-[#121317]';
+const SHIMMER = 'animate-pulse rounded-md bg-white/[0.05]';
+
 function Skeleton({ className = '' }) {
-  return (
-    <div
-      className={`animate-pulse rounded-lg bg-white/5 ${className}`}
-      aria-hidden="true"
-    />
-  );
+  return <div className={`${SHIMMER} ${className}`} aria-hidden="true" />;
 }
 
-/**
- * Stats row — mimics a dashboard stats grid.
- * @param {{ count: number }} props
- */
 function StatsRow({ count = 4 }) {
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-[10px] sm:grid-cols-4">
       {Array.from({ length: count }).map((_, i) => (
-        <div
-          key={i}
-          className="rounded-xl border border-white/10 bg-white/5 p-4 sm:p-6"
-        >
-          <Skeleton className="mb-3 h-3 w-20" />
-          <Skeleton className="mb-2 h-8 w-16" />
-          <Skeleton className="h-3 w-24" />
+        <div key={i} className={`rounded-[12px] ${SURFACE} px-4 py-[14px]`}>
+          <Skeleton className="mb-2 h-[11px] w-20" />
+          <Skeleton className="h-6 w-16" />
         </div>
       ))}
     </div>
   );
 }
 
-/**
- * Table rows skeleton.
- * @param {{ rows: number }} props
- */
-function TableRows({ rows = 5 }) {
+function TableRows({ rows = 6 }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-white/10 bg-white/5">
-      {/* Header */}
-      <div className="flex gap-4 border-b border-white/10 px-4 py-3 sm:px-6">
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="hidden h-4 w-24 sm:block" />
-        <Skeleton className="hidden h-4 w-20 md:block" />
-        <Skeleton className="ml-auto h-4 w-16" />
-      </div>
-      {/* Rows */}
+    <div className={`overflow-hidden rounded-[12px] ${SURFACE}`}>
       {Array.from({ length: rows }).map((_, i) => (
         <div
           key={i}
-          className="flex items-center gap-4 border-b border-white/5 px-4 py-3 sm:px-6"
+          className={`flex items-center gap-[14px] px-[18px] py-3 ${i < rows - 1 ? 'border-b border-white/[0.06]' : ''}`}
         >
-          <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-3 w-28" />
+          <Skeleton className="h-8 w-8 shrink-0 rounded-lg" />
+          <div className="flex-1 space-y-1.5">
+            <Skeleton className="h-[13px] w-2/5" />
+            <Skeleton className="h-[11px] w-3/5" />
           </div>
-          <Skeleton className="h-6 w-16 rounded-full" />
+          <Skeleton className="h-[11px] w-12 shrink-0" />
         </div>
       ))}
     </div>
   );
 }
 
-/**
- * Card grid skeleton.
- * @param {{ count: number }} props
- */
 function CardGrid({ count = 6 }) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: count }).map((_, i) => (
-        <div
-          key={i}
-          className="rounded-xl border border-white/10 bg-white/5 p-5"
-        >
-          <Skeleton className="mb-4 h-36 w-full rounded-lg" />
-          <Skeleton className="mb-2 h-5 w-3/4" />
-          <Skeleton className="mb-3 h-3 w-full" />
-          <Skeleton className="h-3 w-2/3" />
-          <div className="mt-4 flex gap-2">
-            <Skeleton className="h-6 w-14 rounded-full" />
-            <Skeleton className="h-6 w-14 rounded-full" />
+        <div key={i} className={`rounded-[12px] ${SURFACE} overflow-hidden`}>
+          <Skeleton className="h-28 w-full rounded-none" />
+          <div className="space-y-2 px-[18px] py-4">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-2/3" />
+            <div className="flex gap-1.5 pt-2">
+              <Skeleton className="h-5 w-14 rounded-full" />
+              <Skeleton className="h-5 w-14 rounded-full" />
+            </div>
           </div>
         </div>
       ))}
@@ -99,40 +69,32 @@ function CardGrid({ count = 6 }) {
   );
 }
 
-/**
- * Form skeleton.
- * @param {{ fields: number }} props
- */
 function FormSkeleton({ fields = 6 }) {
   return (
-    <div className="space-y-5 rounded-xl border border-white/10 bg-white/5 p-6">
+    <div className={`space-y-5 rounded-[12px] ${SURFACE} p-5 sm:p-6`}>
       {Array.from({ length: fields }).map((_, i) => (
         <div key={i} className="space-y-2">
-          <Skeleton className="h-3 w-24" />
-          <Skeleton className="h-10 w-full rounded-lg" />
+          <Skeleton className="h-[11px] w-24" />
+          <Skeleton className="h-9 w-full rounded-md" />
         </div>
       ))}
-      <div className="flex justify-end gap-3 pt-4">
-        <Skeleton className="h-10 w-24 rounded-lg" />
-        <Skeleton className="h-10 w-28 rounded-lg" />
+      <div className="flex justify-end gap-2 pt-2">
+        <Skeleton className="h-9 w-20 rounded-md" />
+        <Skeleton className="h-9 w-24 rounded-md" />
       </div>
     </div>
   );
 }
 
-/**
- * Profile skeleton.
- */
 function ProfileSkeleton() {
   return (
-    <div className="space-y-6">
-      {/* Avatar + Name */}
-      <div className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/5 p-6">
-        <Skeleton className="h-20 w-20 shrink-0 rounded-full" />
+    <div className="space-y-5">
+      <div className={`flex items-center gap-4 rounded-[12px] ${SURFACE} p-5 sm:p-6`}>
+        <Skeleton className="h-16 w-16 shrink-0 rounded-full" />
         <div className="flex-1 space-y-2">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-5 w-44" />
+          <Skeleton className="h-3 w-28" />
+          <Skeleton className="h-3 w-20" />
         </div>
       </div>
       <FormSkeleton fields={4} />
@@ -140,10 +102,17 @@ function ProfileSkeleton() {
   );
 }
 
-/**
- * Layout variants for loading skeletons.
- * @type {Record<string, string>}
- */
+function TabsBar() {
+  const widths = ['w-14', 'w-16', 'w-20', 'w-16'];
+  return (
+    <div className="flex gap-3 border-b border-white/[0.06] pb-2">
+      {widths.map((w, i) => (
+        <Skeleton key={i} className={`h-5 rounded-md ${w}`} />
+      ))}
+    </div>
+  );
+}
+
 const VARIANTS = {
   dashboard: 'dashboard',
   table: 'table',
@@ -156,8 +125,6 @@ const VARIANTS = {
  * Reusable account loading skeleton.
  *
  * @param {{ variant?: 'dashboard'|'table'|'cards'|'form'|'profile', title?: string }} props
- *   variant — which skeleton layout to display (default: 'dashboard')
- *   title   — optional page title shimmer text
  */
 export default function AccountLoading({
   variant = VARIANTS.dashboard,
@@ -165,41 +132,59 @@ export default function AccountLoading({
 }) {
   return (
     <div
-      className="space-y-6 px-4 pt-6 pb-8 sm:space-y-8 sm:px-6 sm:pt-8 lg:px-8"
+      className="mx-auto max-w-6xl px-4 pt-6 pb-10 sm:px-6 sm:pt-8 lg:px-8"
       role="status"
       aria-label="Loading"
     >
-      {/* Title area */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-2">
-          {title ? (
-            <h1 className="text-xl font-bold text-white/30 sm:text-2xl">
-              {title}
-            </h1>
-          ) : (
-            <Skeleton className="h-7 w-48" />
-          )}
-          <Skeleton className="h-4 w-64" />
+      <div className="space-y-6">
+        {/* Page head */}
+        <div className="flex items-end justify-between gap-4">
+          <div className="space-y-2">
+            {title ? (
+              <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-white/30">
+                {title}
+              </h1>
+            ) : (
+              <Skeleton className="h-7 w-48" />
+            )}
+            <Skeleton className="h-3 w-56" />
+          </div>
+          <Skeleton className="h-9 w-28 rounded-md" />
         </div>
-        <Skeleton className="h-10 w-32 rounded-lg" />
+
+        {variant === VARIANTS.dashboard && (
+          <>
+            <StatsRow count={4} />
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+              <div className="space-y-3 lg:col-span-2">
+                <TableRows rows={4} />
+              </div>
+              <CardGrid count={2} />
+            </div>
+          </>
+        )}
+
+        {variant === VARIANTS.table && (
+          <>
+            <StatsRow count={4} />
+            <TabsBar />
+            <TableRows rows={7} />
+          </>
+        )}
+
+        {variant === VARIANTS.cards && (
+          <>
+            <StatsRow count={4} />
+            <TabsBar />
+            <CardGrid count={6} />
+          </>
+        )}
+
+        {variant === VARIANTS.form && <FormSkeleton fields={6} />}
+
+        {variant === VARIANTS.profile && <ProfileSkeleton />}
       </div>
 
-      {/* Variant content */}
-      {variant === VARIANTS.dashboard && (
-        <>
-          <StatsRow count={4} />
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <TableRows rows={4} />
-            <CardGrid count={2} />
-          </div>
-        </>
-      )}
-      {variant === VARIANTS.table && <TableRows rows={8} />}
-      {variant === VARIANTS.cards && <CardGrid count={6} />}
-      {variant === VARIANTS.form && <FormSkeleton fields={6} />}
-      {variant === VARIANTS.profile && <ProfileSkeleton />}
-
-      {/* Screen-reader announcement */}
       <span className="sr-only">Loading content, please wait…</span>
     </div>
   );

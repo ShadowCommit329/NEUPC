@@ -9,7 +9,7 @@ import { revalidatePath, revalidateTag } from 'next/cache';
 import { auth } from './auth';
 import { supabaseAdmin } from './supabase';
 import { getUserRoles, getUserByEmail } from './data-service';
-import { sanitizeText, isValidUrl } from './validation';
+import { sanitizeText } from './validation';
 import {
   isV2SchemaAvailable,
   upsertUserHandleV2,
@@ -81,22 +81,18 @@ export async function updateMemberProfileAction(formData) {
       .map((s) => sanitizeText(s, 50))
       .filter(Boolean);
 
-    const linkedinUrl = formData.get('linkedin')?.trim() || null;
-    const githubUrl = formData.get('github')?.trim() || null;
-
-    // Validate URLs if provided
-    if (linkedinUrl && !isValidUrl(linkedinUrl)) {
-      return { error: 'Invalid LinkedIn URL.' };
-    }
-    if (githubUrl && !isValidUrl(githubUrl)) {
-      return { error: 'Invalid GitHub URL.' };
-    }
+    const linkedinHandle = sanitizeText(formData.get('linkedin'), 100) || null;
+    const githubHandle   = sanitizeText(formData.get('github'),   50)  || null;
+    const facebookHandle = sanitizeText(formData.get('facebook'), 100) || null;
+    const xHandle        = sanitizeText(formData.get('x_handle'), 50)  || null;
 
     // member_profiles update — no handle columns
     const updates = {
       bio: sanitizeText(formData.get('bio'), 1000) || null,
-      linkedin: linkedinUrl,
-      github: githubUrl,
+      linkedin: linkedinHandle,
+      github: githubHandle,
+      facebook: facebookHandle,
+      x_handle: xHandle,
       skills: skills.length > 0 ? skills : null,
       interests: interests.length > 0 ? interests : null,
       updated_at: new Date().toISOString(),
@@ -113,12 +109,14 @@ export async function updateMemberProfileAction(formData) {
     }
 
     // Save handles to user_handles table (V2 schema)
-    const handleMap = {
-      codeforces: sanitizeText(formData.get('codeforces_handle'), 50) || null,
-      vjudge: sanitizeText(formData.get('vjudge_handle'), 50) || null,
-      atcoder: sanitizeText(formData.get('atcoder_handle'), 50) || null,
-      leetcode: sanitizeText(formData.get('leetcode_handle'), 50) || null,
-    };
+    const CP_PLATFORM_IDS = [
+      'codeforces', 'atcoder', 'leetcode', 'codechef', 'hackerrank',
+      'spoj', 'cses', 'vjudge', 'toph', 'lightoj',
+      'uva', 'beecrowd', 'facebookhackercup',
+    ];
+    const handleMap = Object.fromEntries(
+      CP_PLATFORM_IDS.map(id => [id, sanitizeText(formData.get(`${id}_handle`), 50) || null])
+    );
 
     const useV2 = await isV2SchemaAvailable();
     for (const [platform, handle] of Object.entries(handleMap)) {

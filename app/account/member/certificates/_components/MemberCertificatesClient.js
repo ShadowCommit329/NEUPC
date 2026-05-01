@@ -1,9 +1,3 @@
-/**
- * @file Member certificates client — browsable list of earned
- *   certificates with download and share options.
- * @module MemberCertificatesClient
- */
-
 'use client';
 
 import { useState } from 'react';
@@ -12,115 +6,153 @@ import {
   Award,
   Download,
   ExternalLink,
-  BadgeCheck,
   Shield,
   Star,
   Trophy,
-  Hash,
-  Calendar,
   X,
   Search,
-  Filter,
+  Check,
 } from 'lucide-react';
+
+// ─── Config ───────────────────────────────────────────────────────────────────
 
 const TYPE_META = {
   participation: {
     label: 'Participation',
-    color: 'text-blue-400 bg-blue-400/10 border-blue-400/20',
-    icon: Award,
+    pill: 'bg-[rgba(96,165,250,0.12)] border-[rgba(96,165,250,0.2)] text-[#93c5fd]',
+    bannerGlow: 'rgba(96,165,250,0.18)',
+    sealGradient: 'linear-gradient(135deg,#60a5fa,#2563eb)',
   },
   completion: {
     label: 'Completion',
-    color: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
-    icon: BadgeCheck,
+    pill: 'bg-[rgba(124,131,255,0.12)] border-[rgba(124,131,255,0.20)] text-[#aab0ff]',
+    bannerGlow: 'rgba(124,131,255,0.18)',
+    sealGradient: 'linear-gradient(135deg,#7c83ff,#5b62cc)',
   },
   achievement: {
     label: 'Achievement',
-    color: 'text-amber-400 bg-amber-400/10 border-amber-400/20',
-    icon: Trophy,
+    pill: 'bg-[rgba(251,191,36,0.12)] border-[rgba(251,191,36,0.2)] text-[#fcd34d]',
+    bannerGlow: 'rgba(251,191,36,0.18)',
+    sealGradient: 'linear-gradient(135deg,#fbbf24,#d97706)',
   },
   appreciation: {
     label: 'Appreciation',
-    color: 'text-purple-400 bg-purple-400/10 border-purple-400/20',
-    icon: Star,
+    pill: 'bg-[rgba(167,139,250,0.12)] border-[rgba(167,139,250,0.2)] text-[#c4b5fd]',
+    bannerGlow: 'rgba(167,139,250,0.18)',
+    sealGradient: 'linear-gradient(135deg,#a78bfa,#7c3aed)',
   },
 };
 
-function CertificateCard({ cert, onOpen }) {
+function fmtDate(iso, opts) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-US', opts);
+}
+
+// ─── Card ─────────────────────────────────────────────────────────────────────
+
+function CertCard({ cert, onOpen }) {
   const meta = TYPE_META[cert.certificate_type] ?? TYPE_META.participation;
-  const TypeIcon = meta.icon;
   const linkedName = cert.events?.title ?? cert.contests?.title ?? null;
 
   return (
     <div
-      className="group relative flex cursor-pointer flex-col gap-4 rounded-2xl border border-white/8 bg-white/3 p-5 transition-all duration-200 hover:border-white/16 hover:bg-white/6"
       onClick={() => onOpen(cert)}
+      className="cursor-pointer overflow-hidden rounded-xl border border-white/[0.06] bg-[#121317] transition-colors duration-150 hover:border-white/[0.09]"
     >
-      {/* top row */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-white/5">
-          <TypeIcon className="size-5 text-white/60" />
+      {/* Banner */}
+      <div
+        className="flex items-center justify-between gap-4 border-b border-white/[0.06] px-[22px] py-[22px]"
+        style={{
+          background: `radial-gradient(circle at 80% 30%, ${meta.bannerGlow}, transparent 60%), #181a1f`,
+        }}
+      >
+        {/* Seal */}
+        <div
+          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-white shadow-lg"
+          style={{
+            background: meta.sealGradient,
+            boxShadow: '0 0 0 1px rgba(255,255,255,0.10) inset, 0 4px 12px rgba(0,0,0,0.30)',
+          }}
+        >
+          <Award size={28} strokeWidth={1.6} />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span
-            className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${meta.color}`}
-          >
-            {meta.label}
-          </span>
+        {/* Issuer + verified */}
+        <div className="flex flex-col items-end gap-1.5">
+          <span className="text-[12px] font-medium text-white/70">NEUPC</span>
           {cert.verified && (
-            <span className="flex items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
-              <Shield className="size-3" />
+            <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(74,222,128,0.2)] bg-[rgba(74,222,128,0.12)] px-[7px] py-0.5 text-[11px] font-medium text-[#86efac]">
+              <Check size={11} strokeWidth={2} />
               Verified
             </span>
           )}
         </div>
       </div>
 
-      {/* title */}
-      <div className="flex-1">
-        <h3 className="text-sm leading-snug font-semibold text-white/90 transition-colors group-hover:text-white">
+      {/* Body */}
+      <div className="flex flex-col gap-3 px-[18px] py-4">
+        <h3 className="text-[15px] font-semibold leading-snug tracking-[-0.01em] text-white/90">
           {cert.title}
         </h3>
-        {linkedName && (
-          <p className="mt-1 truncate text-xs text-white/40">{linkedName}</p>
-        )}
-      </div>
 
-      {/* footer */}
-      <div className="flex items-end justify-between border-t border-white/6 pt-3">
-        <div>
-          <p className="text-[10px] tracking-wider text-white/30 uppercase">
-            Cert #
-          </p>
-          <p className="max-w-28 truncate font-mono text-xs text-white/50">
-            {cert.certificate_number}
-          </p>
+        {linkedName && (
+          <p className="truncate text-[12px] text-white/40">{linkedName}</p>
+        )}
+
+        {/* Meta row */}
+        <div className="grid grid-cols-2 gap-4 border-t border-white/[0.05] pt-3">
+          <div>
+            <p className="mb-0.5 text-[10.5px] font-medium uppercase tracking-[0.06em] text-white/25">
+              Awarded
+            </p>
+            <p className="font-mono text-[12.5px] text-white/70">
+              {fmtDate(cert.issue_date, { month: 'short', day: 'numeric', year: 'numeric' })}
+            </p>
+          </div>
+          <div>
+            <p className="mb-0.5 text-[10.5px] font-medium uppercase tracking-[0.06em] text-white/25">
+              Certificate ID
+            </p>
+            <p className="truncate font-mono text-[12.5px] text-white/70">
+              {cert.certificate_number}
+            </p>
+          </div>
         </div>
-        <div className="text-right">
-          <p className="text-[10px] tracking-wider text-white/30 uppercase">
-            Issued
-          </p>
-          <p className="text-xs text-white/50">
-            {cert.issue_date
-              ? new Date(cert.issue_date).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })
-              : '—'}
-          </p>
+
+        {/* Actions */}
+        <div className="flex gap-1.5 border-t border-white/[0.05] pt-3">
+          {cert.certificate_url ? (
+            <a
+              href={cert.certificate_url}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.09] bg-[#1f2127] px-[11px] py-1.5 text-[12px] font-medium text-white/75 transition hover:border-white/[0.14] hover:text-white/90"
+            >
+              <Download size={13} strokeWidth={1.6} />
+              Download PDF
+            </a>
+          ) : null}
+          <button
+            onClick={(e) => { e.stopPropagation(); onOpen(cert); }}
+            className="inline-flex items-center gap-1.5 rounded-md border border-transparent bg-transparent px-[11px] py-1.5 text-[12px] font-medium text-white/50 transition hover:bg-[#1f2127] hover:text-white/80"
+          >
+            <ExternalLink size={13} strokeWidth={1.6} />
+            Verify online
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function CertificateModal({ cert, onClose }) {
+// ─── Modal ────────────────────────────────────────────────────────────────────
+
+function CertModal({ cert, onClose }) {
   useScrollLock();
   if (!cert) return null;
+
   const meta = TYPE_META[cert.certificate_type] ?? TYPE_META.participation;
-  const TypeIcon = meta.icon;
   const linkedName = cert.events?.title ?? cert.contests?.title ?? null;
   const linkedSlug = cert.events?.slug ?? cert.contests?.slug ?? null;
   const linkedPath = cert.events
@@ -131,137 +163,148 @@ function CertificateModal({ cert, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-md rounded-2xl border border-white/12 bg-[#0d0d0f] p-6 shadow-2xl"
+        className="relative w-full max-w-2xl overflow-hidden rounded-xl border border-white/[0.07] bg-[#0d0e11] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 rounded-lg p-1.5 text-white/40 transition hover:bg-white/8 hover:text-white"
+          className="absolute top-4 right-4 z-10 rounded-md p-1.5 text-white/40 transition hover:bg-white/[0.08] hover:text-white/70"
         >
-          <X className="size-4" />
+          <X size={16} strokeWidth={1.6} />
         </button>
 
-        {/* header */}
-        <div className="mb-6 flex items-center gap-3">
-          <div className="flex size-12 items-center justify-center rounded-xl border border-white/8 bg-white/5">
-            <TypeIcon className="size-6 text-white/60" />
-          </div>
-          <div>
-            <h2 className="text-base font-semibold text-white">{cert.title}</h2>
-            <span
-              className={`mt-1 inline-block rounded-full border px-2.5 py-0.5 text-xs font-medium ${meta.color}`}
-            >
-              {meta.label}
-            </span>
-          </div>
-        </div>
-
-        {/* description */}
-        {cert.description && (
-          <p className="mb-5 text-sm leading-relaxed text-white/50">
-            {cert.description}
-          </p>
-        )}
-
-        {/* details grid */}
-        <div className="mb-5 grid grid-cols-2 gap-3">
-          <div className="rounded-xl border border-white/8 bg-white/3 p-3">
-            <p className="mb-1 flex items-center gap-1.5 text-[10px] tracking-wider text-white/30 uppercase">
-              <Hash className="size-3" />
-              Certificate Number
-            </p>
-            <p className="font-mono text-xs break-all text-white/70">
-              {cert.certificate_number}
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-white/8 bg-white/3 p-3">
-            <p className="mb-1 flex items-center gap-1.5 text-[10px] tracking-wider text-white/30 uppercase">
-              <Calendar className="size-3" />
-              Issue Date
-            </p>
-            <p className="text-xs text-white/70">
-              {cert.issue_date
-                ? new Date(cert.issue_date).toLocaleDateString('en-US', {
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })
-                : '—'}
-            </p>
-          </div>
-
-          {cert.verified && (
-            <div className="col-span-2 rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-3">
-              <p className="flex items-center gap-1.5 text-xs text-emerald-400">
-                <Shield className="size-3.5" />
-                This certificate is verified and authentic.
-              </p>
-            </div>
-          )}
-
-          {linkedName && (
-            <div className="col-span-2 rounded-xl border border-white/8 bg-white/3 p-3">
-              <p className="mb-1 text-[10px] tracking-wider text-white/30 uppercase">
-                {cert.events ? 'Event' : 'Contest'}
-              </p>
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-white/70">{linkedName}</p>
-                {linkedPath && (
-                  <a
-                    href={linkedPath}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-lg px-2 py-1 text-[10px] text-white/40 transition hover:bg-white/8 hover:text-white/80"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <ExternalLink className="size-3" />
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* actions */}
-        <div className="flex gap-2">
-          {cert.certificate_url ? (
-            <a
-              href={cert.certificate_url}
-              target="_blank"
-              rel="noreferrer"
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/8 py-2.5 text-sm font-medium text-white/80 transition hover:bg-white/12 hover:text-white"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Download className="size-4" />
-              Download Certificate
-            </a>
-          ) : (
-            <div className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/8 bg-white/3 py-2.5 text-sm text-white/30">
-              No download available
-            </div>
-          )}
-          <button
-            onClick={onClose}
-            className="rounded-xl border border-white/8 bg-white/3 px-4 py-2.5 text-sm text-white/50 transition hover:bg-white/6 hover:text-white/80"
+        {/* Banner */}
+        <div
+          className="flex items-center justify-between gap-4 border-b border-white/[0.06] px-[22px] py-[22px]"
+          style={{
+            background: `radial-gradient(circle at 80% 30%, ${meta.bannerGlow}, transparent 60%), #181a1f`,
+          }}
+        >
+          <div
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-white"
+            style={{
+              background: meta.sealGradient,
+              boxShadow: '0 0 0 1px rgba(255,255,255,0.10) inset, 0 4px 12px rgba(0,0,0,0.30)',
+            }}
           >
-            Close
-          </button>
+            <Award size={28} strokeWidth={1.6} />
+          </div>
+          <div className="flex flex-col items-end gap-1.5">
+            <span className="text-[12px] font-medium text-white/70">NEUPC</span>
+            {cert.verified && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(74,222,128,0.2)] bg-[rgba(74,222,128,0.12)] px-[7px] py-0.5 text-[11px] font-medium text-[#86efac]">
+                <Check size={11} strokeWidth={2} />
+                Verified
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="px-6 py-6">
+          <h2 className="mb-1.5 text-[20px] font-semibold leading-snug tracking-[-0.01em] text-white/90">
+            {cert.title}
+          </h2>
+          {cert.description && (
+            <p className="mb-5 text-[13px] leading-relaxed text-white/45">
+              {cert.description}
+            </p>
+          )}
+
+          {/* Detail grid */}
+          <div className="mb-5 grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+              <p className="mb-1.5 text-[10.5px] font-medium uppercase tracking-[0.06em] text-white/25">
+                Awarded
+              </p>
+              <p className="text-[12.5px] text-white/75">
+                {fmtDate(cert.issue_date, { month: 'long', day: 'numeric', year: 'numeric' })}
+              </p>
+            </div>
+            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+              <p className="mb-1.5 text-[10.5px] font-medium uppercase tracking-[0.06em] text-white/25">
+                Certificate ID
+              </p>
+              <p className="break-all font-mono text-[12.5px] text-white/75">
+                {cert.certificate_number}
+              </p>
+            </div>
+
+            {cert.verified && (
+              <div className="col-span-2 rounded-lg border border-[rgba(74,222,128,0.2)] bg-[rgba(74,222,128,0.08)] p-4">
+                <div className="flex items-center gap-2">
+                  <Shield size={16} strokeWidth={1.6} className="text-[#4ade80]" />
+                  <p className="text-[13px] text-[#4ade80]">
+                    This certificate is verified and authentic
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {linkedName && (
+              <div className="col-span-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+                <p className="mb-1.5 text-[10.5px] font-medium uppercase tracking-[0.06em] text-white/25">
+                  {cert.events ? 'Event' : 'Contest'}
+                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-[12.5px] text-white/75">{linkedName}</p>
+                  {linkedPath && (
+                    <a
+                      href={linkedPath}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-md p-1.5 text-white/40 transition hover:bg-white/[0.08] hover:text-white/70"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ExternalLink size={14} strokeWidth={1.6} />
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2">
+            {cert.certificate_url ? (
+              <a
+                href={cert.certificate_url}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-md border border-white/[0.10] bg-white/[0.06] px-4 py-2.5 text-[12.5px] font-medium text-white/75 transition hover:bg-white/[0.10] hover:text-white/90"
+              >
+                <Download size={14} strokeWidth={1.6} />
+                Download PDF
+              </a>
+            ) : (
+              <div className="inline-flex flex-1 items-center justify-center gap-2 rounded-md border border-white/[0.06] bg-white/[0.02] px-4 py-2.5 text-[12.5px] text-white/30">
+                No download available
+              </div>
+            )}
+            <button
+              onClick={onClose}
+              className="rounded-md border border-white/[0.07] bg-white/[0.03] px-4 py-2.5 text-[12.5px] text-white/50 transition hover:bg-white/[0.07] hover:text-white/70"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
+// ─── Root ─────────────────────────────────────────────────────────────────────
+
 export default function MemberCertificatesClient({ certificates, userName }) {
   const [selected, setSelected] = useState(null);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [sourceFilter, setSourceFilter] = useState('all'); // all | event | contest
 
   const certTypes = [
     'all',
@@ -271,165 +314,129 @@ export default function MemberCertificatesClient({ certificates, userName }) {
   ];
 
   const filtered = certificates.filter((c) => {
+    const q = search.toLowerCase();
     const matchSearch =
       !search ||
-      c.title.toLowerCase().includes(search.toLowerCase()) ||
-      c.certificate_number.toLowerCase().includes(search.toLowerCase()) ||
-      (c.events?.title ?? c.contests?.title ?? '')
-        .toLowerCase()
-        .includes(search.toLowerCase());
-
+      c.title.toLowerCase().includes(q) ||
+      c.certificate_number.toLowerCase().includes(q) ||
+      (c.events?.title ?? c.contests?.title ?? '').toLowerCase().includes(q);
     const matchType = typeFilter === 'all' || c.certificate_type === typeFilter;
-    const matchSource =
-      sourceFilter === 'all' ||
-      (sourceFilter === 'event' && !!c.events) ||
-      (sourceFilter === 'contest' && !!c.contests);
-
-    return matchSearch && matchType && matchSource;
+    return matchSearch && matchType;
   });
 
-  // stats
   const verified = certificates.filter((c) => c.verified).length;
-  const eventCerts = certificates.filter((c) => c.events).length;
-  const contestCerts = certificates.filter((c) => c.contests).length;
+  const fromEvents = certificates.filter((c) => c.events).length;
+  const fromContests = certificates.filter((c) => c.contests).length;
+
+  const STATS = [
+    { label: 'Total', value: certificates.length, accent: '#60a5fa', Icon: Award },
+    { label: 'Verified', value: verified, accent: '#4ade80', Icon: Shield },
+    { label: 'From Events', value: fromEvents, accent: '#a78bfa', Icon: Trophy },
+    { label: 'From Contests', value: fromContests, accent: '#fbbf24', Icon: Star },
+  ];
 
   return (
     <>
-      <CertificateModal cert={selected} onClose={() => setSelected(null)} />
+      <CertModal cert={selected} onClose={() => setSelected(null)} />
 
-      {/* page header */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-white sm:text-3xl">
-          My Certificates
-        </h1>
-        <p className="text-sm text-white/40">
-          All certificates earned by {userName ?? 'you'}
-        </p>
-      </div>
-
-      {/* stats row */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          {
-            label: 'Total',
-            value: certificates.length,
-            icon: Award,
-            color: 'text-blue-400',
-          },
-          {
-            label: 'Verified',
-            value: verified,
-            icon: Shield,
-            color: 'text-emerald-400',
-          },
-          {
-            label: 'From Events',
-            value: eventCerts,
-            icon: Trophy,
-            color: 'text-violet-400',
-          },
-          {
-            label: 'From Contests',
-            value: contestCerts,
-            icon: Star,
-            color: 'text-amber-400',
-          },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <div
-            key={label}
-            className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/3 px-4 py-3"
-          >
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-white/8 bg-white/5">
-              <Icon className={`size-4 ${color}`} />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-white">{value}</p>
-              <p className="text-xs text-white/40">{label}</p>
-            </div>
+      <div className="space-y-5">
+        {/* Page head */}
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-white/90">
+              Certificates
+            </h1>
+            <p className="mt-1 text-[13px] text-white/40">
+              {certificates.length} verified{' '}
+              {certificates.length === 1 ? 'certificate' : 'certificates'} · all
+              blockchain-anchored
+            </p>
           </div>
-        ))}
-      </div>
-
-      {/* filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* search */}
-        <div className="relative max-w-xs flex-1">
-          <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-white/30" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search certificates…"
-            className="w-full rounded-xl border border-white/8 bg-white/4 py-2.5 pr-4 pl-9 text-sm text-white placeholder-white/30 transition outline-none focus:border-white/20 focus:bg-white/6"
-          />
+          <button className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.09] bg-[#1f2127] px-[11px] py-[6px] text-[12.5px] font-medium text-white/75 transition hover:border-white/[0.14] hover:text-white/90">
+            <Download size={13} strokeWidth={1.6} />
+            Download all
+          </button>
         </div>
 
-        {/* chip filters */}
-        <div className="flex flex-wrap gap-2">
-          {/* source */}
-          <div className="flex gap-1 rounded-xl border border-white/8 bg-white/3 p-1">
-            {['all', 'event', 'contest'].map((s) => (
-              <button
-                key={s}
-                onClick={() => setSourceFilter(s)}
-                className={`rounded-lg px-3 py-1 text-xs font-medium transition ${
-                  sourceFilter === s
-                    ? 'bg-white/12 text-white'
-                    : 'text-white/40 hover:text-white/70'
-                }`}
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-[10px] sm:grid-cols-4">
+          {STATS.map(({ label, value, accent, Icon }) => (
+            <div
+              key={label}
+              className="rounded-xl border border-white/[0.06] bg-[#121317] px-4 py-[14px]"
+            >
+              <p className="mb-1.5 text-[11.5px] font-medium text-white/40">{label}</p>
+              <p
+                className="font-['Inter'] text-[26px] font-semibold leading-none tracking-[-0.02em] text-white/90 tabular-nums"
               >
-                {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
-              </button>
-            ))}
+                {value}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Search + filter */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative max-w-xs flex-1">
+            <Search
+              size={14}
+              strokeWidth={1.6}
+              className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-white/30"
+            />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search certificates…"
+              className="w-full rounded-md border border-white/[0.08] bg-white/[0.03] py-[7px] pr-3 pl-9 text-[12.5px] text-white/85 placeholder-white/20 outline-none transition focus:border-white/20 focus:bg-white/[0.05]"
+            />
           </div>
 
-          {/* type */}
           {certTypes.length > 1 && (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-2">
               {certTypes.map((t) => {
+                const active = typeFilter === t;
                 const m = TYPE_META[t];
                 return (
                   <button
                     key={t}
                     onClick={() => setTypeFilter(t)}
-                    className={`rounded-xl border px-3 py-1 text-xs font-medium transition ${
-                      typeFilter === t
-                        ? t === 'all'
-                          ? 'border-white/20 bg-white/12 text-white'
-                          : m?.color
-                        : 'border-white/8 bg-white/3 text-white/40 hover:text-white/70'
+                    className={`rounded-md px-3 py-1.5 text-[12px] font-medium transition border ${
+                      active
+                        ? 'border-white/[0.14] bg-white/[0.08] text-white/90'
+                        : 'border-white/[0.06] bg-transparent text-white/40 hover:text-white/60'
                     }`}
                   >
-                    {t === 'all' ? 'All Types' : (m?.label ?? t)}
+                    {t === 'all' ? 'All' : m?.label}
                   </button>
                 );
               })}
             </div>
           )}
         </div>
-      </div>
 
-      {/* grid */}
-      {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-white/8 bg-white/3 py-20">
-          <div className="flex size-16 items-center justify-center rounded-2xl border border-white/8 bg-white/5">
-            <Award className="size-7 text-white/20" />
+        {/* Grid */}
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-white/[0.06] bg-[#121317] py-20">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.07] bg-white/[0.03]">
+              <Award size={28} strokeWidth={1.6} className="text-white/20" />
+            </div>
+            <div className="text-center">
+              <p className="font-medium text-white/50">No certificates found</p>
+              <p className="mt-1 text-[12.5px] text-white/30">
+                {certificates.length === 0
+                  ? 'Participate in events and contests to earn certificates.'
+                  : 'Try adjusting the filters.'}
+              </p>
+            </div>
           </div>
-          <div className="text-center">
-            <p className="font-medium text-white/60">No certificates found</p>
-            <p className="mt-1 text-sm text-white/30">
-              {certificates.length === 0
-                ? 'Participate in events and contests to earn certificates.'
-                : 'Try adjusting the filters.'}
-            </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2">
+            {filtered.map((cert) => (
+              <CertCard key={cert.id} cert={cert} onOpen={setSelected} />
+            ))}
           </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((cert) => (
-            <CertificateCard key={cert.id} cert={cert} onOpen={setSelected} />
-          ))}
-        </div>
-      )}
+        )}
+      </div>
     </>
   );
 }

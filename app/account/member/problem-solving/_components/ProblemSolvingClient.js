@@ -127,10 +127,10 @@ function PageHeader({ onSync, syncing }) {
                 <Activity className="h-6 w-6 text-white transition-transform duration-300 group-hover:scale-110 sm:h-7 sm:w-7 xl:h-8 xl:w-8" />
               </div>
               <div className="min-w-0">
-                <h1 className="truncate text-2xl font-bold tracking-tight text-white sm:text-3xl md:text-3xl lg:text-4xl">
+                <h1 className="truncate text-[24px] font-semibold tracking-[-0.025em] text-white/90">
                   Problem Solving
                 </h1>
-                <p className="mt-0.5 truncate text-sm text-gray-400 sm:text-base lg:text-base xl:text-lg">
+                <p className="mt-1 truncate text-[13px] text-white/40">
                   Track your Competitive Programming journey
                 </p>
               </div>
