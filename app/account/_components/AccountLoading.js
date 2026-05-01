@@ -141,7 +141,7 @@ export default function AccountLoading({
         <div className="flex items-end justify-between gap-4">
           <div className="space-y-2">
             {title ? (
-              <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-white/30">
+              <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-white/90">
                 {title}
               </h1>
             ) : (

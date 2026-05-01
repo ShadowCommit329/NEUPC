@@ -1,7 +1,8 @@
 /**
  * @file Account error boundary — reusable error UI shown when a server
  *   or client error occurs within the /account/* segment. Offers retry,
- *   dashboard, and support links.
+ *   dashboard, and support links. Visual style matches member panel
+ *   design system (surface #121317, hairline border, 16px radius).
  * @module AccountError
  */
 
@@ -9,27 +10,11 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import {
-  AlertTriangle,
-  RotateCcw,
-  LayoutDashboard,
-  HelpCircle,
-} from 'lucide-react';
+import { AlertTriangle, RotateCcw, LayoutDashboard, HelpCircle } from 'lucide-react';
 
-/**
- * Reusable account error boundary component.
- *
- * @param {{
- *   error: Error & { digest?: string },
- *   reset: () => void,
- *   title?: string,
- *   dashboardHref?: string
- * }} props
- *   error         — the caught error object
- *   reset         — Next.js retry callback
- *   title         — optional page context label (e.g. "Events", "Users")
- *   dashboardHref — link for the "Back to Dashboard" button (default: /account)
- */
+const SURFACE = 'border border-white/[0.06] bg-[#121317]';
+const NESTED_SURFACE = 'border border-white/[0.06] bg-white/[0.02]';
+
 export default function AccountError({
   error,
   reset,
@@ -40,67 +25,62 @@ export default function AccountError({
     console.error(`[Account Error]${title ? ` (${title})` : ''}:`, error);
   }, [error, title]);
 
-  const heading = title ? `Failed to Load ${title}` : 'Something Went Wrong';
+  const heading = title ? `Failed to load ${title}` : 'Something went wrong';
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center px-4 py-12">
-      <div className="w-full max-w-lg text-center">
-        {/* Icon */}
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10 ring-1 ring-red-500/20">
-          <AlertTriangle className="h-8 w-8 text-red-400" />
+    <div className="mx-auto flex w-full max-w-[1600px] items-center justify-center px-4 pt-10 pb-12 sm:px-6 sm:pt-14 lg:px-8 xl:px-10 2xl:px-12">
+      <div className={`w-full max-w-xl rounded-2xl ${SURFACE} p-6 sm:p-8`}>
+        <div className="flex items-start gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-500/20 bg-red-500/10">
+            <AlertTriangle className="h-5 w-5 text-red-400" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-white/90 sm:text-[22px]">
+              {heading}
+            </h2>
+            <p className="mt-1 text-[13px] text-white/40">
+              An unexpected error occurred while loading this page.
+            </p>
+          </div>
         </div>
 
-        {/* Heading */}
-        <h2 className="mb-2 text-2xl font-bold text-white sm:text-3xl">
-          {heading}
-        </h2>
-
-        {/* Description */}
-        <p className="mb-2 text-sm text-gray-400 sm:text-base">
-          An unexpected error occurred while loading this page.
-        </p>
-
-        {/* Error detail (collapsed in production) */}
         {error?.message && (
-          <div className="mx-auto mb-6 max-w-md rounded-lg border border-white/10 bg-white/5 px-4 py-3">
-            <p className="text-left font-mono text-xs leading-relaxed wrap-break-word text-gray-400">
+          <div className={`mt-5 rounded-xl ${NESTED_SURFACE} px-4 py-3`}>
+            <p className="font-mono text-[11.5px] leading-relaxed wrap-break-word text-white/55">
               {error.message}
             </p>
             {error.digest && (
-              <p className="mt-1 text-left text-[10px] text-gray-500">
+              <p className="mt-1.5 font-mono text-[10.5px] text-white/30">
                 Digest: {error.digest}
               </p>
             )}
           </div>
         )}
 
-        {/* Action buttons */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+        <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
           <button
             onClick={reset}
-            className="group inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-6 py-3 text-sm font-semibold text-blue-300 transition-all duration-300 hover:border-blue-500/50 hover:bg-blue-500/20 hover:shadow-lg hover:shadow-blue-500/10 active:scale-95"
+            className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white/90 px-4 py-2.5 text-[13px] font-semibold text-black transition hover:bg-white active:scale-[0.98]"
           >
-            <RotateCcw className="h-4 w-4 transition-transform duration-300 group-hover:rotate-180" />
-            Try Again
+            <RotateCcw className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-180" />
+            Try again
           </button>
-
           <Link
             href={dashboardHref}
-            className="group inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-gray-300 transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95"
+            className="group inline-flex items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-2.5 text-[13px] font-medium text-white/70 transition hover:border-white/[0.14] hover:bg-white/[0.05] hover:text-white"
           >
-            <LayoutDashboard className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
-            Back to Dashboard
+            <LayoutDashboard className="h-3.5 w-3.5" />
+            Back to dashboard
           </Link>
         </div>
 
-        {/* Support link */}
-        <div className="mt-8 rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
-          <p className="flex items-center justify-center gap-2 text-sm text-gray-400">
-            <HelpCircle className="h-4 w-4" />
-            Persistent issue?{' '}
+        <div className={`mt-6 rounded-xl ${NESTED_SURFACE} px-4 py-3`}>
+          <p className="flex flex-wrap items-center justify-center gap-1.5 text-[12.5px] text-white/45">
+            <HelpCircle className="h-3.5 w-3.5" />
+            Persistent issue?
             <Link
               href="/contact"
-              className="text-blue-400 underline underline-offset-2 transition-colors hover:text-blue-300"
+              className="text-white/75 underline underline-offset-2 decoration-white/20 transition hover:text-white hover:decoration-white/50"
             >
               Contact support
             </Link>

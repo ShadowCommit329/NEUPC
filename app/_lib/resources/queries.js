@@ -209,3 +209,21 @@ export async function getBookmarkedResourceIds(userId, resourceIds) {
   if (error) return [];
   return (data || []).map((r) => r.resource_id);
 }
+
+export async function getPublishedBlogCount() {
+  const { count, error } = await supabase
+    .from('blog_posts')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'published');
+  if (error) return 0;
+  return count ?? 0;
+}
+
+export async function getPublishedRoadmapCount() {
+  const { count, error } = await supabase
+    .from('roadmaps')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'published');
+  if (error) return 0;
+  return count ?? 0;
+}

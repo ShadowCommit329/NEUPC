@@ -8,7 +8,9 @@
 import { requireRole } from '@/app/_lib/auth-guard';
 import {
   getBookmarkedResourceIds,
+  getPublishedBlogCount,
   getPublishedResources,
+  getPublishedRoadmapCount,
   getResourceCategories,
 } from '@/app/_lib/resources/queries';
 import ResourcesClient from '@/app/_components/resources/ResourcesClient';
@@ -26,7 +28,7 @@ export default async function MemberResourcesPage({ searchParams }) {
 
   const { user } = await requireRole('member');
 
-  const [{ resources, total }, categories] = await Promise.all([
+  const [{ resources, total }, categories, blogCount, roadmapCount] = await Promise.all([
     getPublishedResources({
       page,
       pageSize,
@@ -36,6 +38,8 @@ export default async function MemberResourcesPage({ searchParams }) {
       includeMembers: true,
     }),
     getResourceCategories(),
+    getPublishedBlogCount(),
+    getPublishedRoadmapCount(),
   ]);
 
   const bookmarkedIds = await getBookmarkedResourceIds(
@@ -63,6 +67,8 @@ export default async function MemberResourcesPage({ searchParams }) {
         bookmarkedIds={bookmarkedIds}
         canBookmark={Boolean(user?.id)}
         basePath="/account/member/resources"
+        blogCount={blogCount}
+        roadmapCount={roadmapCount}
       />
     </div>
   );

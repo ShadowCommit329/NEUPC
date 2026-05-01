@@ -1,7 +1,7 @@
 /**
  * @file Account not-found state — reusable 404 UI for /account/* subroutes.
- *   Shows contextual heading, suggestions, and navigation back to the
- *   relevant dashboard.
+ *   Visual style matches member panel design system (surface #121317,
+ *   hairline border, 16px radius).
  * @module AccountNotFoundState
  */
 
@@ -10,32 +10,17 @@
 import Link from 'next/link';
 import { FileQuestion, LayoutDashboard, ArrowLeft } from 'lucide-react';
 
-/**
- * Quick-link suggestions shown inside the not-found card.
- * @type {{ label: string, href: string }[]}
- */
+const SURFACE = 'border border-white/[0.06] bg-[#121317]';
+const NESTED_SURFACE = 'border border-white/[0.06] bg-white/[0.02]';
+
 const DEFAULT_SUGGESTIONS = [
   { label: 'Profile', href: 'profile' },
   { label: 'Settings', href: 'settings' },
   { label: 'Notifications', href: 'notifications' },
 ];
 
-/**
- * Reusable account not-found component.
- *
- * @param {{
- *   title?: string,
- *   description?: string,
- *   dashboardHref?: string,
- *   suggestions?: { label: string, href: string }[]
- * }} props
- *   title          — heading text (default: "Page Not Found")
- *   description    — explanatory paragraph
- *   dashboardHref  — base path for the "Back to Dashboard" link (default: /account)
- *   suggestions    — optional quick-link array to show as alternatives
- */
 export default function AccountNotFoundState({
-  title = 'Page Not Found',
+  title = 'Page not found',
   description = "The page you're looking for doesn't exist or has been moved.",
   dashboardHref = '/account',
   suggestions,
@@ -48,57 +33,51 @@ export default function AccountNotFoundState({
     }));
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md text-center">
-        {/* Icon */}
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/10 ring-1 ring-amber-500/20">
-          <FileQuestion className="h-8 w-8 text-amber-400" />
+    <div className="mx-auto flex w-full max-w-[1600px] items-center justify-center px-4 pt-10 pb-12 sm:px-6 sm:pt-14 lg:px-8 xl:px-10 2xl:px-12">
+      <div className={`w-full max-w-xl rounded-2xl ${SURFACE} p-6 sm:p-8`}>
+        <div className="flex items-start gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/10">
+            <FileQuestion className="h-5 w-5 text-amber-400" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10.5px] font-semibold tracking-[0.18em] text-amber-400/80 uppercase">
+              404
+            </p>
+            <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-white/90 sm:text-[22px]">
+              {title}
+            </h2>
+            <p className="mt-1 text-[13px] text-white/40">{description}</p>
+          </div>
         </div>
 
-        {/* 404 label */}
-        <p className="mb-2 text-sm font-semibold tracking-wider text-amber-400 uppercase">
-          404
-        </p>
-
-        {/* Heading */}
-        <h2 className="mb-2 text-2xl font-bold text-white sm:text-3xl">
-          {title}
-        </h2>
-
-        {/* Description */}
-        <p className="mb-8 text-sm text-gray-400 sm:text-base">{description}</p>
-
-        {/* Action buttons */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+        <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
           <Link
             href={dashboardHref}
-            className="group inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-6 py-3 text-sm font-semibold text-blue-300 transition-all duration-300 hover:border-blue-500/50 hover:bg-blue-500/20 hover:shadow-lg hover:shadow-blue-500/10 active:scale-95"
+            className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white/90 px-4 py-2.5 text-[13px] font-semibold text-black transition hover:bg-white active:scale-[0.98]"
           >
-            <LayoutDashboard className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
-            Back to Dashboard
+            <LayoutDashboard className="h-3.5 w-3.5" />
+            Back to dashboard
           </Link>
-
           <button
             onClick={() => window.history.back()}
-            className="group inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-gray-300 transition-all duration-300 hover:border-white/20 hover:bg-white/10 hover:text-white active:scale-95"
+            className="group inline-flex items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-2.5 text-[13px] font-medium text-white/70 transition hover:border-white/[0.14] hover:bg-white/[0.05] hover:text-white"
           >
-            <ArrowLeft className="h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" />
-            Go Back
+            <ArrowLeft className="h-3.5 w-3.5 transition-transform duration-300 group-hover:-translate-x-0.5" />
+            Go back
           </button>
         </div>
 
-        {/* Quick links / suggestions */}
         {links.length > 0 && (
-          <div className="mt-8 rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
-            <p className="mb-3 text-xs font-semibold tracking-wider text-gray-300 uppercase">
+          <div className={`mt-6 rounded-xl ${NESTED_SURFACE} p-4`}>
+            <p className="mb-2.5 text-[10.5px] font-semibold tracking-[0.14em] text-white/35 uppercase">
               Try these pages
             </p>
-            <div className="flex flex-wrap justify-center gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {links.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-gray-300 transition-all duration-200 hover:border-white/20 hover:bg-white/10 hover:text-white"
+                  className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-1.5 text-[12.5px] text-white/65 transition hover:border-white/[0.14] hover:bg-white/[0.05] hover:text-white"
                 >
                   {link.label}
                 </Link>
@@ -107,12 +86,11 @@ export default function AccountNotFoundState({
           </div>
         )}
 
-        {/* Support link */}
-        <p className="mt-6 text-sm text-gray-500">
+        <p className="mt-5 text-center text-[12px] text-white/35">
           Think this is an error?{' '}
           <Link
             href="/contact"
-            className="text-blue-400 underline underline-offset-2 transition-colors hover:text-blue-300"
+            className="text-white/65 underline underline-offset-2 decoration-white/20 transition hover:text-white hover:decoration-white/50"
           >
             Contact support
           </Link>

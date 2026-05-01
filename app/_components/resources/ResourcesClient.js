@@ -21,7 +21,10 @@ import {
   CheckCircle,
   FolderOpen,
   SlidersHorizontal,
+  Map,
+  ExternalLink,
 } from 'lucide-react';
+import Link from 'next/link';
 import ResourceGrid from '@/app/_components/resources/ResourceGrid';
 import ResourceFilters from '@/app/_components/resources/ResourceFilters';
 import { toggleResourceBookmarkAction } from '@/app/_lib/member-resources-actions';
@@ -37,6 +40,8 @@ export default function ResourcesClient({
   bookmarkedIds = [],
   canBookmark = false,
   basePath,
+  blogCount = 0,
+  roadmapCount = 0,
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -270,6 +275,31 @@ export default function ResourcesClient({
           Bookmarked
           {saved.length > 0 && <span className="tabular-nums text-[10.5px] opacity-60">{saved.length}</span>}
         </button>
+
+        {/* Divider dot */}
+        <span className="shrink-0 text-white/15">·</span>
+
+        {/* Blogs chip */}
+        <Link
+          href="/blogs"
+          target="_blank"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/[0.06] bg-[#121317] px-3 py-1.5 text-[12px] font-medium text-white/50 transition-all hover:border-white/[0.12] hover:text-white/80"
+        >
+          <BookOpen className="h-3 w-3" />
+          Blogs
+          {blogCount > 0 && <span className="tabular-nums text-[10.5px] opacity-60">{blogCount}</span>}
+        </Link>
+
+        {/* Roadmaps chip */}
+        <Link
+          href="/roadmaps"
+          target="_blank"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/[0.06] bg-[#121317] px-3 py-1.5 text-[12px] font-medium text-white/50 transition-all hover:border-white/[0.12] hover:text-white/80"
+        >
+          <Map className="h-3 w-3" />
+          Roadmaps
+          {roadmapCount > 0 && <span className="tabular-nums text-[10.5px] opacity-60">{roadmapCount}</span>}
+        </Link>
       </div>
 
       {/* ── Main two-column layout ── */}
@@ -344,6 +374,40 @@ export default function ResourcesClient({
               <CheckCircle className="h-3 w-3 shrink-0" />
               <span className="flex-1">Completed</span>
             </button>
+
+            {/* Explore divider */}
+            <div className="my-[10px] h-px bg-white/[0.06]" />
+            <div className="mb-[6px] px-[6px] text-[10.5px] font-medium uppercase tracking-[0.08em] text-white/25">
+              Explore
+            </div>
+
+            {/* Blogs */}
+            <Link
+              href="/blogs"
+              target="_blank"
+              className="flex w-full items-center gap-2 rounded-[6px] px-[8px] py-[6px] text-[12.5px] text-white/50 transition-all hover:bg-[#181a1f] hover:text-white/80 group"
+            >
+              <BookOpen className="h-3 w-3 shrink-0" />
+              <span className="flex-1">Blogs</span>
+              {blogCount > 0 && (
+                <span className="tabular-nums text-[11px] text-white/25">{blogCount}</span>
+              )}
+              <ExternalLink className="h-2.5 w-2.5 shrink-0 opacity-0 group-hover:opacity-40 transition-opacity" />
+            </Link>
+
+            {/* Roadmaps */}
+            <Link
+              href="/roadmaps"
+              target="_blank"
+              className="flex w-full items-center gap-2 rounded-[6px] px-[8px] py-[6px] text-[12.5px] text-white/50 transition-all hover:bg-[#181a1f] hover:text-white/80 group"
+            >
+              <Map className="h-3 w-3 shrink-0" />
+              <span className="flex-1">Roadmaps</span>
+              {roadmapCount > 0 && (
+                <span className="tabular-nums text-[11px] text-white/25">{roadmapCount}</span>
+              )}
+              <ExternalLink className="h-2.5 w-2.5 shrink-0 opacity-0 group-hover:opacity-40 transition-opacity" />
+            </Link>
           </div>
         </aside>
 
