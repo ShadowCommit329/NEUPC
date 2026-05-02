@@ -2514,6 +2514,7 @@ html[data-dashboard] [data-public-footer] {
   padding-bottom: env(safe-area-inset-bottom, 1rem);
 }
 
+
 /* Material Symbols base rendering */
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;

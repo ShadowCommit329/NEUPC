@@ -11,6 +11,7 @@
 import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { auth } from '@/app/_lib/auth';
+import { uploadToDrive } from './gdrive';
 import {
   extractDriveFileId,
   getFileMetadata,
@@ -77,6 +78,10 @@ function generateSlug(title) {
     .trim();
 }
 
+const ALLOWED_BOOTCAMP_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+const MAX_BOOTCAMP_IMAGE_SIZE = 5 * 1024 * 1024;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // BOOTCAMP ACTIONS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -89,12 +94,7 @@ export async function getAdminBootcamps() {
 
   const { data, error } = await supabaseAdmin
     .from('bootcamps')
-    .select(
-      `
-      *,
-      users:created_by (id, full_name, avatar_url)
-    `
-    )
+    .select('*, users:created_by (id, full_name, avatar_url)')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -152,6 +152,46 @@ export async function getMemberBootcamps() {
     ...b,
     course_count: b.courses?.[0]?.count || 0,
   }));
+}
+
+/**
+ * Upload a bootcamp thumbnail image before the bootcamp exists.
+ */
+export async function uploadBootcampThumbnailAction(formData) {
+  const adminId = await requireAdmin();
+
+  const file = formData.get('file');
+  if (!file || !(file instanceof File) || file.size === 0) {
+    return { error: 'No image provided.' };
+  }
+
+  if (!ALLOWED_BOOTCAMP_IMAGE_TYPES.includes(file.type)) {
+    return { error: 'Image type not supported. Use JPEG, PNG, or WebP.' };
+  }
+
+  if (file.size > MAX_BOOTCAMP_IMAGE_SIZE) {
+    return {
+      error: `File size exceeds maximum of ${MAX_BOOTCAMP_IMAGE_SIZE / (1024 * 1024)}MB`,
+    };
+  }
+
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  const filename = `bootcamp_${adminId}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`;
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const { url } = await uploadToDrive(
+      Buffer.from(arrayBuffer),
+      filename,
+      file.type,
+      'bootcamp-thumbnails'
+    );
+
+    return { success: true, url };
+  } catch (error) {
+    console.error('Bootcamp thumbnail upload error:', error);
+    return { error: error.message || 'Failed to upload image.' };
+  }
 }
 
 /**
@@ -244,6 +284,7 @@ export async function createBootcamp(formData) {
   if (error) throw error;
 
   revalidatePath('/account/admin/bootcamps');
+  revalidatePath(`/bootcamps/${data.slug}`);
 
   return data;
 }
@@ -297,6 +338,7 @@ export async function updateBootcamp(id, formData) {
 
   revalidatePath('/account/admin/bootcamps');
   revalidatePath(`/account/admin/bootcamps/${id}`);
+  revalidatePath(`/bootcamps/${data.slug}`);
 
   return data;
 }

@@ -1,44 +1,28 @@
-/**
- * @file Bootcamp detail page client component.
- * @module BootcampDetailClient
- */
-
 'use client';
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  GraduationCap,
   ChevronRight,
   Save,
   Loader2,
-  ArrowLeft,
-  Eye,
   Users,
-  BookOpen,
-  Clock,
-  DollarSign,
-  Calendar,
-  Star,
-  ExternalLink,
   Settings,
   LayoutList,
+  Eye,
+  CloudUpload,
+  ChevronDown,
 } from 'lucide-react';
 import CurriculumBuilder from '../../_components/CurriculumBuilder';
 import EnrollmentsTab from './EnrollmentsTab';
-import {
-  getStatusConfig,
-  BOOTCAMP_STATUSES,
-  formatDuration,
-  formatPrice,
-  formatDate,
-} from '../../_components/bootcampConfig';
+import ThumbnailUploader from '../../_components/ThumbnailUploader';
+import { getStatusConfig, BOOTCAMP_STATUSES } from '../../_components/bootcampConfig';
 import { updateBootcamp } from '@/app/_lib/bootcamp-actions';
 import toast from 'react-hot-toast';
 
-// Tab configuration
 const TABS = [
+  { key: 'details', label: 'General Details' },
   { key: 'curriculum', label: 'Curriculum', icon: LayoutList },
   { key: 'settings', label: 'Settings', icon: Settings },
   { key: 'enrollments', label: 'Enrollments', icon: Users },
@@ -46,11 +30,10 @@ const TABS = [
 
 export default function BootcampDetailClient({ bootcamp }) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('curriculum');
+  const [activeTab, setActiveTab] = useState('details');
   const [saving, setSaving] = useState(false);
   const [bootcampData, setBootcampData] = useState(bootcamp);
 
-  // Form state for settings
   const [formData, setFormData] = useState({
     title: bootcamp.title || '',
     slug: bootcamp.slug || '',
@@ -63,9 +46,10 @@ export default function BootcampDetailClient({ bootcamp }) {
     end_date: bootcamp.end_date || '',
     max_students: bootcamp.max_students || '',
     is_featured: bootcamp.is_featured || false,
+    category: bootcamp.category || 'Web Development',
+    difficulty: bootcamp.difficulty || 'Beginner',
+    subtitle: bootcamp.subtitle || '',
   });
-
-  const sc = getStatusConfig(bootcampData.status);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -75,7 +59,7 @@ export default function BootcampDetailClient({ bootcamp }) {
     }));
   };
 
-  const handleSaveSettings = async () => {
+  const handleSave = async () => {
     setSaving(true);
     try {
       const fd = new FormData();
@@ -84,13 +68,12 @@ export default function BootcampDetailClient({ bootcamp }) {
           fd.append(key, String(value));
         }
       });
-
       const updated = await updateBootcamp(bootcamp.id, fd);
       setBootcampData((prev) => ({ ...prev, ...updated }));
-      toast.success('Settings saved');
+      toast.success('Saved successfully.');
       router.refresh();
     } catch (err) {
-      toast.error(err.message || 'Failed to save settings');
+      toast.error(err.message || 'Failed to save');
     } finally {
       setSaving(false);
     }
@@ -100,370 +83,408 @@ export default function BootcampDetailClient({ bootcamp }) {
     setBootcampData((prev) => ({ ...prev, courses }));
   }, []);
 
+  const statusLabel = getStatusConfig(bootcampData.status)?.label ?? bootcampData.status;
+
   return (
-    <div className="mx-4 my-6 space-y-6 sm:mx-6 lg:mx-8">
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/8 bg-gradient-to-br from-white/6 via-white/3 to-white/5 p-6">
-        <div className="pointer-events-none absolute -top-20 -right-20 h-64 w-64 rounded-full bg-violet-500/6 blur-3xl" />
-
-        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex-1">
-            {/* Breadcrumb */}
-            <nav className="mb-3 flex items-center gap-1.5 text-xs text-gray-500">
-              <Link
-                href="/account/admin"
-                className="transition-colors hover:text-gray-300"
-              >
-                Dashboard
-              </Link>
-              <ChevronRight className="h-3 w-3" />
-              <Link
-                href="/account/admin/bootcamps"
-                className="transition-colors hover:text-gray-300"
-              >
-                Bootcamps
-              </Link>
-              <ChevronRight className="h-3 w-3" />
-              <span className="text-gray-400">{bootcampData.title}</span>
-            </nav>
-
-            {/* Title */}
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/20 ring-1 ring-violet-500/30">
-                <GraduationCap className="h-6 w-6 text-violet-400" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-bold text-white">
-                    {bootcampData.title}
-                  </h1>
-                  <span
-                    className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${sc.badge}`}
-                  >
-                    <span className={`h-1.5 w-1.5 rounded-full ${sc.dot}`} />
-                    {sc.label}
-                  </span>
-                  {bootcampData.is_featured && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-medium text-amber-400">
-                      <Star className="h-2.5 w-2.5 fill-current" />
-                      Featured
-                    </span>
-                  )}
-                </div>
-                {bootcampData.batch_info && (
-                  <p className="mt-0.5 text-xs text-gray-500">
-                    {bootcampData.batch_info}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500">
-              <span className="flex items-center gap-1.5">
-                <BookOpen className="h-3.5 w-3.5" />
-                {bootcampData.total_lessons || 0} lessons
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5" />
-                {formatDuration(bootcampData.total_duration || 0)}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <DollarSign className="h-3.5 w-3.5" />
-                {formatPrice(bootcampData.price)}
-              </span>
-              {bootcampData.start_date && (
-                <span className="flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5" />
-                  {formatDate(bootcampData.start_date)}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto w-full pt-8 px-8 pb-16">
+      {/* Breadcrumb + title */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+        <div>
+          <nav className="flex items-center gap-2 text-sm text-gray-400 mb-2">
             <Link
               href="/account/admin/bootcamps"
-              className="flex items-center gap-1.5 rounded-xl bg-white/6 px-3 py-2 text-xs font-medium text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+              className="hover:text-indigo-600 transition-colors"
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back
+              Learning Paths
             </Link>
-            {bootcampData.status === 'published' && (
-              <a
-                href={`/bootcamps/${bootcampData.slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-xl bg-white/6 px-3 py-2 text-xs font-medium text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                <Eye className="h-3.5 w-3.5" />
-                View Live
-              </a>
-            )}
+            <ChevronRight className="h-4 w-4" />
+            <span className="text-gray-700">{bootcampData.title || 'New Track'}</span>
+          </nav>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-semibold text-gray-900 tracking-tight">
+              {bootcampData.title || 'New Track'}
+            </h1>
+            <span className="bg-gray-100 text-gray-500 text-xs font-semibold px-2.5 py-1 rounded border border-gray-200 uppercase tracking-wider">
+              {statusLabel}
+            </span>
           </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {bootcampData.status === 'published' && (
+            <a
+              href={`/bootcamps/${bootcampData.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium px-5 py-2 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2"
+            >
+              <Eye className="h-4 w-4" />
+              Preview
+            </a>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="text-sm font-semibold px-5 py-2 rounded-full bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-60"
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            Save Changes
+          </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-xl border border-white/8 bg-white/3 p-1">
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          return (
+      <div className="border-b border-gray-200 mb-8">
+        <nav className="flex gap-8 -mb-px">
+          {TABS.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium transition-all ${
+              className={`pb-3 border-b-2 text-sm font-medium transition-colors ${
                 activeTab === tab.key
-                  ? 'bg-white/12 text-white shadow-sm'
-                  : 'text-gray-500 hover:bg-white/6 hover:text-gray-300'
+                  ? 'border-indigo-600 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-800'
               }`}
             >
-              <Icon className="h-3.5 w-3.5" />
               {tab.label}
             </button>
-          );
-        })}
+          ))}
+        </nav>
       </div>
 
-      {/* Tab Content */}
-      <div className="min-h-[400px]">
-        {activeTab === 'curriculum' && (
-          <CurriculumBuilder
-            bootcampId={bootcamp.id}
-            initialCourses={bootcampData.courses || []}
-            onCoursesChange={handleCoursesChange}
-          />
-        )}
-
-        {activeTab === 'settings' && (
-          <div className="rounded-2xl border border-white/8 bg-[#0d1117] p-6">
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-white">
-                  Bootcamp Settings
-                </h3>
-                <p className="text-xs text-gray-600">
-                  Update bootcamp details and configuration
-                </p>
-              </div>
-              <button
-                onClick={handleSaveSettings}
-                disabled={saving}
-                className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-violet-500 disabled:opacity-50"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-3.5 w-3.5" />
-                    Save Changes
-                  </>
-                )}
-              </button>
-            </div>
-
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Left column */}
+      {/* GENERAL DETAILS TAB */}
+      {activeTab === 'details' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main column */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Basic Info */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-5">
+                Basic Information
+              </h2>
               <div className="space-y-4">
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-gray-400">
-                    Title
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
+                    Track Title
                   </label>
                   <input
                     type="text"
                     name="title"
                     value={formData.title}
                     onChange={handleChange}
-                    className="w-full rounded-xl border border-white/8 bg-white/4 px-3 py-2.5 text-sm text-white transition-all outline-none focus:border-white/20 focus:bg-white/6"
+                    className="w-full bg-gray-50 border border-gray-200 rounded px-3 py-2 text-base text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors"
                   />
                 </div>
-
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-gray-400">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
+                    Subtitle / Short Description
+                  </label>
+                  <input
+                    type="text"
+                    name="subtitle"
+                    value={formData.subtitle}
+                    onChange={handleChange}
+                    className="w-full bg-gray-50 border border-gray-200 rounded px-3 py-2 text-base text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-5">
+                About this Track
+              </h2>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                rows={10}
+                placeholder="Write a detailed description of this bootcamp..."
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 resize-y focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors placeholder:text-gray-400"
+              />
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-5">
+            {/* Status */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+              <h3 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">
+                Status
+              </h3>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="bg-gray-50 border border-gray-200 rounded px-3 py-1.5 text-sm text-gray-800 outline-none focus:border-indigo-400"
+              >
+                {BOOTCAMP_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {getStatusConfig(s)?.label ?? s}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Thumbnail */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+              <h3 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">
+                Track Thumbnail
+              </h3>
+              <ThumbnailUploader
+                bootcampId={bootcamp.id}
+                currentThumbnail={formData.thumbnail}
+                onUploadSuccess={(data) => {
+                  if (data?.url) {
+                    setFormData((prev) => ({ ...prev, thumbnail: data.url }));
+                  }
+                }}
+              />
+              <p className="text-xs text-gray-400 mt-3 text-center">
+                Recommended size: 1200×630px. Max 5MB.
+              </p>
+            </div>
+
+            {/* Metadata */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+              <h3 className="text-xs font-semibold text-gray-500 mb-4 uppercase tracking-wider">
+                Metadata
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">
+                    Category
+                  </label>
+                  <div className="relative">
+                    <select
+                      name="category"
+                      value={formData.category}
+                      onChange={handleChange}
+                      className="w-full appearance-none bg-gray-50 border border-gray-200 rounded px-3 py-2 text-sm text-gray-800 outline-none focus:border-indigo-400 pr-8"
+                    >
+                      <option value="Web Development">Web Development</option>
+                      <option value="Data Science">Data Science</option>
+                      <option value="Mobile App Dev">Mobile App Dev</option>
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">
+                    Difficulty Level
+                  </label>
+                  <div className="relative">
+                    <select
+                      name="difficulty"
+                      value={formData.difficulty}
+                      onChange={handleChange}
+                      className="w-full appearance-none bg-gray-50 border border-gray-200 rounded px-3 py-2 text-sm text-gray-800 outline-none focus:border-indigo-400 pr-8"
+                    >
+                      <option value="Beginner">Beginner</option>
+                      <option value="Intermediate">Intermediate</option>
+                      <option value="Advanced">Advanced</option>
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">
                     Slug
                   </label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-600">/bootcamps/</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-gray-400">/bootcamps/</span>
                     <input
                       type="text"
                       name="slug"
                       value={formData.slug}
                       onChange={handleChange}
-                      className="flex-1 rounded-xl border border-white/8 bg-white/4 px-3 py-2.5 text-sm text-white transition-all outline-none focus:border-white/20 focus:bg-white/6"
+                      className="flex-1 bg-gray-50 border border-gray-200 rounded px-3 py-2 text-sm text-gray-800 outline-none focus:border-indigo-400"
                     />
                   </div>
                 </div>
-
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-gray-400">
-                    Description
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows={4}
-                    className="w-full resize-none rounded-xl border border-white/8 bg-white/4 px-3 py-2.5 text-sm text-white transition-all outline-none focus:border-white/20 focus:bg-white/6"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-gray-400">
-                    Thumbnail URL
-                  </label>
-                  <input
-                    type="text"
-                    name="thumbnail"
-                    value={formData.thumbnail}
-                    onChange={handleChange}
-                    placeholder="https://..."
-                    className="w-full rounded-xl border border-white/8 bg-white/4 px-3 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-white/20 focus:bg-white/6"
-                  />
-                </div>
-              </div>
-
-              {/* Right column */}
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-gray-400">
-                      Status
-                    </label>
-                    <select
-                      name="status"
-                      value={formData.status}
-                      onChange={handleChange}
-                      className="w-full appearance-none rounded-xl border border-white/8 bg-white/4 px-3 py-2.5 text-sm text-white transition-all outline-none focus:border-white/20 focus:bg-white/6"
-                      style={{ colorScheme: 'dark' }}
-                    >
-                      {BOOTCAMP_STATUSES.map((status) => {
-                        const config = getStatusConfig(status);
-                        return (
-                          <option key={status} value={status}>
-                            {config.label}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-gray-400">
-                      Price (BDT)
-                    </label>
-                    <input
-                      type="number"
-                      name="price"
-                      value={formData.price}
-                      onChange={handleChange}
-                      min="0"
-                      className="w-full rounded-xl border border-white/8 bg-white/4 px-3 py-2.5 text-sm text-white transition-all outline-none focus:border-white/20 focus:bg-white/6"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-gray-400">
-                    Batch Info
-                  </label>
-                  <input
-                    type="text"
-                    name="batch_info"
-                    value={formData.batch_info}
-                    onChange={handleChange}
-                    placeholder="e.g., Batch 5 - Spring 2026"
-                    className="w-full rounded-xl border border-white/8 bg-white/4 px-3 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-white/20 focus:bg-white/6"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-gray-400">
-                      Start Date
-                    </label>
-                    <input
-                      type="date"
-                      name="start_date"
-                      value={formData.start_date}
-                      onChange={handleChange}
-                      className="w-full rounded-xl border border-white/8 bg-white/4 px-3 py-2.5 text-sm text-white transition-all outline-none focus:border-white/20 focus:bg-white/6"
-                      style={{ colorScheme: 'dark' }}
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-gray-400">
-                      End Date
-                    </label>
-                    <input
-                      type="date"
-                      name="end_date"
-                      value={formData.end_date}
-                      onChange={handleChange}
-                      className="w-full rounded-xl border border-white/8 bg-white/4 px-3 py-2.5 text-sm text-white transition-all outline-none focus:border-white/20 focus:bg-white/6"
-                      style={{ colorScheme: 'dark' }}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-gray-400">
-                    Max Students
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">
+                    Price (BDT)
                   </label>
                   <input
                     type="number"
-                    name="max_students"
-                    value={formData.max_students}
+                    name="price"
+                    value={formData.price}
                     onChange={handleChange}
-                    min="1"
-                    placeholder="Leave empty for unlimited"
-                    className="w-full rounded-xl border border-white/8 bg-white/4 px-3 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-white/20 focus:bg-white/6"
+                    min="0"
+                    className="w-full bg-gray-50 border border-gray-200 rounded px-3 py-2 text-sm text-gray-800 outline-none focus:border-indigo-400"
                   />
                 </div>
-
-                <div className="flex items-center justify-between rounded-xl border border-white/8 bg-white/2 p-3">
-                  <div>
-                    <span className="text-sm text-white">Featured</span>
-                    <p className="text-[10px] text-gray-600">
-                      Show on homepage
-                    </p>
-                  </div>
-                  <label className="relative inline-flex cursor-pointer items-center">
-                    <input
-                      type="checkbox"
-                      name="is_featured"
-                      checked={formData.is_featured}
-                      onChange={handleChange}
-                      className="peer sr-only"
-                    />
-                    <div className="peer h-5 w-9 rounded-full bg-white/10 peer-checked:bg-amber-500/30 after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:rounded-full after:bg-gray-400 after:transition-all peer-checked:after:translate-x-4 peer-checked:after:bg-amber-400" />
-                  </label>
-                </div>
-
-                {/* Thumbnail Preview */}
-                {formData.thumbnail && (
-                  <div className="overflow-hidden rounded-xl border border-white/8">
-                    <img
-                      src={formData.thumbnail}
-                      alt="Thumbnail preview"
-                      className="aspect-video w-full object-cover"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                )}
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {activeTab === 'enrollments' && (
-          <EnrollmentsTab bootcampId={bootcamp.id} />
-        )}
+      {/* CURRICULUM TAB */}
+      {activeTab === 'curriculum' && (
+        <CurriculumBuilder
+          bootcampId={bootcamp.id}
+          initialCourses={bootcampData.courses || []}
+          onCoursesChange={handleCoursesChange}
+        />
+      )}
+
+      {/* SETTINGS TAB */}
+      {activeTab === 'settings' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <section className="bg-white rounded-xl border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                Enrollment Settings
+              </h2>
+              <p className="text-sm text-gray-500 mb-6">
+                Manage how club members can join this learning path.
+              </p>
+              <div className="space-y-3">
+                <label className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                  <input
+                    type="radio"
+                    name="enrollment_type"
+                    value="open"
+                    defaultChecked
+                    className="mt-1 text-indigo-600"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">
+                      Open Enrollment
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      Anyone can join instantly.
+                    </div>
+                  </div>
+                </label>
+                <label className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                  <input
+                    type="radio"
+                    name="enrollment_type"
+                    value="application"
+                    className="mt-1 text-indigo-600"
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">
+                      Invite Only
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1">
+                      Members must be manually approved.
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </section>
+
+            <section className="bg-white rounded-xl border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Schedule
+              </h2>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    name="start_date"
+                    value={formData.start_date}
+                    onChange={handleChange}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-indigo-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    name="end_date"
+                    value={formData.end_date}
+                    onChange={handleChange}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-indigo-400"
+                  />
+                </div>
+              </div>
+              <div className="mt-4">
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                  Max Students
+                </label>
+                <input
+                  type="number"
+                  name="max_students"
+                  value={formData.max_students}
+                  onChange={handleChange}
+                  min="1"
+                  placeholder="Leave empty for unlimited"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-indigo-400 placeholder:text-gray-400"
+                />
+              </div>
+              <div className="mt-4">
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                  Batch Info
+                </label>
+                <input
+                  type="text"
+                  name="batch_info"
+                  value={formData.batch_info}
+                  onChange={handleChange}
+                  placeholder="e.g., Batch 5 - Spring 2026"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-indigo-400 placeholder:text-gray-400"
+                />
+              </div>
+            </section>
+          </div>
+
+          <div className="space-y-6">
+            <section className="bg-red-50 rounded-xl border border-red-200 p-6">
+              <h2 className="text-base font-semibold text-red-600 mb-2">
+                Danger Zone
+              </h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Irreversible actions for this learning path.
+              </p>
+              <button className="w-full bg-red-600 text-white text-sm font-medium py-2 px-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-between">
+                Delete Permanently
+                <span className="text-base">🗑</span>
+              </button>
+            </section>
+
+            <section className="bg-white rounded-xl border border-gray-200 p-6">
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">
+                Featured
+              </h2>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">Show on homepage</p>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    name="is_featured"
+                    checked={formData.is_featured}
+                    onChange={handleChange}
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-5 w-9 rounded-full bg-gray-200 peer-checked:bg-amber-400 after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-4" />
+                </label>
+              </div>
+            </section>
+          </div>
+        </div>
+      )}
+
+      {/* ENROLLMENTS TAB */}
+      {activeTab === 'enrollments' && (
+        <EnrollmentsTab bootcampId={bootcamp.id} />
+      )}
       </div>
     </div>
   );
