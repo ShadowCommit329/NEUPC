@@ -24,6 +24,8 @@ export default function ThumbnailUploader({
   currentThumbnail,
   onUploadSuccess,
   onUploadError,
+  onRemove,
+  uploadAction,
 }) {
   const [preview, setPreview] = useState(currentThumbnail || null);
   const [isDragging, setIsDragging] = useState(false);
@@ -55,29 +57,36 @@ export default function ThumbnailUploader({
       try {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('bootcampId', bootcampId);
+        if (uploadAction) {
+          const result = await uploadAction(formData);
+          if (result?.error) {
+            throw new Error(result.error || 'Upload failed');
+          }
+          setPreview(result?.url || URL.createObjectURL(file));
+          if (onUploadSuccess) {
+            onUploadSuccess(result);
+          }
+        } else {
+          formData.append('bootcampId', bootcampId);
 
-        const response = await fetch('/api/admin/upload/thumbnail', {
-          method: 'POST',
-          body: formData,
-        });
+          const response = await fetch('/api/admin/upload/thumbnail', {
+            method: 'POST',
+            body: formData,
+          });
 
-        const result = await response.json();
+          const result = await response.json();
 
-        if (!response.ok) {
-          throw new Error(result.error || 'Upload failed');
-        }
+          if (!response.ok) {
+            throw new Error(result.error || 'Upload failed');
+          }
 
-        // Update preview with uploaded image
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setPreview(reader.result);
-        };
-        reader.readAsDataURL(file);
+          // Use the returned URL for preview (falls back to local blob)
+          setPreview(result.data?.url || URL.createObjectURL(file));
 
-        // Notify parent component
-        if (onUploadSuccess) {
-          onUploadSuccess(result.data);
+          // Notify parent component
+          if (onUploadSuccess) {
+            onUploadSuccess(result.data);
+          }
         }
       } catch (err) {
         console.error('Upload error:', err);
@@ -89,7 +98,7 @@ export default function ThumbnailUploader({
         setIsUploading(false);
       }
     },
-    [bootcampId, onUploadSuccess, onUploadError]
+    [bootcampId, onUploadSuccess, onUploadError, uploadAction]
   );
 
   /**
@@ -152,7 +161,10 @@ export default function ThumbnailUploader({
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  }, []);
+    if (onRemove) {
+      onRemove();
+    }
+  }, [onRemove]);
 
   /**
    * Open file picker
@@ -163,10 +175,6 @@ export default function ThumbnailUploader({
 
   return (
     <div className="space-y-3">
-      <label className="block text-sm font-medium text-gray-900">
-        Thumbnail
-      </label>
-
       {/* Upload Area */}
       {!preview && (
         <div
@@ -174,10 +182,10 @@ export default function ThumbnailUploader({
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`relative cursor-pointer rounded-lg border-2 border-dashed p-8 transition-colors ${
+          className={`relative cursor-pointer rounded-xl border-2 border-dashed p-8 transition-colors ${
             isDragging
-              ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-300 bg-gray-50 hover:border-gray-400'
+              ? 'border-violet-500/40 bg-violet-500/5'
+              : 'border-white/8 bg-white/3 hover:border-white/12'
           } ${isUploading ? 'pointer-events-none opacity-50' : ''} `}
         >
           <input
@@ -191,13 +199,13 @@ export default function ThumbnailUploader({
           <div className="text-center">
             {isUploading ? (
               <>
-                <div className="mx-auto mb-3 h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-                <p className="text-sm text-gray-600">Uploading...</p>
+                <div className="mx-auto mb-3 h-12 w-12 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
+                <p className="text-sm text-gray-300">Uploading...</p>
               </>
             ) : (
               <>
                 <svg
-                  className="mx-auto mb-3 h-12 w-12 text-gray-400"
+                  className="mx-auto mb-3 h-12 w-12 text-gray-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -209,13 +217,13 @@ export default function ThumbnailUploader({
                     d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                   />
                 </svg>
-                <p className="mb-1 text-sm text-gray-700">
-                  <span className="font-semibold text-blue-600">
+                <p className="mb-1 text-sm text-gray-300">
+                  <span className="font-semibold text-violet-400">
                     Click to upload
                   </span>{' '}
                   or drag and drop
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-600">
                   JPG, PNG, or WebP (max 5MB)
                 </p>
               </>
@@ -226,8 +234,8 @@ export default function ThumbnailUploader({
 
       {/* Preview */}
       {preview && !isUploading && (
-        <div className="relative overflow-hidden rounded-lg border-2 border-gray-300">
-          <div className="relative aspect-video w-full bg-gray-100">
+        <div className="relative overflow-hidden rounded-xl border border-white/10">
+          <div className="relative aspect-video w-full bg-white/3">
             <Image
               src={preview}
               alt="Thumbnail preview"
@@ -239,7 +247,7 @@ export default function ThumbnailUploader({
           <button
             type="button"
             onClick={handleRemove}
-            className="absolute top-2 right-2 rounded-full bg-red-600 p-2 text-white shadow-lg transition-colors hover:bg-red-700"
+            className="absolute top-2 right-2 rounded-full bg-red-600/80 p-2 text-white shadow-lg transition-colors hover:bg-red-700"
             title="Remove thumbnail"
           >
             <svg
@@ -261,10 +269,10 @@ export default function ThumbnailUploader({
 
       {/* Error Message */}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
           <div className="flex items-start gap-2">
             <svg
-              className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600"
+              className="mt-0.5 h-5 w-5 shrink-0 text-red-600"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -276,14 +284,14 @@ export default function ThumbnailUploader({
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <p className="text-sm text-red-800">{error}</p>
+            <p className="text-sm text-red-400">{error}</p>
           </div>
         </div>
       )}
 
       {/* Info Message */}
       {!error && !preview && !isUploading && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-600">
           Recommended size: 1280x720px (16:9 aspect ratio)
         </p>
       )}

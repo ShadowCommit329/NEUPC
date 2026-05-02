@@ -19,7 +19,9 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@/app/_lib/supabase';
+import { revalidatePath } from 'next/cache';
+import { supabaseAdmin } from '@/app/_lib/supabase';
+import { requireApiAuth, isAuthError } from '@/app/_lib/api-guard';
 import {
   uploadThumbnail,
   isValidThumbnailType,
@@ -30,30 +32,8 @@ const MAX_THUMBNAIL_SIZE = 5 * 1024 * 1024; // 5MB
 
 export async function POST(request) {
   try {
-    // Check authentication
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Check if user is admin
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile || profile.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Forbidden: Admin access required' },
-        { status: 403 }
-      );
-    }
+    const authResult = await requireApiAuth('admin');
+    if (isAuthError(authResult)) return authResult;
 
     // Parse form data
     const formData = await request.formData();
@@ -85,8 +65,8 @@ export async function POST(request) {
       );
     }
 
-    // Verify bootcamp exists and user has access
-    const { data: bootcamp, error: bootcampError } = await supabase
+    // Verify bootcamp exists
+    const { data: bootcamp, error: bootcampError } = await supabaseAdmin
       .from('bootcamps')
       .select('id')
       .eq('id', bootcampId)
@@ -111,12 +91,26 @@ export async function POST(request) {
       bootcampId
     );
 
+    const thumbnailUrl = `/api/image/${result.fileId}`;
+
+    // Save thumbnail URL to bootcamp record
+    await supabaseAdmin
+      .from('bootcamps')
+      .update({ thumbnail: thumbnailUrl })
+      .eq('id', bootcampId);
+
+    revalidatePath('/account/admin/bootcamps');
+    revalidatePath(`/account/admin/bootcamps/${bootcampId}`);
+    revalidatePath('/account/member/bootcamps');
+    revalidatePath(`/account/member/bootcamps/${bootcampId}`);
+
     return NextResponse.json({
       success: true,
       data: {
         fileId: result.fileId,
         filename: result.filename,
         size: result.size,
+        url: thumbnailUrl,
       },
     });
   } catch (error) {

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import CurriculumBuilder from '../../_components/CurriculumBuilder';
 import EnrollmentsTab from './EnrollmentsTab';
+import ThumbnailUploader from '../../_components/ThumbnailUploader';
 import {
   getStatusConfig,
   BOOTCAMP_STATUSES,
@@ -313,15 +314,16 @@ export default function BootcampDetailClient({ bootcamp }) {
 
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-gray-400">
-                    Thumbnail URL
+                    Banner Image
                   </label>
-                  <input
-                    type="text"
-                    name="thumbnail"
-                    value={formData.thumbnail}
-                    onChange={handleChange}
-                    placeholder="https://..."
-                    className="w-full rounded-xl border border-white/8 bg-white/4 px-3 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-white/20 focus:bg-white/6"
+                  <ThumbnailUploader
+                    bootcampId={bootcamp.id}
+                    currentThumbnail={formData.thumbnail}
+                    onUploadSuccess={(data) => {
+                      if (data?.url) {
+                        setFormData((prev) => ({ ...prev, thumbnail: data.url }));
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -443,19 +445,6 @@ export default function BootcampDetailClient({ bootcamp }) {
                   </label>
                 </div>
 
-                {/* Thumbnail Preview */}
-                {formData.thumbnail && (
-                  <div className="overflow-hidden rounded-xl border border-white/8">
-                    <img
-                      src={formData.thumbnail}
-                      alt="Thumbnail preview"
-                      className="aspect-video w-full object-cover"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                )}
               </div>
             </div>
           </div>

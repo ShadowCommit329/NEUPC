@@ -181,45 +181,48 @@ function Sidebar({
     totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
   const content = (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-[#080b11]">
       {/* Header */}
-      <div className="shrink-0 border-b border-white/8 p-4">
+      <div className="shrink-0 border-b border-white/6 px-4 py-4">
         <div className="flex items-center justify-between">
           <Link
-            href="/account/member/bootcamps"
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white"
+            href={`/account/member/bootcamps/${bootcamp?.id}`}
+            className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] text-gray-600 transition-colors hover:bg-white/5 hover:text-white"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
-            Back
+            Curriculum
           </Link>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-white/8 lg:hidden"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-white/8 hover:text-white lg:hidden"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
-        <h2 className="mt-3 line-clamp-2 text-sm font-bold text-white">
+        <h2 className="mt-3 line-clamp-2 text-[13px] font-bold leading-snug text-white">
           {bootcamp?.title}
         </h2>
 
         {/* Progress */}
-        <div className="mt-3">
-          <div className="mb-1.5 flex items-center justify-between text-[11px]">
-            <span className="text-gray-500">Progress</span>
-            <span className="font-semibold text-white">{progressPercent}%</span>
+        <div className="mt-3 rounded-xl bg-white/3 px-3 py-2.5">
+          <div className="mb-2 flex items-center justify-between text-[11px]">
+            <span className="text-gray-600">Your progress</span>
+            <span className="font-bold text-emerald-400">{progressPercent}%</span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/8">
             <div
-              className="h-full rounded-full bg-emerald-500 transition-all"
+              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-500"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
+          <p className="mt-1.5 text-[10px] text-gray-700">
+            {completedLessons}/{totalLessons} lessons complete
+          </p>
         </div>
       </div>
 
       {/* Modules */}
-      <div className="flex-1 space-y-3 overflow-y-auto p-4">
+      <div className="flex-1 space-y-2 overflow-y-auto p-3">
         {bootcamp?.courses?.map((course) =>
           course.modules?.map((module) => (
             <ModuleAccordion
@@ -238,7 +241,7 @@ function Sidebar({
   return (
     <>
       {/* Desktop */}
-      <div className="hidden w-72 shrink-0 border-r border-white/8 bg-[#0d1117] lg:block">
+      <div className="hidden w-72 shrink-0 border-r border-white/6 lg:block">
         {content}
       </div>
 
@@ -246,10 +249,10 @@ function Sidebar({
       {isOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={onClose}
           />
-          <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-[#0d1117] shadow-2xl">
+          <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] shadow-2xl">
             {content}
           </div>
         </div>
@@ -447,24 +450,21 @@ export default function LessonViewClient({
         {/* Lesson content */}
         <div className="flex-1 space-y-6 p-4 lg:p-6">
           {/* Breadcrumb (desktop) */}
-          <div className="hidden text-[11px] text-gray-500 lg:block">
-            <Link
-              href={`/account/member/bootcamps/${bootcamp.id}`}
-              className="hover:text-white"
-            >
+          <div className="hidden items-center gap-1.5 text-[11px] text-gray-600 lg:flex">
+            <Link href={`/account/member/bootcamps/${bootcamp.id}`} className="hover:text-white">
               {bootcamp.title}
             </Link>
-            <span className="mx-2">→</span>
+            <span className="text-gray-700">›</span>
             <span className="text-gray-400">{lesson.title}</span>
           </div>
 
-          {/* Title */}
-          <div>
-            <h1 className="text-xl font-bold text-white lg:text-2xl">
+          {/* Title block */}
+          <div className="rounded-2xl border border-white/6 bg-gradient-to-br from-white/4 to-transparent p-5">
+            <h1 className="text-xl font-extrabold leading-tight tracking-tight text-white lg:text-2xl">
               {lesson.title}
             </h1>
             {lesson.duration > 0 && (
-              <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+              <div className="mt-2 flex items-center gap-1.5 text-[12px] text-gray-500">
                 <Clock className="h-3.5 w-3.5" />
                 {formatDuration(lesson.duration)}
               </div>
@@ -480,28 +480,33 @@ export default function LessonViewClient({
           />
 
           {/* Completion toggle */}
-          <div className="flex items-center justify-between rounded-xl border border-white/8 bg-white/3 px-4 py-3">
+          <div className={`flex items-center justify-between rounded-2xl border px-5 py-4 transition-colors ${isCompleted ? 'border-emerald-500/20 bg-emerald-500/6' : 'border-white/8 bg-white/3'}`}>
             <div className="flex items-center gap-3">
               {isCompleted ? (
-                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                <CheckCircle2 className="h-5 w-5 text-emerald-400" />
               ) : (
                 <Circle className="h-5 w-5 text-gray-600" />
               )}
-              <span className="text-sm text-gray-300">
-                {isCompleted ? 'Completed' : 'Mark as complete'}
-              </span>
+              <div>
+                <p className={`text-sm font-semibold ${isCompleted ? 'text-emerald-300' : 'text-white'}`}>
+                  {isCompleted ? 'Lesson complete!' : 'Mark as complete'}
+                </p>
+                <p className="text-[11px] text-gray-600">
+                  {isCompleted ? 'Great work — keep going' : 'Mark done when finished'}
+                </p>
+              </div>
             </div>
             <button
               onClick={toggleComplete}
               disabled={completing}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+              className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm transition-all disabled:opacity-50 ${
                 isCompleted
-                  ? 'border border-emerald-500/30 bg-emerald-500/15 text-emerald-400'
-                  : 'bg-emerald-500 text-white hover:bg-emerald-600'
-              } disabled:opacity-50`}
+                  ? 'border border-emerald-500/25 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/20'
+                  : 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-emerald-500/20 hover:from-emerald-400 hover:to-emerald-500'
+              }`}
             >
               {completing && <Loader2 className="h-4 w-4 animate-spin" />}
-              {isCompleted ? 'Completed' : 'Complete'}
+              {isCompleted ? '✓ Done' : 'Complete'}
             </button>
           </div>
 
@@ -521,7 +526,7 @@ export default function LessonViewClient({
           {/* Rich content */}
           {lesson.content && (
             <div
-              className="prose prose-invert prose-sm max-w-none rounded-xl border border-white/8 bg-white/3 p-4"
+              className="blog-content rounded-xl border border-white/8 bg-white/3 p-6"
               dangerouslySetInnerHTML={{ __html: lesson.content }}
             />
           )}
@@ -559,17 +564,15 @@ export default function LessonViewClient({
         </div>
 
         {/* Navigation footer */}
-        <div className="shrink-0 border-t border-white/8 bg-[#0d1117] px-4 py-4 lg:px-6">
+        <div className="shrink-0 border-t border-white/6 bg-[#080b11] px-4 py-4 lg:px-6">
           <div className="flex items-center justify-between gap-4">
             {prevLesson ? (
               <button
                 onClick={() => goToLesson(prevLesson)}
-                className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/8"
+                className="group flex items-center gap-2 rounded-xl border border-white/8 bg-white/4 px-4 py-2.5 text-[13px] font-medium text-gray-400 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
               >
-                <ChevronLeft className="h-4 w-4" />
-                <span className="hidden max-w-[150px] truncate sm:inline">
-                  {prevLesson.title}
-                </span>
+                <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+                <span className="hidden max-w-[140px] truncate sm:inline">{prevLesson.title}</span>
                 <span className="sm:hidden">Previous</span>
               </button>
             ) : (
@@ -579,21 +582,19 @@ export default function LessonViewClient({
             {nextLesson ? (
               <button
                 onClick={() => goToLesson(nextLesson)}
-                className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/8"
+                className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-violet-700 px-5 py-2.5 text-[13px] font-bold text-white shadow-md shadow-violet-500/20 transition-all hover:from-violet-500 hover:to-violet-600 hover:shadow-violet-500/30"
               >
-                <span className="hidden max-w-[150px] truncate sm:inline">
-                  {nextLesson.title}
-                </span>
+                <span className="hidden max-w-[140px] truncate sm:inline">{nextLesson.title}</span>
                 <span className="sm:hidden">Next</span>
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </button>
             ) : (
               <Link
                 href={`/account/member/bootcamps/${bootcamp.id}`}
-                className="flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600"
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-2.5 text-[13px] font-bold text-white shadow-md shadow-emerald-500/20 transition-all hover:from-emerald-400 hover:to-emerald-500"
               >
-                Finish
                 <CheckCircle2 className="h-4 w-4" />
+                Finish Course
               </Link>
             )}
           </div>

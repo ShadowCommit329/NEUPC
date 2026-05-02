@@ -1,251 +1,192 @@
-/**
- * @file Bootcamp learning view client — displays curriculum sidebar
- *   with nested courses/modules/lessons and the current lesson content.
- * @module BootcampLearningClient
- */
-
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import {
   ChevronLeft,
-  ChevronRight,
   ChevronDown,
+  ChevronRight,
   Play,
+  FileText,
   CheckCircle2,
-  Circle,
   Clock,
   BookOpen,
-  FileText,
-  Lock,
-  Menu,
-  X,
-  GraduationCap,
   BarChart2,
-  List,
+  Layers,
+  GraduationCap,
+  ArrowRight,
+  Trophy,
+  Zap,
 } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatDuration(seconds) {
-  if (!seconds || seconds <= 0) return '0:00';
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-  if (hours > 0) {
-    return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  }
-  return `${minutes}:${String(secs).padStart(2, '0')}`;
+function formatDurationMins(minutes) {
+  if (!minutes || minutes <= 0) return null;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  return `${m}m`;
 }
 
-function formatMinutes(minutes) {
-  if (!minutes || minutes <= 0) return '0m';
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (hours > 0) {
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-  }
-  return `${mins}m`;
+function formatDurationSecs(seconds) {
+  if (!seconds || seconds <= 0) return null;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  return `${m}m`;
 }
 
-// ─── Lesson Item ──────────────────────────────────────────────────────────────
+// ─── Lesson Row ───────────────────────────────────────────────────────────────
 
-function LessonItem({ lesson, isActive, isCompleted, onClick }) {
-  const hasVideo = lesson.video_source !== 'none';
+function LessonRow({ lesson, bootcampId, lessonProgress, index }) {
+  const progress = lessonProgress?.[lesson.id];
+  const isCompleted = progress?.is_completed;
+  const hasVideo = lesson.video_source && lesson.video_source !== 'none';
 
   return (
-    <button
-      onClick={onClick}
-      className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all ${
-        isActive
-          ? 'bg-emerald-500/15 text-emerald-400'
-          : 'text-gray-400 hover:bg-white/6 hover:text-gray-200'
-      }`}
+    <Link
+      href={`/account/member/bootcamps/${bootcampId}/${lesson.id}`}
+      className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all hover:bg-white/5"
     >
-      {/* Status icon */}
-      <div className="shrink-0">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center">
         {isCompleted ? (
-          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-        ) : hasVideo ? (
-          <Play
-            className={`h-4 w-4 ${isActive ? 'text-emerald-400' : 'text-gray-600'}`}
-          />
+          <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
         ) : (
-          <FileText
-            className={`h-4 w-4 ${isActive ? 'text-emerald-400' : 'text-gray-600'}`}
-          />
+          <div className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-white/4 text-[10px] font-mono font-semibold text-gray-600 transition-colors group-hover:border-violet-500/30 group-hover:text-violet-400">
+            {index + 1}
+          </div>
         )}
       </div>
-
-      {/* Content */}
       <div className="min-w-0 flex-1">
-        <p
-          className={`truncate text-xs font-medium ${
-            isActive ? 'text-emerald-400' : 'text-gray-300'
-          }`}
-        >
+        <p className={`truncate text-[13px] font-medium transition-colors group-hover:text-white ${isCompleted ? 'text-gray-500 line-through decoration-white/15' : 'text-gray-300'}`}>
           {lesson.title}
         </p>
-        {lesson.duration > 0 && (
-          <p className="mt-0.5 text-[10px] text-gray-600">
-            {formatDuration(lesson.duration)}
-          </p>
-        )}
+        <div className="mt-0.5 flex items-center gap-2">
+          {hasVideo ? (
+            <span className="flex items-center gap-1 text-[10px] text-gray-600">
+              <Play className="h-2.5 w-2.5" /> Video
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[10px] text-gray-600">
+              <FileText className="h-2.5 w-2.5" /> Reading
+            </span>
+          )}
+          {lesson.duration > 0 && (
+            <>
+              <span className="text-[10px] text-gray-700">·</span>
+              <span className="text-[10px] text-gray-600">{formatDurationSecs(lesson.duration)}</span>
+            </>
+          )}
+          {lesson.is_free_preview && (
+            <span className="rounded-md bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-blue-400 ring-1 ring-blue-500/20">
+              Free
+            </span>
+          )}
+        </div>
       </div>
-
-      {/* Free preview badge */}
-      {lesson.is_free_preview && (
-        <span className="shrink-0 rounded bg-blue-500/15 px-1.5 py-0.5 text-[9px] font-medium text-blue-400">
-          Free
-        </span>
-      )}
-    </button>
+      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-gray-700 transition-all group-hover:translate-x-0.5 group-hover:text-violet-400" />
+    </Link>
   );
 }
 
 // ─── Module Accordion ─────────────────────────────────────────────────────────
 
-function ModuleAccordion({
-  module,
-  isExpanded,
-  onToggle,
-  currentLessonId,
-  lessonProgress,
-  onSelectLesson,
-}) {
-  const completedCount =
-    module.lessons?.filter((l) => lessonProgress[l.id]?.is_completed).length ||
-    0;
-  const totalCount = module.lessons?.length || 0;
+function ModuleAccordion({ module, bootcampId, lessonProgress, moduleIndex, defaultOpen }) {
+  const [open, setOpen] = useState(defaultOpen ?? moduleIndex === 0);
+
+  const totalLessons = module.lessons?.length || 0;
+  const completedCount = module.lessons?.filter((l) => lessonProgress?.[l.id]?.is_completed).length || 0;
+  const allDone = completedCount === totalLessons && totalLessons > 0;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-white/6 bg-white/2">
+    <div className={`overflow-hidden rounded-xl border transition-colors ${allDone ? 'border-emerald-500/15 bg-emerald-500/3' : 'border-white/6 bg-white/2'}`}>
       <button
-        onClick={onToggle}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/4"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/4"
       >
-        <ChevronDown
-          className={`h-4 w-4 shrink-0 text-gray-500 transition-transform ${
-            isExpanded ? 'rotate-180' : ''
-          }`}
-        />
+        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-mono font-bold transition-colors ${allDone ? 'bg-emerald-500/15 text-emerald-400' : 'bg-white/6 text-gray-400'}`}>
+          {allDone ? '✓' : String(moduleIndex + 1).padStart(2, '0')}
+        </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-white">
-            {module.title}
-          </p>
-          <p className="mt-0.5 text-[10px] text-gray-600">
-            {completedCount}/{totalCount} lessons completed
+          <p className="truncate text-sm font-semibold text-white">{module.title}</p>
+          <p className="mt-0.5 text-[11px] text-gray-600">
+            {completedCount}/{totalLessons} lessons
+            {module.total_duration > 0 && <> · {formatDurationMins(module.total_duration)}</>}
           </p>
         </div>
-        {/* Progress circle */}
-        <div className="relative h-8 w-8 shrink-0">
-          <svg className="h-8 w-8 -rotate-90" viewBox="0 0 32 32">
-            <circle
-              cx="16"
-              cy="16"
-              r="14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              className="text-white/10"
-            />
-            <circle
-              cx="16"
-              cy="16"
-              r="14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeDasharray={`${(completedCount / totalCount) * 88} 88`}
-              className="text-emerald-500"
-              strokeLinecap="round"
-            />
-          </svg>
-          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white">
-            {totalCount > 0
-              ? Math.round((completedCount / totalCount) * 100)
-              : 0}
-            %
-          </span>
+        {/* Mini progress bar */}
+        <div className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-white/8 sm:block">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-violet-500 to-violet-400 transition-all"
+            style={{ width: `${totalLessons > 0 ? (completedCount / totalLessons) * 100 : 0}%` }}
+          />
         </div>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {isExpanded && module.lessons?.length > 0 && (
+      {open && (
         <div className="space-y-0.5 border-t border-white/5 px-2 py-2">
-          {module.lessons.map((lesson) => (
-            <LessonItem
-              key={lesson.id}
-              lesson={lesson}
-              isActive={lesson.id === currentLessonId}
-              isCompleted={lessonProgress[lesson.id]?.is_completed}
-              onClick={() => onSelectLesson(lesson)}
-            />
-          ))}
+          {module.lessons?.length > 0 ? (
+            module.lessons.map((lesson, i) => (
+              <LessonRow
+                key={lesson.id}
+                lesson={lesson}
+                bootcampId={bootcampId}
+                lessonProgress={lessonProgress}
+                index={i}
+              />
+            ))
+          ) : (
+            <p className="px-3 py-4 text-xs text-gray-600">No lessons yet.</p>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-// ─── Course Accordion ─────────────────────────────────────────────────────────
+// ─── Course Section ───────────────────────────────────────────────────────────
 
-function CourseAccordion({
-  course,
-  isExpanded,
-  onToggle,
-  currentLessonId,
-  lessonProgress,
-  onSelectLesson,
-  expandedModules,
-  onToggleModule,
-}) {
-  const totalLessons =
-    course.modules?.reduce((sum, m) => sum + (m.lessons?.length || 0), 0) || 0;
-  const completedLessons =
-    course.modules?.reduce(
-      (sum, m) =>
-        sum +
-        (m.lessons?.filter((l) => lessonProgress[l.id]?.is_completed).length ||
-          0),
-      0
-    ) || 0;
+function CourseSection({ course, bootcampId, lessonProgress, courseIndex }) {
+  const [open, setOpen] = useState(courseIndex === 0);
+
+  const totalLessons = course.modules?.reduce((s, m) => s + (m.lessons?.length || 0), 0) || 0;
+  const completedCount = course.modules?.reduce(
+    (s, m) => s + (m.lessons?.filter((l) => lessonProgress?.[l.id]?.is_completed).length || 0),
+    0
+  ) || 0;
+  const pct = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
 
   return (
     <div className="space-y-2">
       <button
-        onClick={onToggle}
-        className="flex w-full items-center gap-3 rounded-xl bg-white/4 px-4 py-3.5 text-left transition-colors hover:bg-white/6"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-3 rounded-2xl border border-white/8 bg-gradient-to-r from-white/4 to-white/2 px-4 py-3.5 text-left shadow-sm transition-all hover:border-violet-500/20 hover:from-violet-500/8 hover:to-white/2"
       >
-        <ChevronDown
-          className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${
-            isExpanded ? 'rotate-180' : ''
-          }`}
-        />
-        <BookOpen className="h-4 w-4 shrink-0 text-violet-400" />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 ring-1 ring-violet-500/20">
+          <Layers className="h-4 w-4 text-violet-400" />
+        </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-white">
-            {course.title}
-          </p>
-          <p className="mt-0.5 text-[10px] text-gray-500">
-            {completedLessons}/{totalLessons} lessons •{' '}
-            {formatMinutes(course.total_duration)}
+          <p className="truncate text-sm font-bold text-white">{course.title}</p>
+          <p className="mt-0.5 text-[11px] text-gray-500">
+            {completedCount}/{totalLessons} completed · {course.modules?.length || 0} modules · {pct}%
           </p>
         </div>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {isExpanded && course.modules?.length > 0 && (
-        <div className="ml-4 space-y-2">
-          {course.modules.map((module) => (
+      {open && (
+        <div className="ml-3 space-y-2 border-l-2 border-violet-500/15 pl-4">
+          {course.modules?.map((module, mi) => (
             <ModuleAccordion
               key={module.id}
               module={module}
-              isExpanded={expandedModules.includes(module.id)}
-              onToggle={() => onToggleModule(module.id)}
-              currentLessonId={currentLessonId}
+              bootcampId={bootcampId}
               lessonProgress={lessonProgress}
-              onSelectLesson={onSelectLesson}
+              moduleIndex={mi}
+              defaultOpen={mi === 0 && courseIndex === 0}
             />
           ))}
         </div>
@@ -254,374 +195,229 @@ function CourseAccordion({
   );
 }
 
-// ─── Curriculum Sidebar ───────────────────────────────────────────────────────
+// ─── Stat Pill ────────────────────────────────────────────────────────────────
 
-function CurriculumSidebar({
-  bootcamp,
-  currentLessonId,
-  lessonProgress,
-  onSelectLesson,
-  isOpen,
-  onClose,
-}) {
-  const [expandedCourses, setExpandedCourses] = useState([]);
-  const [expandedModules, setExpandedModules] = useState([]);
-
-  // Auto-expand course/module containing current lesson
-  useEffect(() => {
-    if (!currentLessonId || !bootcamp?.courses) return;
-
-    for (const course of bootcamp.courses) {
-      for (const mod of course.modules || []) {
-        const hasLesson = mod.lessons?.some((l) => l.id === currentLessonId);
-        if (hasLesson) {
-          setExpandedCourses((prev) =>
-            prev.includes(course.id) ? prev : [...prev, course.id]
-          );
-          setExpandedModules((prev) =>
-            prev.includes(mod.id) ? prev : [...prev, mod.id]
-          );
-          return;
-        }
-      }
-    }
-  }, [currentLessonId, bootcamp?.courses]);
-
-  const toggleCourse = (id) => {
-    setExpandedCourses((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
-    );
-  };
-
-  const toggleModule = (id) => {
-    setExpandedModules((prev) =>
-      prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]
-    );
-  };
-
-  // Calculate overall progress
-  const totalLessons =
-    bootcamp?.courses?.reduce(
-      (sum, c) =>
-        sum + c.modules?.reduce((s, m) => s + (m.lessons?.length || 0), 0),
-      0
-    ) || 0;
-  const completedLessons = Object.values(lessonProgress).filter(
-    (p) => p.is_completed
-  ).length;
-  const progressPercent =
-    totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
-
-  const sidebarContent = (
-    <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="shrink-0 border-b border-white/8 p-4">
-        <div className="flex items-center justify-between">
-          <Link
-            href="/account/member/bootcamps"
-            className="flex items-center gap-2 text-sm text-gray-400 transition-colors hover:text-white"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Back to bootcamps</span>
-          </Link>
-          <button
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-white/8 hover:text-white lg:hidden"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <h2 className="mt-3 line-clamp-2 text-sm font-bold text-white">
-          {bootcamp?.title}
-        </h2>
-
-        {/* Progress bar */}
-        <div className="mt-3">
-          <div className="mb-1.5 flex items-center justify-between text-[11px]">
-            <span className="text-gray-500">Overall Progress</span>
-            <span className="font-semibold text-white">{progressPercent}%</span>
-          </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-white/8">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-          <p className="mt-1.5 text-[10px] text-gray-600">
-            {completedLessons} of {totalLessons} lessons completed
-          </p>
-        </div>
-      </div>
-
-      {/* Curriculum */}
-      <div className="flex-1 space-y-3 overflow-y-auto p-4">
-        {bootcamp?.courses?.map((course) => (
-          <CourseAccordion
-            key={course.id}
-            course={course}
-            isExpanded={expandedCourses.includes(course.id)}
-            onToggle={() => toggleCourse(course.id)}
-            currentLessonId={currentLessonId}
-            lessonProgress={lessonProgress}
-            onSelectLesson={onSelectLesson}
-            expandedModules={expandedModules}
-            onToggleModule={toggleModule}
-          />
-        ))}
-      </div>
-    </div>
-  );
-
+function StatPill({ icon: Icon, label, color }) {
   return (
-    <>
-      {/* Desktop sidebar */}
-      <div className="hidden w-80 shrink-0 border-r border-white/8 bg-[#0d1117] lg:block">
-        {sidebarContent}
-      </div>
-
-      {/* Mobile drawer */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={onClose}
-          />
-          <div className="absolute inset-y-0 left-0 w-80 max-w-[85vw] bg-[#0d1117] shadow-2xl">
-            {sidebarContent}
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-// ─── Lesson Not Found ─────────────────────────────────────────────────────────
-
-function LessonNotFound({ bootcamp, onSelectLesson }) {
-  // Find first lesson
-  const firstLesson = bootcamp?.courses?.[0]?.modules?.[0]?.lessons?.[0];
-
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-500/10">
-        <GraduationCap className="h-8 w-8 text-violet-400" />
-      </div>
-      <h2 className="mb-2 text-lg font-semibold text-white">
-        Ready to Start Learning?
-      </h2>
-      <p className="mb-6 max-w-md text-sm text-gray-500">
-        Select a lesson from the curriculum to begin, or start with the first
-        lesson.
-      </p>
-      {firstLesson && (
-        <button
-          onClick={() => onSelectLesson(firstLesson)}
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-600"
-        >
-          <Play className="h-4 w-4 fill-current" />
-          Start First Lesson
-        </button>
-      )}
-    </div>
+    <span className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium ${color}`}>
+      <Icon className="h-3 w-3" />
+      {label}
+    </span>
   );
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function BootcampLearningClient({
-  bootcamp,
-  enrollment,
-  lessonProgress,
-  initialLessonId,
-}) {
-  const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [currentLessonId, setCurrentLessonId] = useState(
-    initialLessonId || null
-  );
-
-  // Find current lesson data
-  const currentLesson = useMemo(() => {
-    if (!currentLessonId || !bootcamp?.courses) return null;
-
-    for (const course of bootcamp.courses) {
-      for (const mod of course.modules || []) {
-        const lesson = mod.lessons?.find((l) => l.id === currentLessonId);
-        if (lesson) {
-          return {
-            ...lesson,
-            moduleName: mod.title,
-            courseName: course.title,
-          };
-        }
-      }
-    }
-    return null;
-  }, [currentLessonId, bootcamp?.courses]);
-
-  // Get all lessons in order for prev/next navigation
+export default function BootcampLearningClient({ bootcamp, lessonProgress = {} }) {
   const allLessons = useMemo(() => {
     const lessons = [];
-    bootcamp?.courses?.forEach((course) => {
-      course.modules?.forEach((mod) => {
-        mod.lessons?.forEach((lesson) => {
-          lessons.push({
-            ...lesson,
-            moduleName: mod.title,
-            courseName: course.title,
-          });
-        });
+    bootcamp?.courses?.forEach((c) => {
+      c.modules?.forEach((m) => {
+        m.lessons?.forEach((l) => lessons.push(l));
       });
     });
     return lessons;
   }, [bootcamp?.courses]);
 
-  const currentIndex = allLessons.findIndex((l) => l.id === currentLessonId);
-  const prevLesson = currentIndex > 0 ? allLessons[currentIndex - 1] : null;
-  const nextLesson =
-    currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null;
+  const totalLessons = allLessons.length;
+  const completedCount = allLessons.filter((l) => lessonProgress?.[l.id]?.is_completed).length;
+  const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+  const isComplete = completedCount === totalLessons && totalLessons > 0;
 
-  const handleSelectLesson = useCallback(
-    (lesson) => {
-      setCurrentLessonId(lesson.id);
-      setSidebarOpen(false);
-      // Update URL without full navigation
-      router.push(`/account/member/bootcamps/${bootcamp.id}/${lesson.id}`, {
-        scroll: false,
-      });
-    },
-    [bootcamp?.id, router]
+  const resumeLesson = useMemo(
+    () => allLessons.find((l) => !lessonProgress?.[l.id]?.is_completed) || allLessons[0],
+    [allLessons, lessonProgress]
   );
 
-  return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-      {/* Sidebar */}
-      <CurriculumSidebar
-        bootcamp={bootcamp}
-        currentLessonId={currentLessonId}
-        lessonProgress={lessonProgress}
-        onSelectLesson={handleSelectLesson}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
+  const totalDuration = bootcamp?.total_duration;
+  const coursesCount = bootcamp?.courses?.length || 0;
+  const modulesCount = bootcamp?.courses?.reduce((s, c) => s + (c.modules?.length || 0), 0) || 0;
 
-      {/* Main content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Mobile header */}
-        <div className="flex items-center gap-3 border-b border-white/8 bg-[#0d1117] px-4 py-3 lg:hidden">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/4 text-gray-400 hover:bg-white/8 hover:text-white"
+  return (
+    <div className="min-h-screen bg-[#080b11] text-white">
+      {/* Topbar */}
+      <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/6 bg-[#080b11]/95 px-4 py-3 backdrop-blur-xl">
+        <Link
+          href="/account/member/bootcamps"
+          className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] text-gray-500 transition-colors hover:bg-white/6 hover:text-white"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+          Back
+        </Link>
+        <span className="text-gray-700">·</span>
+        <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-white/90">
+          {bootcamp?.title}
+        </span>
+        {resumeLesson && (
+          <Link
+            href={`/account/member/bootcamps/${bootcamp.id}/${resumeLesson.id}`}
+            className="hidden shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-1.5 text-[11px] font-bold text-white shadow-md shadow-emerald-500/20 transition-all hover:from-emerald-400 hover:to-emerald-500 sm:flex"
           >
-            <Menu className="h-4 w-4" />
-          </button>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-white">
-              {currentLesson?.title || bootcamp?.title}
-            </p>
-            {currentLesson && (
-              <p className="truncate text-[10px] text-gray-500">
-                {currentLesson.courseName} • {currentLesson.moduleName}
-              </p>
+            <Play className="h-3 w-3 fill-current" />
+            {completedCount > 0 ? 'Resume' : 'Start'}
+          </Link>
+        )}
+      </div>
+
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+
+        {/* ── Hero ─────────────────────────────────────────────────────── */}
+        <div className="mb-8 overflow-hidden rounded-3xl border border-white/8 bg-[#0d1117] shadow-2xl shadow-black/40">
+          {/* Banner */}
+          {bootcamp?.thumbnail ? (
+            <div className="relative aspect-[3/1] w-full overflow-hidden">
+              <Image
+                src={bootcamp.thumbnail}
+                alt={bootcamp.title}
+                fill
+                className="object-cover"
+                unoptimized
+                priority
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0d1117] via-[#0d1117]/50 to-transparent" />
+              {isComplete && (
+                <div className="absolute top-4 right-4 flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-3 py-1.5 text-[11px] font-bold text-emerald-300 ring-1 ring-emerald-500/30 backdrop-blur-sm">
+                  <Trophy className="h-3 w-3" />
+                  Course Complete!
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="relative h-32 w-full bg-gradient-to-br from-violet-900/40 via-indigo-900/30 to-[#0d1117]">
+              <div className="pointer-events-none absolute inset-0 opacity-30"
+                style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, rgba(139,92,246,0.3), transparent 60%), radial-gradient(circle at 80% 20%, rgba(99,102,241,0.2), transparent 50%)' }}
+              />
+            </div>
+          )}
+
+          {/* Info */}
+          <div className="p-6 sm:p-8">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl font-extrabold leading-tight tracking-tight text-white sm:text-2xl lg:text-3xl">
+                  {bootcamp?.title}
+                </h1>
+                {bootcamp?.description && (
+                  <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-500 line-clamp-2">
+                    {bootcamp.description}
+                  </p>
+                )}
+
+                {/* Meta pills */}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {coursesCount > 0 && (
+                    <StatPill
+                      icon={Layers}
+                      label={`${coursesCount} course${coursesCount !== 1 ? 's' : ''}`}
+                      color="border-violet-500/20 bg-violet-500/8 text-violet-300"
+                    />
+                  )}
+                  {modulesCount > 0 && (
+                    <StatPill
+                      icon={BookOpen}
+                      label={`${modulesCount} modules`}
+                      color="border-blue-500/20 bg-blue-500/8 text-blue-300"
+                    />
+                  )}
+                  {totalLessons > 0 && (
+                    <StatPill
+                      icon={GraduationCap}
+                      label={`${totalLessons} lessons`}
+                      color="border-emerald-500/20 bg-emerald-500/8 text-emerald-300"
+                    />
+                  )}
+                  {totalDuration > 0 && (
+                    <StatPill
+                      icon={Clock}
+                      label={formatDurationMins(totalDuration)}
+                      color="border-amber-500/20 bg-amber-500/8 text-amber-300"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Progress ring area */}
+              <div className="shrink-0 rounded-2xl border border-white/8 bg-white/3 px-5 py-4 text-center sm:min-w-[130px]">
+                <div className="flex items-center justify-center gap-2">
+                  <BarChart2 className="h-5 w-5 text-emerald-400" />
+                  <span className="text-3xl font-extrabold tabular-nums text-white">
+                    {progressPercent}%
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-gray-600">
+                  {completedCount}/{totalLessons} done
+                </p>
+                <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-white/8">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-700"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Resume CTA */}
+            {resumeLesson && (
+              <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-white/6 bg-white/2 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium text-gray-600">
+                    {completedCount > 0 ? 'Continue where you left off' : 'Begin your learning journey'}
+                  </p>
+                  <p className="mt-0.5 truncate text-sm font-semibold text-gray-200">
+                    {resumeLesson.title}
+                  </p>
+                </div>
+                <Link
+                  href={`/account/member/bootcamps/${bootcamp.id}/${resumeLesson.id}`}
+                  className="flex shrink-0 items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:from-emerald-400 hover:to-emerald-500 hover:shadow-emerald-500/35 active:scale-95"
+                >
+                  <Zap className="h-4 w-4" />
+                  {completedCount > 0 ? 'Resume Learning' : 'Start Learning'}
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Lesson content or welcome screen */}
-        {currentLesson ? (
-          <div className="flex flex-1 flex-col overflow-y-auto">
-            {/* Lesson header */}
-            <div className="border-b border-white/8 bg-[#0d1117] px-6 py-4">
-              <div className="hidden text-[11px] text-gray-500 lg:block">
-                {currentLesson.courseName} → {currentLesson.moduleName}
-              </div>
-              <h1 className="mt-1 text-xl font-bold text-white lg:text-2xl">
-                {currentLesson.title}
-              </h1>
-              {currentLesson.duration > 0 && (
-                <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-                  <Clock className="h-3.5 w-3.5" />
-                  {formatDuration(currentLesson.duration)}
-                </div>
-              )}
+        {/* ── Curriculum ───────────────────────────────────────────────── */}
+        <div>
+          <div className="mb-5 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-extrabold tracking-tight text-white">Course Curriculum</h2>
+              <p className="mt-0.5 text-[12px] text-gray-600">
+                {completedCount}/{totalLessons} lessons completed
+              </p>
             </div>
-
-            {/* Video/content placeholder - will be replaced with actual VideoPlayer */}
-            <div className="flex-1 p-6">
-              <div className="flex aspect-video w-full items-center justify-center rounded-xl bg-gray-900">
-                <div className="text-center">
-                  <Play className="mx-auto mb-3 h-12 w-12 text-gray-600" />
-                  <p className="text-sm text-gray-500">
-                    Video player will be rendered here
-                  </p>
-                  <p className="mt-1 text-xs text-gray-600">
-                    Lesson ID: {currentLesson.id}
-                  </p>
-                </div>
-              </div>
-
-              {/* Description */}
-              {currentLesson.description && (
-                <div className="mt-6 rounded-xl border border-white/8 bg-white/3 p-4">
-                  <h3 className="mb-2 text-sm font-semibold text-white">
-                    About this lesson
-                  </h3>
-                  <p className="text-sm text-gray-400">
-                    {currentLesson.description}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Navigation */}
-            <div className="shrink-0 border-t border-white/8 bg-[#0d1117] px-6 py-4">
-              <div className="flex items-center justify-between gap-4">
-                {prevLesson ? (
-                  <button
-                    onClick={() => handleSelectLesson(prevLesson)}
-                    className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-sm text-gray-300 transition-colors hover:bg-white/8 hover:text-white"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    <span className="hidden sm:inline">Previous</span>
-                  </button>
-                ) : (
-                  <div />
-                )}
-
-                {/* Mark complete button */}
-                <button
-                  className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${
-                    lessonProgress[currentLessonId]?.is_completed
-                      ? 'border border-emerald-500/30 bg-emerald-500/15 text-emerald-400'
-                      : 'bg-emerald-500 text-white hover:bg-emerald-600'
-                  }`}
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  {lessonProgress[currentLessonId]?.is_completed
-                    ? 'Completed'
-                    : 'Mark as Complete'}
-                </button>
-
-                {nextLesson ? (
-                  <button
-                    onClick={() => handleSelectLesson(nextLesson)}
-                    className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-sm text-gray-300 transition-colors hover:bg-white/8 hover:text-white"
-                  >
-                    <span className="hidden sm:inline">Next</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                ) : (
-                  <div />
-                )}
-              </div>
-            </div>
+            {progressPercent > 0 && (
+              <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-bold text-emerald-400 ring-1 ring-emerald-500/20">
+                {progressPercent}% complete
+              </span>
+            )}
           </div>
-        ) : (
-          <LessonNotFound
-            bootcamp={bootcamp}
-            onSelectLesson={handleSelectLesson}
-          />
-        )}
+
+          {bootcamp?.courses?.length > 0 ? (
+            <div className="space-y-4">
+              {bootcamp.courses.map((course, ci) => (
+                <CourseSection
+                  key={course.id}
+                  course={course}
+                  bootcampId={bootcamp.id}
+                  lessonProgress={lessonProgress}
+                  courseIndex={ci}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center rounded-3xl border border-white/6 bg-gradient-to-br from-white/3 to-transparent py-20 text-center">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5">
+                <BookOpen className="h-8 w-8 text-gray-700" />
+              </div>
+              <p className="text-sm font-bold text-gray-400">No curriculum yet</p>
+              <p className="mt-1.5 text-xs text-gray-600">The instructor hasn&apos;t published lessons yet.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
