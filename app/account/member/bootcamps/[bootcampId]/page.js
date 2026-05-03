@@ -33,7 +33,7 @@ export default async function BootcampLearningPage({ params }) {
 
   const enrollmentCheck = await checkEnrollment(bootcampId);
   if (!enrollmentCheck.enrolled) {
-    redirect(`/account/member/bootcamps/preview/${bootcamp.slug || bootcampId}`);
+    redirect(`/account/member/bootcamps`);
   }
 
   await updateEnrollmentAccess(bootcampId).catch(() => {});

@@ -195,6 +195,46 @@ export async function uploadBootcampThumbnailAction(formData) {
 }
 
 /**
+ * Upload an image for a lesson content block.
+ */
+export async function uploadLessonImageAction(formData) {
+  const adminId = await requireAdmin();
+
+  const file = formData.get('file');
+  if (!file || !(file instanceof File) || file.size === 0) {
+    return { error: 'No image provided.' };
+  }
+
+  if (!ALLOWED_BOOTCAMP_IMAGE_TYPES.includes(file.type)) {
+    return { error: 'Image type not supported. Use JPEG, PNG, or WebP.' };
+  }
+
+  if (file.size > MAX_BOOTCAMP_IMAGE_SIZE) {
+    return {
+      error: `File size exceeds maximum of ${MAX_BOOTCAMP_IMAGE_SIZE / (1024 * 1024)}MB`,
+    };
+  }
+
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  const filename = `lesson_img_${adminId}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`;
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const { url } = await uploadToDrive(
+      Buffer.from(arrayBuffer),
+      filename,
+      file.type,
+      'lesson-images'
+    );
+
+    return { success: true, url };
+  } catch (error) {
+    console.error('Lesson image upload error:', error);
+    return { error: error.message || 'Failed to upload image.' };
+  }
+}
+
+/**
  * Get a single bootcamp by ID or slug with full curriculum.
  */
 export async function getBootcampWithCurriculum(idOrSlug) {

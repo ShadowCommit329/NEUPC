@@ -21,6 +21,7 @@ import {
   X,
   Eye,
   EyeOff,
+  Maximize2,
 } from 'lucide-react';
 import {
   createCourse,
@@ -46,6 +47,7 @@ import {
 import toast from 'react-hot-toast';
 import RichTextEditor from '@/app/_components/ui/RichTextEditor';
 import MultiBlockEditor from './MultiBlockEditor';
+import LessonFullscreenEditorModal from './LessonFullscreenEditorModal';
 
 // ─── Inline rename input ───────────────────────────────────────────────────────
 
@@ -86,12 +88,13 @@ const VIDEO_ICONS = {
 
 // ─── Lesson editor (right panel) ───────────────────────────────────────────────
 
-function LessonEditor({ lesson, onSaved, onClose }) {
+function LessonEditor({ lesson, onSaved, onClose, syllabusUI }) {
   const [saving, setSaving] = useState(false);
   const [validating, setValidating] = useState(false);
   const [driveValidation, setDriveValidation] = useState(null);
   const [errors, setErrors] = useState({});
   const [deleting, setDeleting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const [form, setForm] = useState(() => {
     let content = lesson.content || '';
@@ -208,6 +211,19 @@ function LessonEditor({ lesson, onSaved, onClose }) {
 
   return (
     <div className="xl:col-span-8 flex flex-col gap-6">
+      {/* Top Header */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-[#d4e4fa]">Edit Lesson</h3>
+        <button
+          type="button"
+          onClick={() => setShowPreview(true)}
+          className="px-4 py-2 rounded-full bg-[#122131]/50 border border-[#464554] text-[#c0c1ff] text-sm font-semibold hover:bg-[#122131] hover:text-[#e1e0ff] transition-colors flex items-center gap-2 shadow-sm"
+        >
+          <Maximize2 className="h-4 w-4" />
+          Fullscreen Editor
+        </button>
+      </div>
+
       {/* Header card */}
       <div className="bg-[#010f1f] rounded-xl border border-[#464554] p-6 flex flex-col gap-4">
         <div className="flex items-start justify-between gap-4">
@@ -309,6 +325,14 @@ function LessonEditor({ lesson, onSaved, onClose }) {
       <div className="flex items-center justify-end gap-3">
         <button
           type="button"
+          onClick={() => setShowPreview(true)}
+          className="px-6 py-2 rounded-full border border-[#464554] text-[#908fa0] text-sm font-semibold hover:bg-[#0d1c2d] hover:text-[#d4e4fa] transition-colors flex items-center gap-2"
+        >
+          <Maximize2 className="h-4 w-4" />
+          Fullscreen Editor
+        </button>
+        <button
+          type="button"
           onClick={onClose}
           className="px-6 py-2 rounded-full border border-[#464554] text-[#d4e4fa] text-sm font-semibold hover:bg-[#0d1c2d] transition-colors"
         >
@@ -324,6 +348,20 @@ function LessonEditor({ lesson, onSaved, onClose }) {
           Save Changes
         </button>
       </div>
+
+      {showPreview && (
+        <LessonFullscreenEditorModal
+          form={form}
+          set={set}
+          handleChange={handleChange}
+          errors={errors}
+          durationMins={durationMins}
+          handleSave={handleSave}
+          saving={saving}
+          onClose={() => setShowPreview(false)}
+          syllabusUI={syllabusUI}
+        />
+      )}
     </div>
   );
 }
@@ -936,10 +974,8 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
     0
   );
 
-  return (
-    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-      {/* ── Left: Syllabus ─────────────────────────────────────────────────── */}
-      <div className="xl:col-span-4 flex flex-col gap-4 bg-[#010f1f] p-4 rounded-xl border border-[#464554] min-h-[500px]">
+  const syllabusUI = (
+    <>
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold text-[#d4e4fa]">Syllabus</h2>
@@ -957,7 +993,7 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
           </button>
         </div>
 
-        <div className="flex flex-col gap-2 overflow-y-auto flex-1 pr-1">
+        <div className="flex flex-col gap-2 overflow-y-auto flex-1 pr-1 custom-scrollbar">
           {courses.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center gap-3 text-[#908fa0]">
               <BookOpen className="h-10 w-10 text-[#464554]" />
@@ -986,6 +1022,14 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
             ))
           )}
         </div>
+    </>
+  );
+
+  return (
+    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+      {/* ── Left: Syllabus ─────────────────────────────────────────────────── */}
+      <div className="xl:col-span-4 flex flex-col gap-4 bg-[#010f1f] p-4 rounded-xl border border-[#464554] min-h-[500px]">
+        {syllabusUI}
       </div>
 
       {/* ── Right: Editor or placeholder ───────────────────────────────────── */}
@@ -995,6 +1039,7 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
           lesson={activeLesson}
           onSaved={handleLessonSaved}
           onClose={() => setActiveLesson(null)}
+          syllabusUI={syllabusUI}
         />
       ) : (
         <div className="xl:col-span-8">

@@ -56,6 +56,39 @@ export default function LessonContentRenderer({ content }) {
           );
         }
 
+        if (block.type === 'image') {
+          let images = block.data?.images;
+          
+          // Backward compatibility for single image
+          if (!images || !Array.isArray(images)) {
+            if (block.content) {
+              images = [{ id: 'legacy', url: block.content, alt: block.data?.alt }];
+            } else {
+              images = [];
+            }
+          }
+
+          if (images.length === 0) return null;
+
+          return (
+            <div key={block.id} className="flex flex-col gap-6">
+              {images.map((img) => {
+                if (!img.url) return null;
+                return (
+                  <div key={img.id} className="rounded-xl border border-white/8 overflow-hidden bg-black/20 flex justify-center p-4">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
+                      src={img.url} 
+                      alt={img.alt || 'Lesson image'} 
+                      className="max-w-full h-auto rounded-lg"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          );
+        }
+
         return null;
       })}
     </div>

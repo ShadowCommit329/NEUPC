@@ -18,7 +18,10 @@ import {
   Upload,
   CheckCircle,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Image as ImageIcon,
+  Sparkles,
+  Copy
 } from 'lucide-react';
 import RichTextEditor from '@/app/_components/ui/RichTextEditor';
 import CodeMirror from '@uiw/react-codemirror';
@@ -26,7 +29,7 @@ import { html } from '@codemirror/lang-html';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { VIDEO_SOURCES, getVideoSourceConfig, formatDurationSeconds } from './bootcampConfig';
-import { validateDriveVideo } from '@/app/_lib/bootcamp-actions';
+import { validateDriveVideo, uploadLessonImageAction } from '@/app/_lib/bootcamp-actions';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -52,8 +55,44 @@ const BLOCK_TYPES = [
   { id: 'markdown', label: 'Markdown', icon: FileText, description: 'Write content using Markdown syntax' },
   { id: 'html', label: 'HTML', icon: FileCode2, description: 'Raw HTML and inline styling' },
   { id: 'video', label: 'Video', icon: Play, description: 'Embed a video from Google Drive or YouTube' },
+  { id: 'image', label: 'Image', icon: ImageIcon, description: 'Embed an image using a URL' },
   { id: 'lessonPlan', label: 'Lesson Plan', icon: BookOpen, description: 'Structured nested layout' },
 ];
+
+const AI_PROMPT_IDEA = (type) => `I want you to act as an expert technical content writer for a coding bootcamp. 
+Please transform the following raw data into a high-fidelity ${type.toUpperCase()} structure. 
+
+Rules:
+1. Use semantic hierarchy (H2 for main sections, H3 for sub-sections).
+2. Include "Pro Tip" or "Warning" callout boxes.
+3. Format all code snippets with syntax highlighting.
+4. Use tables or lists for feature comparisons.
+5. Keep the tone professional, encouraging, and clear.
+${type === 'html' ? '6. Use modern, inline-styled components (glassmorphism/neon) consistent with a cyberpunk aesthetic.\n' : ''}
+Raw Data:
+[PASTE YOUR DATA HERE]`;
+
+function PromptButton({ type }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(AI_PROMPT_IDEA(type));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="flex items-center gap-1.5 px-2 py-1 rounded bg-[#8083ff]/10 hover:bg-[#8083ff]/20 text-[#c0c1ff] text-[10px] font-medium transition-colors border border-[#8083ff]/20"
+      title="Copy AI Prompt Idea"
+    >
+      {copied ? <CheckCircle className="w-3 h-3 text-emerald-400" /> : <Sparkles className="w-3 h-3" />}
+      {copied ? 'Copied Idea!' : 'AI Prompt Idea'}
+    </button>
+  );
+}
 
 // Video Source Icons mapping
 const VIDEO_ICONS = {
@@ -134,29 +173,39 @@ export default function MultiBlockEditor({ value, onChange }) {
     
     if (block.type === 'markdown') {
       return (
-        <CodeMirror
-          value={block.content}
-          height="auto"
-          minHeight="200px"
-          theme={oneDark}
-          extensions={[markdown({ base: markdownLanguage })]}
-          onChange={(val) => updateBlockContent(block.id, val)}
-          className="text-sm overflow-hidden"
-        />
+        <div className="relative group/editor">
+          <div className="absolute top-2 right-2 z-10 opacity-0 group-hover/editor:opacity-100 transition-opacity">
+            <PromptButton type="markdown" />
+          </div>
+          <CodeMirror
+            value={block.content}
+            height="auto"
+            minHeight="200px"
+            theme={oneDark}
+            extensions={[markdown({ base: markdownLanguage })]}
+            onChange={(val) => updateBlockContent(block.id, val)}
+            className="text-sm overflow-hidden"
+          />
+        </div>
       );
     }
     
     if (block.type === 'html') {
       return (
-        <CodeMirror
-          value={block.content}
-          height="auto"
-          minHeight="200px"
-          theme={oneDark}
-          extensions={[html()]}
-          onChange={(val) => updateBlockContent(block.id, val)}
-          className="text-sm overflow-hidden"
-        />
+        <div className="relative group/editor">
+          <div className="absolute top-2 right-2 z-10 opacity-0 group-hover/editor:opacity-100 transition-opacity">
+            <PromptButton type="html" />
+          </div>
+          <CodeMirror
+            value={block.content}
+            height="auto"
+            minHeight="200px"
+            theme={oneDark}
+            extensions={[html()]}
+            onChange={(val) => updateBlockContent(block.id, val)}
+            className="text-sm overflow-hidden"
+          />
+        </div>
       );
     }
     
@@ -352,6 +401,149 @@ export default function MultiBlockEditor({ value, onChange }) {
             value={block.content} 
             onChange={(val) => updateBlockContent(block.id, val)}
           />
+        </div>
+      );
+    }
+    
+    if (block.type === 'image') {
+      const data = block.data || {};
+      let images = data.images;
+      
+      if (!images || !Array.isArray(images)) {
+        if (block.content) {
+          images = [{ id: crypto.randomUUID(), url: block.content, alt: data.alt || '' }];
+        } else {
+          images = [{ id: crypto.randomUUID(), url: '', alt: '' }];
+        }
+      }
+
+      const updateImage = (imgId, updates) => {
+        const newImages = images.map(img => img.id === imgId ? { ...img, ...updates } : img);
+        updateBlockData(block.id, { images: newImages });
+        // Clear legacy content field to avoid confusion
+        if (block.content !== undefined) updateBlockContent(block.id, '');
+      };
+
+      const addImage = () => {
+        updateBlockData(block.id, { images: [...images, { id: crypto.randomUUID(), url: '', alt: '' }] });
+      };
+
+      const removeImage = (imgId) => {
+        updateBlockData(block.id, { images: images.filter(img => img.id !== imgId) });
+      };
+
+      const handleImageUpload = async (imgId, file) => {
+        if (!file) return;
+        updateImage(imgId, { uploading: true, uploadError: null });
+        
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          
+          const result = await uploadLessonImageAction(formData);
+          if (result.error) {
+            updateImage(imgId, { uploadError: result.error, uploading: false });
+          } else {
+            updateImage(imgId, { url: result.url, uploading: false, uploadError: null });
+          }
+        } catch (err) {
+          updateImage(imgId, { uploadError: err.message, uploading: false });
+        }
+      };
+
+      return (
+        <div className="p-4 bg-[#051424] flex flex-col gap-6">
+          {images.map((img, imgIndex) => (
+            <div key={img.id} className="flex flex-col gap-4 relative border border-[#464554] rounded-xl p-4 bg-[#010f1f]">
+              <div className="flex justify-between items-center">
+                <h5 className="text-sm font-semibold text-[#d4e4fa]">Image {imgIndex + 1}</h5>
+                {images.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeImage(img.id)}
+                    className="p-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+                    title="Remove image"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-[#908fa0] block mb-1">
+                    Image URL or Direct Upload
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={img.url || ''}
+                      onChange={(e) => updateImage(img.id, { url: e.target.value })}
+                      placeholder="https://example.com/image.jpg"
+                      className="flex-1 rounded-lg border border-[#464554] bg-[#051424] px-3 py-2 text-sm text-[#d4e4fa] outline-none focus:border-[#c0c1ff]"
+                    />
+                    <div className="relative">
+                      <input 
+                        type="file" 
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(e) => handleImageUpload(img.id, e.target.files[0])}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                        disabled={img.uploading}
+                      />
+                      <button 
+                        type="button" 
+                        disabled={img.uploading}
+                        className="flex items-center gap-1.5 rounded-lg bg-[#273647] px-3 py-2 text-xs font-medium text-[#d4e4fa] hover:bg-[#34465c] disabled:opacity-50 transition-colors shrink-0 h-full"
+                      >
+                        {img.uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                        Upload
+                      </button>
+                    </div>
+                  </div>
+                  {img.uploadError && (
+                    <p className="mt-1 flex items-center gap-1 text-xs text-red-400">
+                      <AlertCircle className="h-3 w-3" /> {img.uploadError}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[#908fa0] block mb-1">
+                    Alt Text (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={img.alt || ''}
+                    onChange={(e) => updateImage(img.id, { alt: e.target.value })}
+                    placeholder="Description of the image"
+                    className="w-full rounded-lg border border-[#464554] bg-[#051424] px-3 py-2 text-sm text-[#d4e4fa] outline-none focus:border-[#c0c1ff]"
+                  />
+                </div>
+              </div>
+
+              {img.url && (
+                <div className="rounded-xl border border-[#464554] bg-[#010f1f] p-2 overflow-hidden flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img 
+                    src={img.url} 
+                    alt={img.alt || 'Image preview'} 
+                    className="max-h-[300px] rounded-lg object-contain"
+                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
+                    onLoad={(e) => { e.target.style.display = 'block'; e.target.nextSibling.style.display = 'none'; }}
+                  />
+                  <div className="text-[#908fa0] text-sm py-8 hidden">Invalid image URL</div>
+                </div>
+              )}
+            </div>
+          ))}
+          
+          <button
+            type="button"
+            onClick={addImage}
+            className="flex items-center gap-2 justify-center py-3 rounded-xl border border-dashed border-[#464554] text-[#908fa0] hover:border-[#c0c1ff] hover:text-[#c0c1ff] transition-all bg-[#010f1f]"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="text-sm font-semibold">Add Another Image</span>
+          </button>
         </div>
       );
     }
