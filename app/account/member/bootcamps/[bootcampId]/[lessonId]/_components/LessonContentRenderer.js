@@ -409,7 +409,7 @@ export default function LessonContentRenderer({ content, lessonId }) {
 
           let gridClass = "grid gap-4 sm:gap-6 ";
           if (validImages.length === 1) {
-            gridClass += "grid-cols-1 max-w-4xl mx-auto";
+            gridClass += "grid-cols-1 max-w-5xl mx-auto";
           } else if (validImages.length === 2) {
             gridClass += "grid-cols-1 sm:grid-cols-2";
           } else if (validImages.length === 3) {

@@ -23,40 +23,78 @@ import { getYouTubeEmbedUrl } from '@/app/_lib/utils';
 /**
  * Check if user has access to the lesson.
  */
+/**
+ * Check if user has access to the lesson.
+ */
 async function canAccessLesson(lessonId, userEmail) {
-  // Get lesson with enrollment check info
-  const { data: lesson, error } = await supabaseAdmin
-    .from('lessons')
-    .select(
-      `
-      id,
-      video_source,
-      video_id,
-      video_url,
-      is_free_preview,
-      is_published,
-      modules (
+  let isAdmin = false;
+  let isMember = false;
+  let user = null;
+
+  if (userEmail) {
+    const { data } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('email', userEmail)
+      .single();
+    
+    user = data;
+
+    if (user) {
+      const { data: roles } = await supabaseAdmin
+        .from('user_roles')
+        .select('roles(name)')
+        .eq('user_id', user.id);
+      isAdmin = roles?.some((r) => r.roles?.name === 'admin');
+      isMember = roles?.some((r) => r.roles?.name === 'member');
+    }
+  }
+
+  // Determine if lessonId is a valid UUID
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(lessonId);
+
+  let lesson = null;
+  if (isUuid) {
+    const { data } = await supabaseAdmin
+      .from('lessons')
+      .select(
+        `
+        id,
+        video_source,
+        video_id,
+        video_url,
+        is_free_preview,
         is_published,
-        courses (
+        modules (
           is_published,
-          bootcamps (
-            id,
-            status
+          courses (
+            is_published,
+            bootcamps (
+              id,
+              status
+            )
           )
         )
+      `
       )
-    `
-    )
-    .eq('id', lessonId)
-    .single();
+      .eq('id', lessonId)
+      .single();
+    
+    lesson = data;
+  }
 
-  if (error || !lesson) {
-    return { allowed: false, reason: 'Lesson not found' };
+  // Admins bypass all checks (enrollment, published status, even existence if previewing)
+  if (isAdmin) {
+    return { allowed: true, lesson: lesson || {}, isAdmin: true };
+  }
+
+  if (!lesson) {
+    return { allowed: false, reason: 'Lesson not found', isAdmin: false };
   }
 
   // Check if lesson/module/course/bootcamp are published
   if (!lesson.is_published) {
-    return { allowed: false, reason: 'Lesson not published' };
+    return { allowed: false, reason: 'Lesson not published', isAdmin: false };
   }
 
   const mod = lesson.modules;
@@ -64,32 +102,26 @@ async function canAccessLesson(lessonId, userEmail) {
   const bootcamp = course?.bootcamps;
 
   if (!mod?.is_published || !course?.is_published) {
-    return { allowed: false, reason: 'Content not published' };
+    return { allowed: false, reason: 'Content not published', isAdmin: false };
   }
 
   if (bootcamp?.status !== 'published') {
-    return { allowed: false, reason: 'Bootcamp not published' };
+    return { allowed: false, reason: 'Bootcamp not published', isAdmin: false };
   }
 
   // Free preview lessons are accessible to everyone
   if (lesson.is_free_preview) {
-    return { allowed: true, lesson };
+    return { allowed: true, lesson, isAdmin: false };
   }
 
-  // Check user enrollment
-  if (!userEmail) {
-    return { allowed: false, reason: 'Authentication required' };
-  }
-
-  // Get user ID
-  const { data: user } = await supabaseAdmin
-    .from('users')
-    .select('id')
-    .eq('email', userEmail)
-    .single();
-
+  // Check user authentication
   if (!user) {
-    return { allowed: false, reason: 'User not found' };
+    return { allowed: false, reason: 'Authentication required', isAdmin: false };
+  }
+
+  // Check member role
+  if (!isMember) {
+    return { allowed: false, reason: 'Member role required', isAdmin: false };
   }
 
   // Check enrollment
@@ -101,10 +133,10 @@ async function canAccessLesson(lessonId, userEmail) {
     .single();
 
   if (!enrollment || enrollment.status !== 'active') {
-    return { allowed: false, reason: 'Not enrolled in this bootcamp' };
+    return { allowed: false, reason: 'Not enrolled in this bootcamp', isAdmin: false };
   }
 
-  return { allowed: true, lesson };
+  return { allowed: true, lesson, isAdmin: false };
 }
 
 /**
@@ -138,7 +170,9 @@ export async function GET(request, { params }) {
     const lesson = access.lesson;
 
     // Determine target video ID
-    const targetVideoId = fileId || lesson.video_id;
+    // SECURITY: Only allow explicit fileId overrides for admins previewing content.
+    // Regular users MUST only see the video specifically attached to the lesson they have access to.
+    const targetVideoId = access.isAdmin ? (fileId || lesson.video_id) : lesson.video_id;
 
     if (!targetVideoId) {
       return NextResponse.json(
@@ -148,9 +182,8 @@ export async function GET(request, { params }) {
     }
 
     // Handle different video sources
-    // Note: If fileId is provided, we assume it's a Drive video as that's currently 
-    // the only source needing secure streaming through this API.
-    const videoSource = fileId ? 'drive' : (lesson.video_source || 'none');
+    // Note: If fileId is provided by an admin, we assume it's a Drive video.
+    const videoSource = (access.isAdmin && fileId) ? 'drive' : (lesson.video_source || 'none');
 
     switch (videoSource) {
       case 'drive': {
@@ -239,6 +272,9 @@ export async function HEAD(request, { params }) {
   try {
     const { lessonId } = await params;
 
+    const { searchParams } = new URL(request.url);
+    const fileId = searchParams.get('fileId');
+
     const session = await auth();
     const userEmail = session?.user?.email || null;
 
@@ -249,10 +285,12 @@ export async function HEAD(request, { params }) {
     }
 
     const lesson = access.lesson;
+    const targetVideoId = access.isAdmin ? (fileId || lesson.video_id) : lesson.video_id;
+    const videoSource = (access.isAdmin && fileId) ? 'drive' : (lesson.video_source || 'none');
 
-    if (lesson.video_source === 'drive' && lesson.video_id) {
+    if (videoSource === 'drive' && targetVideoId) {
       const { getFileMetadata } = await import('@/app/_lib/bootcamp-video');
-      const metadata = await getFileMetadata(lesson.video_id);
+      const metadata = await getFileMetadata(targetVideoId);
 
       return new NextResponse(null, {
         status: 200,
@@ -269,3 +307,4 @@ export async function HEAD(request, { params }) {
     return new NextResponse(null, { status: 500 });
   }
 }
+
