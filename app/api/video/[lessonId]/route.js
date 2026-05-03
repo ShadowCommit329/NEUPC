@@ -17,7 +17,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/app/_lib/auth';
 import { supabaseAdmin } from '@/app/_lib/supabase';
-import { streamVideo, getYouTubeEmbedUrl } from '@/app/_lib/bootcamp-video';
+import { streamVideo } from '@/app/_lib/bootcamp-video';
+import { getYouTubeEmbedUrl } from '@/app/_lib/utils';
 
 /**
  * Check if user has access to the lesson.
@@ -149,15 +150,18 @@ export async function GET(request, { params }) {
     // Handle different video sources
     // Note: If fileId is provided, we assume it's a Drive video as that's currently 
     // the only source needing secure streaming through this API.
-    if (fileId || lesson.video_source === 'drive') {
-      // Get Range header for partial content
-      const rangeHeader = request.headers.get('range');
+    const videoSource = fileId ? 'drive' : (lesson.video_source || 'none');
 
-      try {
-        const { stream, headers, status } = await streamVideo(
-          targetVideoId,
-          rangeHeader
-        );
+    switch (videoSource) {
+      case 'drive': {
+        // Get Range header for partial content
+        const rangeHeader = request.headers.get('range');
+
+        try {
+          const { stream, headers, status } = await streamVideo(
+            targetVideoId,
+            rangeHeader
+          );
 
           // Create response with stream
           const response = new NextResponse(stream, { status });
