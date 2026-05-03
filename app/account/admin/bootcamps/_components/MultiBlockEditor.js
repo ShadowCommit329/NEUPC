@@ -66,7 +66,7 @@ Your task is to transform raw lesson data into polished Rich Text (HTML) that wi
 
 ## Rendering Context
 - Dark background (#080b11), light text (#d4e4fa)
-- Content area max-width: ~768px, padding 24-32px on each side
+- Content area max-width: ~1024px (standard) up to ~1152px (large screens)
 - NO external CSS classes are applied — your content must be self-contained
 - The output is injected via dangerouslySetInnerHTML
 
@@ -97,7 +97,7 @@ Your task is to transform raw lesson data into polished Rich Text (HTML) that wi
 1. **Headings**: Use <h2> for main sections, <h3> for sub-topics, <h4> for details. Keep headings short (under 60 chars).
 2. **Paragraphs**: Use <p> tags. Keep paragraphs to 3-4 sentences max for readability.
 3. **Lists**: Use <ul> or <ol> with clear, scannable bullet points. Each item should be a single idea.
-4. **Tables**: Use <table> with clear headers. Limit to 4-5 columns max so it fits the viewport.
+4. **Tables**: Use <table> with clear headers. Limit to 5-6 columns max so it fits the wider viewport.
 5. **Callouts**: Use <blockquote> for tips, warnings, and important notes. Prefix with emoji: 💡 Pro Tip, ⚠️ Warning, 📌 Important.
 6. **Images**: If needed, use placeholder text like [IMAGE: description] — do not use broken URLs.
 
@@ -119,7 +119,7 @@ Raw Data:
 Your task is to transform raw lesson data into beautifully styled, self-contained HTML that will be rendered directly inside a dark-themed lesson viewer.
 
 ## Rendering Context
-- Background: #080b11 (near-black), container max-width: ~768px
+- Background: #080b11 (near-black), container max-width: ~1024px to ~1152px
 - NO external CSS classes or stylesheets are available
 - ALL styling must be inline using the style="" attribute
 - The output is injected via dangerouslySetInnerHTML — it must be valid HTML
@@ -183,10 +183,11 @@ Use: 💡 Tip (#34d399) | ⚠️ Warning (#fbbf24) | 📌 Important (#8083ff) | 
 </table>
 
 ## Responsive Rules
-- All content must fit within ~768px width
-- Tables: max 4-5 columns
-- Code blocks: overflow-x auto, max ~70 chars per line preferred
+- All content must fit within ~1024px - ~1152px width
+- Tables: max 6-8 columns (utilize the wider display)
+- Code blocks: overflow-x auto, max ~100 chars per line preferred
 - No fixed widths — use max-width and percentages
+- Design for premium, spacious feel. Avoid crowded layouts.
 
 ## Content Structure
 - Brief overview paragraph at the top
@@ -207,7 +208,7 @@ Your task is to transform raw lesson data into clean, well-structured Markdown t
 
 ## Rendering Context
 - The Markdown is processed by remark/remark-html and rendered in a dark UI (#080b11 background)
-- Container max-width: ~768px
+- Container max-width: ~1024px to ~1152px
 - No custom CSS classes are applied to the output
 - Code blocks will automatically get a copy button via client-side JavaScript
 
@@ -227,13 +228,13 @@ Your task is to transform raw lesson data into clean, well-structured Markdown t
    - Inline: Use single backticks for \`variable names\`, \`functions()\`, \`commands\`
    - Blocks: Use triple backticks with language identifier (e.g. \`\`\`python). Keep under 20 lines.
    - ALWAYS specify the language after opening backticks for syntax context
-   - Keep code lines under 70 characters to avoid horizontal scrolling
+   - Keep code lines under 100 characters to avoid horizontal scrolling
 4. **Lists**: 
    - Use bullet lists (-) for unordered items
    - Use numbered lists (1.) for sequential steps
    - Keep items to 1-2 lines each
    - Indent sub-items with 2 spaces
-5. **Tables**: Use standard Markdown tables with alignment. Max 4-5 columns.
+5. **Tables**: Use standard Markdown tables with alignment. Max 6-7 columns.
 6. **Emphasis**: Use **bold** for key terms, *italic* for emphasis.
 7. **Callouts**: Use blockquotes with emoji prefixes:
    - > 💡 **Pro Tip:** helpful advice here
@@ -251,10 +252,11 @@ Your task is to transform raw lesson data into clean, well-structured Markdown t
 - Keep the total content readable in 5-10 minutes
 
 ## Width & Readability
-- Keep lines under 80 characters where possible
-- Tables should have max 4-5 columns to fit the viewport
-- Code blocks should not require horizontal scrolling (max ~70 chars per line)
+- Keep lines under 100 characters where possible
+- Tables should have max 6-7 columns to fit the wider viewport
+- Code blocks should not require horizontal scrolling (max ~100 chars per line)
 - Use short, scannable headings
+- Leverage the expanded width for clearer comparisons and better-spaced code.
 
 ## Tone
 Professional, encouraging, and developer-friendly. No filler — every sentence should add value.
