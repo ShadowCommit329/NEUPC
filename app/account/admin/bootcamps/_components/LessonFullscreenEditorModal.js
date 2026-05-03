@@ -90,7 +90,7 @@ export default function LessonFullscreenEditorModal({
         </div>
 
         {/* Middle Side: Editor */}
-        <div className="w-[500px] xl:w-[600px] shrink-0 overflow-y-auto border-r border-white/10 bg-[#0a0d14] p-6 lg:p-8 custom-scrollbar">
+        <div className="flex-[3] min-w-0 overflow-y-auto border-r border-white/10 bg-[#0a0d14] p-6 lg:p-8 custom-scrollbar">
           <div className="max-w-3xl mx-auto flex flex-col gap-6 pb-20">
             {/* Header card */}
             <div className="bg-[#010f1f] rounded-xl border border-[#464554] p-6 flex flex-col gap-4">
@@ -185,35 +185,29 @@ export default function LessonFullscreenEditorModal({
         </div>
 
         {/* Rightmost Side: Preview */}
-        <div className="flex-1 overflow-y-auto bg-[#080b11] p-6 lg:p-8 custom-scrollbar">
-          <div className="max-w-3xl mx-auto space-y-6 pb-20">
-            {/* Title block */}
-            <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161b22] to-[#0d1117] p-6 md:p-8 shadow-xl">
-              <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-white lg:text-3xl">
-                {form.title || 'Lesson Title'}
-              </h1>
-              {form.duration > 0 && (
-                <div className="mt-4 flex items-center gap-2 text-sm font-medium text-gray-400">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/10">
-                    <Clock className="h-4 w-4 text-violet-400" />
-                  </div>
-                  {formatDuration(form.duration)}
-                </div>
-              )}
-            </div>
+        <div className="flex-[2] min-w-0 overflow-y-auto bg-[#080b11] p-6 lg:p-8 custom-scrollbar">
+          <div className="max-w-3xl mx-auto pb-20">
+            {/* Title */}
+            <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-white lg:text-3xl mb-4">
+              {form.title || 'Lesson Title'}
+            </h1>
+            {form.duration > 0 && (
+              <div className="mb-4 flex items-center gap-2 text-sm font-medium text-gray-400">
+                <Clock className="h-4 w-4 text-violet-400" />
+                {formatDuration(form.duration)}
+              </div>
+            )}
 
             {/* Legacy Global Video Player (if any) */}
             {(form.video_source && form.video_source !== 'none') && (
-              <div className="rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-black">
+              <div className="mb-4">
                 <VideoPlayer lesson={form} />
               </div>
             )}
 
-            {/* Content Blocks */}
+            {/* Content Blocks — no wrapping styles */}
             {form.content ? (
-              <div className="bg-[#0d1117] border border-white/10 rounded-3xl p-6 md:p-8 shadow-xl">
-                <LessonContentRenderer content={form.content} />
-              </div>
+              <LessonContentRenderer content={form.content} lessonId={form.id} />
             ) : (
               <div className="flex flex-col items-center justify-center py-16 text-center border border-white/10 border-dashed rounded-3xl bg-white/2">
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/5 mb-4">

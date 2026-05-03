@@ -69,6 +69,7 @@ function YouTubeEmbed({ videoId, onProgress }) {
 
 function DriveVideoPlayer({
   lessonId,
+  fileId,
   initialPosition,
   onProgress,
   onComplete,
@@ -88,7 +89,7 @@ function DriveVideoPlayer({
     showControls: true,
   });
 
-  const videoSrc = `/api/video/${lessonId}`;
+  const videoSrc = `/api/video/${lessonId}${fileId ? `?fileId=${fileId}` : ''}`;
 
   // Hide controls after inactivity
   useEffect(() => {
@@ -458,6 +459,7 @@ export default function VideoPlayer({
     return (
       <DriveVideoPlayer
         lessonId={lessonId}
+        fileId={video_id}
         initialPosition={initialPosition}
         onProgress={onProgress}
         onComplete={onComplete}

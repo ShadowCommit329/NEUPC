@@ -115,13 +115,10 @@ async function canAccessLesson(lessonId, userEmail) {
 export async function GET(request, { params }) {
   try {
     const { lessonId } = await params;
-
-    if (!lessonId) {
-      return NextResponse.json(
-        { error: 'Lesson ID required' },
-        { status: 400 }
-      );
-    }
+    
+    // Get query parameters
+    const { searchParams } = new URL(request.url);
+    const fileId = searchParams.get('fileId');
 
     // Get user session
     const session = await auth();
@@ -139,24 +136,28 @@ export async function GET(request, { params }) {
 
     const lesson = access.lesson;
 
+    // Determine target video ID
+    const targetVideoId = fileId || lesson.video_id;
+
+    if (!targetVideoId) {
+      return NextResponse.json(
+        { error: 'No video configured' },
+        { status: 404 }
+      );
+    }
+
     // Handle different video sources
-    switch (lesson.video_source) {
-      case 'drive': {
-        if (!lesson.video_id) {
-          return NextResponse.json(
-            { error: 'No video configured for this lesson' },
-            { status: 404 }
-          );
-        }
+    // Note: If fileId is provided, we assume it's a Drive video as that's currently 
+    // the only source needing secure streaming through this API.
+    if (fileId || lesson.video_source === 'drive') {
+      // Get Range header for partial content
+      const rangeHeader = request.headers.get('range');
 
-        // Get Range header for partial content
-        const rangeHeader = request.headers.get('range');
-
-        try {
-          const { stream, headers, status } = await streamVideo(
-            lesson.video_id,
-            rangeHeader
-          );
+      try {
+        const { stream, headers, status } = await streamVideo(
+          targetVideoId,
+          rangeHeader
+        );
 
           // Create response with stream
           const response = new NextResponse(stream, { status });

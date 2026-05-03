@@ -30,6 +30,7 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { VIDEO_SOURCES, getVideoSourceConfig, formatDurationSeconds } from './bootcampConfig';
 import { validateDriveVideo, uploadLessonImageAction } from '@/app/_lib/bootcamp-actions';
+import { extractDriveFileId, driveImageUrl } from '@/app/_lib/utils';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -59,18 +60,211 @@ const BLOCK_TYPES = [
   { id: 'lessonPlan', label: 'Lesson Plan', icon: BookOpen, description: 'Structured nested layout' },
 ];
 
-const AI_PROMPT_IDEA = (type) => `I want you to act as an expert technical content writer for a coding bootcamp. 
-Please transform the following raw data into a high-fidelity ${type.toUpperCase()} structure. 
+const AI_PROMPTS = {
+  richText: `You are a senior technical content designer for a premium coding bootcamp platform.
+Your task is to transform raw lesson data into polished Rich Text (HTML) that will be rendered inside a WYSIWYG editor output.
 
-Rules:
-1. Use semantic hierarchy (H2 for main sections, H3 for sub-sections).
-2. Include "Pro Tip" or "Warning" callout boxes.
-3. Format all code snippets with syntax highlighting.
-4. Use tables or lists for feature comparisons.
-5. Keep the tone professional, encouraging, and clear.
-${type === 'html' ? '6. Use modern, inline-styled components (glassmorphism/neon) consistent with a cyberpunk aesthetic.\n' : ''}
+## Rendering Context
+- Dark background (#080b11), light text (#d4e4fa)
+- Content area max-width: ~768px, padding 24-32px on each side
+- NO external CSS classes are applied — your content must be self-contained
+- The output is injected via dangerouslySetInnerHTML
+
+## Spacing & Layout (use these exact values)
+- Sections: margin-bottom 32px between major sections
+- Headings:
+  - <h2>: margin-top 40px, margin-bottom 16px, padding-bottom 8px
+  - <h3>: margin-top 28px, margin-bottom 12px
+  - <h4>: margin-top 20px, margin-bottom 8px
+- Paragraphs: margin-bottom 16px, line-height 1.75
+- Lists: margin 16px 0, padding-left 24px, li margin-bottom 10px
+- Tables: margin 24px 0
+- Blockquotes/Callouts: margin 24px 0, padding 16px 20px
+- Between heading and first paragraph: margin 0 (heading margin-bottom handles it)
+
+## Code Block Styling
+- For code blocks, use this exact structure:
+  <div data-has-copy="true" style="position:relative; margin:24px 0;">
+    <div style="display:flex; align-items:center; justify-content:space-between; background:#0d1117; border:1px solid #273647; border-bottom:none; border-radius:8px 8px 0 0; padding:8px 12px;">
+      <span style="font-size:12px; color:#908fa0; font-weight:600;">LANGUAGE_NAME</span>
+      <button data-copy-btn="true" onclick="navigator.clipboard.writeText(this.closest('div').nextElementSibling.querySelector('code').textContent).then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='Copy',2000)})" style="font-size:11px; color:#8083ff; background:#8083ff15; border:1px solid #8083ff30; border-radius:6px; padding:4px 12px; cursor:pointer;">Copy</button>
+    </div>
+    <pre style="margin:0; background:#010f1f; border:1px solid #273647; border-top:none; border-radius:0 0 8px 8px; padding:16px 20px; overflow-x:auto; font-size:13px; line-height:1.6;"><code style="font-family:'JetBrains Mono','Fira Code',monospace; color:#d4e4fa;">YOUR CODE HERE</code></pre>
+  </div>
+- For inline code: <code style="background:#122131; padding:2px 8px; border-radius:4px; font-size:13px; color:#c0c1ff; font-family:'JetBrains Mono','Fira Code',monospace;">code</code>
+
+## Other Formatting Rules
+1. **Headings**: Use <h2> for main sections, <h3> for sub-topics, <h4> for details. Keep headings short (under 60 chars).
+2. **Paragraphs**: Use <p> tags. Keep paragraphs to 3-4 sentences max for readability.
+3. **Lists**: Use <ul> or <ol> with clear, scannable bullet points. Each item should be a single idea.
+4. **Tables**: Use <table> with clear headers. Limit to 4-5 columns max so it fits the viewport.
+5. **Callouts**: Use <blockquote> for tips, warnings, and important notes. Prefix with emoji: 💡 Pro Tip, ⚠️ Warning, 📌 Important.
+6. **Images**: If needed, use placeholder text like [IMAGE: description] — do not use broken URLs.
+
+## Content Structure
+- Start with a brief overview (2-3 sentences) of what the learner will gain
+- Break content into logical sections with clear headings
+- End each section with a key takeaway or action item
+- Use bold for key terms on first mention
+- Aim for scannable content — a learner should be able to skim headings and get the gist
+
+## Tone
+Professional, encouraging, and concise. Write for developers who value clarity over fluff.
+
+---
 Raw Data:
-[PASTE YOUR DATA HERE]`;
+[PASTE YOUR DATA HERE]`,
+
+  html: `You are a senior UI engineer and content designer for a premium coding bootcamp.
+Your task is to transform raw lesson data into beautifully styled, self-contained HTML that will be rendered directly inside a dark-themed lesson viewer.
+
+## Rendering Context
+- Background: #080b11 (near-black), container max-width: ~768px
+- NO external CSS classes or stylesheets are available
+- ALL styling must be inline using the style="" attribute
+- The output is injected via dangerouslySetInnerHTML — it must be valid HTML
+
+## Design System (use these exact values)
+- Text primary: #d4e4fa | Secondary: #908fa0 | Muted: #464554
+- Accent: #8083ff (violet) | Success: #34d399 | Warning: #fbbf24 | Error: #f87171
+- Surface: #010f1f (cards) | Border: #273647 | Hover-surface: #122131
+- Font: system-ui, -apple-system, sans-serif | Code font: 'JetBrains Mono', 'Fira Code', monospace
+
+## Spacing & Layout (STRICT — use these exact pixel values)
+- Page wrapper: padding 0 (already handled by container)
+- Sections: margin-bottom 32px
+- <h2>: font-size 22px, font-weight 800, color #d4e4fa, margin-top 40px, margin-bottom 16px, padding-bottom 8px, border-bottom 1px solid #273647
+- <h3>: font-size 18px, font-weight 700, color #c0c1ff, margin-top 28px, margin-bottom 12px
+- <h4>: font-size 15px, font-weight 600, color #d4e4fa, margin-top 20px, margin-bottom 8px
+- <p>: font-size 15px, line-height 1.75, color #908fa0, margin-bottom 16px
+- <ul>/<ol>: margin 16px 0, padding-left 24px
+- <li>: margin-bottom 10px, line-height 1.6, color #908fa0, font-size 15px
+- <table>: margin 24px 0, width 100%
+- <th>: padding 12px 16px, text-align left
+- <td>: padding 10px 16px
+- <blockquote>: margin 24px 0, padding 16px 20px
+
+## Code Blocks (IMPORTANT — use this exact HTML pattern)
+For EVERY code block, use this structure with a copy button:
+
+<div data-has-copy="true" style="position:relative; margin:24px 0; border-radius:10px; overflow:hidden; border:1px solid #273647;">
+  <div style="display:flex; align-items:center; justify-content:space-between; background:#0d1117; padding:10px 16px; border-bottom:1px solid #273647;">
+    <span style="font-size:12px; color:#908fa0; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">LANGUAGE_NAME</span>
+    <button data-copy-btn="true" onclick="navigator.clipboard.writeText(this.closest('[style]').querySelector('code').textContent).then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='Copy',2000)})" style="font-size:11px; color:#8083ff; background:rgba(128,131,255,0.08); border:1px solid rgba(128,131,255,0.2); border-radius:6px; padding:4px 14px; cursor:pointer; font-weight:600; transition:all 0.2s;">Copy</button>
+  </div>
+  <pre style="margin:0; background:#010f1f; padding:20px; overflow-x:auto; font-size:13px; line-height:1.7;"><code style="font-family:'JetBrains Mono','Fira Code',monospace; color:#d4e4fa; white-space:pre;">YOUR CODE HERE</code></pre>
+</div>
+
+For inline code:
+<code style="background:#122131; padding:2px 8px; border-radius:5px; font-size:13px; color:#c0c1ff; font-family:'JetBrains Mono','Fira Code',monospace; border:1px solid #27364750;">code</code>
+
+## Callout Boxes (use this pattern)
+<div style="border-left:4px solid ACCENT_COLOR; background:#010f1f; padding:16px 20px; border-radius:0 12px 12px 0; margin:24px 0; display:flex; gap:12px; align-items:flex-start;">
+  <span style="font-size:20px; line-height:1;">EMOJI</span>
+  <div>
+    <strong style="color:#d4e4fa; font-size:14px; display:block; margin-bottom:4px;">TITLE</strong>
+    <p style="color:#908fa0; font-size:14px; line-height:1.6; margin:0;">CONTENT</p>
+  </div>
+</div>
+Use: 💡 Tip (#34d399) | ⚠️ Warning (#fbbf24) | 📌 Important (#8083ff) | 🚨 Caution (#f87171)
+
+## Table Styling
+<table style="width:100%; border-collapse:collapse; margin:24px 0; border-radius:10px; overflow:hidden; border:1px solid #273647;">
+  <thead>
+    <tr style="background:#122131;">
+      <th style="padding:12px 16px; text-align:left; font-size:13px; font-weight:700; color:#d4e4fa; border-bottom:2px solid #273647;">Header</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding:10px 16px; font-size:14px; color:#908fa0; border-bottom:1px solid #1a2535;">Data</td>
+    </tr>
+  </tbody>
+</table>
+
+## Responsive Rules
+- All content must fit within ~768px width
+- Tables: max 4-5 columns
+- Code blocks: overflow-x auto, max ~70 chars per line preferred
+- No fixed widths — use max-width and percentages
+
+## Content Structure
+- Brief overview paragraph at the top
+- Logical sections with clear headings and visual separation
+- Key concepts highlighted in callout boxes
+- Practical code examples with language labels
+- Summary or key takeaways at the bottom
+
+## Tone
+Professional, encouraging, and clear. Write for developers who appreciate clean design and clarity.
+
+---
+Raw Data:
+[PASTE YOUR DATA HERE]`,
+
+  markdown: `You are a senior technical writer for a premium coding bootcamp platform.
+Your task is to transform raw lesson data into clean, well-structured Markdown that will be converted to HTML and rendered in a dark-themed viewer.
+
+## Rendering Context
+- The Markdown is processed by remark/remark-html and rendered in a dark UI (#080b11 background)
+- Container max-width: ~768px
+- No custom CSS classes are applied to the output
+- Code blocks will automatically get a copy button via client-side JavaScript
+
+## Spacing Rules (Markdown naturally creates these, but be intentional)
+- Always leave a blank line between paragraphs
+- Always leave a blank line before and after headings
+- Always leave a blank line before and after code blocks
+- Always leave a blank line before and after lists
+- Always leave a blank line before and after blockquotes
+- Always leave a blank line before and after tables
+- Use --- (horizontal rule) between major sections for extra visual separation
+
+## Formatting Rules
+1. **Headings**: Use ## for main sections, ### for sub-topics, #### for minor details. Keep them short and descriptive.
+2. **Paragraphs**: Write concise paragraphs (3-4 sentences max). Leave a blank line between paragraphs.
+3. **Code**:
+   - Inline: Use single backticks for \`variable names\`, \`functions()\`, \`commands\`
+   - Blocks: Use triple backticks with language identifier (e.g. \`\`\`python). Keep under 20 lines.
+   - ALWAYS specify the language after opening backticks for syntax context
+   - Keep code lines under 70 characters to avoid horizontal scrolling
+4. **Lists**: 
+   - Use bullet lists (-) for unordered items
+   - Use numbered lists (1.) for sequential steps
+   - Keep items to 1-2 lines each
+   - Indent sub-items with 2 spaces
+5. **Tables**: Use standard Markdown tables with alignment. Max 4-5 columns.
+6. **Emphasis**: Use **bold** for key terms, *italic* for emphasis.
+7. **Callouts**: Use blockquotes with emoji prefixes:
+   - > 💡 **Pro Tip:** helpful advice here
+   - > ⚠️ **Warning:** things to watch out for
+   - > 📌 **Important:** critical information
+   - > 🚨 **Caution:** dangerous operations
+8. **Horizontal rules**: Use --- to separate major sections with extra breathing room.
+
+## Content Structure
+- Start with a brief overview of the lesson topic (2-3 sentences)
+- Organize into clear sections with descriptive headings
+- Include practical code examples with language labels
+- Add callout boxes for tips, warnings, and key concepts
+- End with a summary section: "## Key Takeaways" with bullet points
+- Keep the total content readable in 5-10 minutes
+
+## Width & Readability
+- Keep lines under 80 characters where possible
+- Tables should have max 4-5 columns to fit the viewport
+- Code blocks should not require horizontal scrolling (max ~70 chars per line)
+- Use short, scannable headings
+
+## Tone
+Professional, encouraging, and developer-friendly. No filler — every sentence should add value.
+
+---
+Raw Data:
+[PASTE YOUR DATA HERE]`,
+};
+
+const AI_PROMPT_IDEA = (type) => AI_PROMPTS[type] || AI_PROMPTS.richText;
 
 function PromptButton({ type }) {
   const [copied, setCopied] = useState(false);
@@ -111,50 +305,72 @@ export default function MultiBlockEditor({ value, onChange }) {
   const [dragHandleActive, setDragHandleActive] = useState(null);
 
   // Sync value changes from outside (e.g. when changing selected lesson)
-  useEffect(() => {
+  // Use derived state pattern instead of useEffect to prevent infinite flip-flop loops
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
     const parsed = parseContentBlocks(value);
-    // Basic deep compare to avoid infinite loops if it's just a ref update
     if (JSON.stringify(parsed) !== JSON.stringify(blocks)) {
       setBlocks(parsed);
     }
-  }, [value]);
+  }
+
+  // Sync local blocks back to the parent (onChange)
+  useEffect(() => {
+    const serialized = JSON.stringify(blocks);
+    // Only notify parent if the content actually changed and is different from current value
+    if (serialized !== value) {
+      onChange(serialized);
+    }
+  }, [blocks, onChange, value]);
 
   const updateBlocks = useCallback((newBlocks) => {
     setBlocks(newBlocks);
-    onChange(JSON.stringify(newBlocks));
-  }, [onChange]);
+  }, []);
+
+  const updateBlock = useCallback((id, updates) => {
+    setBlocks(prev => prev.map(b => {
+      if (b.id !== id) return b;
+      const resolvedUpdates = typeof updates === 'function' ? updates(b) : updates;
+      const nb = { ...b, ...resolvedUpdates };
+      // Deep merge data if provided
+      if (resolvedUpdates.data) {
+        nb.data = { ...(b.data || {}), ...resolvedUpdates.data };
+      }
+      return nb;
+    }));
+  }, []);
 
   const addBlock = (type) => {
     const newBlock = { id: crypto.randomUUID(), type, content: '' };
-    updateBlocks([...blocks, newBlock]);
+    setBlocks(prev => [...prev, newBlock]);
     setShowAddMenu(false);
   };
 
   const updateBlockContent = (id, content) => {
-    const newBlocks = blocks.map(b => b.id === id ? { ...b, content } : b);
-    updateBlocks(newBlocks);
+    updateBlock(id, { content });
   };
 
   const updateBlockData = (id, data) => {
-    const newBlocks = blocks.map(b => b.id === id ? { ...b, data: { ...(b.data || {}), ...data } } : b);
-    updateBlocks(newBlocks);
+    updateBlock(id, { data });
   };
 
   // validateDrive has been moved to the video block render logic
 
   const removeBlock = (id) => {
-    const newBlocks = blocks.filter(b => b.id !== id);
-    updateBlocks(newBlocks);
+    setBlocks(prev => prev.filter(b => b.id !== id));
   };
 
   const moveBlock = (index, direction) => {
     if ((direction === -1 && index === 0) || (direction === 1 && index === blocks.length - 1)) return;
     
-    const newBlocks = [...blocks];
-    const temp = newBlocks[index];
-    newBlocks[index] = newBlocks[index + direction];
-    newBlocks[index + direction] = temp;
-    updateBlocks(newBlocks);
+    setBlocks(prev => {
+      const newBlocks = [...prev];
+      const temp = newBlocks[index];
+      newBlocks[index] = newBlocks[index + direction];
+      newBlocks[index + direction] = temp;
+      return newBlocks;
+    });
   };
 
   const renderEditor = (block) => {
@@ -164,6 +380,7 @@ export default function MultiBlockEditor({ value, onChange }) {
           <RichTextEditor
             value={block.content}
             onChange={(val) => updateBlockContent(block.id, val)}
+            uploadImageAction={uploadLessonImageAction}
             placeholder="Write your content here..."
             minHeight="200px"
           />
@@ -229,16 +446,28 @@ export default function MultiBlockEditor({ value, onChange }) {
       }
 
       const updateVideo = (vidId, updates) => {
-        const newVideos = videos.map(v => v.id === vidId ? { ...v, ...updates } : v);
-        updateBlockData(block.id, { videos: newVideos });
+        updateBlock(block.id, (b) => {
+          const bData = b.data || {};
+          let bVideos = bData.videos || [];
+          const newVideos = bVideos.map(vid => vid.id === vidId ? { ...vid, ...updates } : vid);
+          return { data: { videos: newVideos } };
+        });
       };
 
       const addVideo = () => {
-        updateBlockData(block.id, { videos: [...videos, { id: crypto.randomUUID(), video_source: 'drive', video_id: '' }] });
+        updateBlock(block.id, (b) => {
+          const bData = b.data || {};
+          const bVideos = bData.videos || [];
+          return { data: { videos: [...bVideos, { id: crypto.randomUUID(), video_source: 'drive', video_id: '' }] } };
+        });
       };
 
       const removeVideo = (vidId) => {
-        updateBlockData(block.id, { videos: videos.filter(v => v.id !== vidId) });
+        updateBlock(block.id, (b) => {
+          const bData = b.data || {};
+          const bVideos = bData.videos || [];
+          return { data: { videos: bVideos.filter(v => v.id !== vidId) } };
+        });
       };
 
       const validateDriveMulti = async (vid) => {
@@ -283,6 +512,20 @@ export default function MultiBlockEditor({ value, onChange }) {
                   )}
                 </div>
                 
+                {/* Video Title */}
+                <div>
+                  <label className="text-xs font-medium text-[#908fa0] block mb-1">
+                    Video Title <span className="text-[#464554]">(shown in playlist)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={vid.label || ''}
+                    onChange={(e) => updateVideo(vid.id, { label: e.target.value })}
+                    placeholder={`e.g. Introduction, Part ${vIndex + 1}…`}
+                    className="w-full rounded-lg border border-[#464554] bg-[#051424] px-3 py-2 text-sm text-[#d4e4fa] outline-none focus:border-[#c0c1ff] placeholder:text-[#464554]"
+                  />
+                </div>
+
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {VIDEO_SOURCES.filter(s => s !== 'none').map((src) => {
                     const config = getVideoSourceConfig(src);
@@ -409,7 +652,8 @@ export default function MultiBlockEditor({ value, onChange }) {
       const data = block.data || {};
       let images = data.images;
       
-      if (!images || !Array.isArray(images)) {
+      // Professional: If images array is missing or empty, ensure at least one slot
+      if (!images || !Array.isArray(images) || images.length === 0) {
         if (block.content) {
           images = [{ id: crypto.randomUUID(), url: block.content, alt: data.alt || '' }];
         } else {
@@ -418,10 +662,31 @@ export default function MultiBlockEditor({ value, onChange }) {
       }
 
       const updateImage = (imgId, updates) => {
-        const newImages = images.map(img => img.id === imgId ? { ...img, ...updates } : img);
-        updateBlockData(block.id, { images: newImages });
-        // Clear legacy content field to avoid confusion
-        if (block.content !== undefined) updateBlockContent(block.id, '');
+        // Professional: If user pastes a Google Drive link, automatically convert to proxy
+        let finalUrl = updates.url;
+        if (finalUrl && finalUrl.includes('drive.google.com')) {
+          const fileId = extractDriveFileId(finalUrl);
+          if (fileId) {
+            finalUrl = `/api/image/${fileId}`;
+          }
+        }
+        
+        const resolvedUpdates = { ...updates, ...(finalUrl !== undefined && { url: finalUrl }) };
+
+        updateBlock(block.id, (b) => {
+          const bData = b.data || {};
+          let bImages = bData.images;
+          if (!bImages || !Array.isArray(bImages) || bImages.length === 0) {
+            bImages = b.content 
+              ? [{ id: crypto.randomUUID(), url: b.content, alt: bData.alt || '' }]
+              : [{ id: crypto.randomUUID(), url: '', alt: '' }];
+          }
+          const newImages = bImages.map(img => img.id === imgId ? { ...img, ...resolvedUpdates } : img);
+          return { 
+            data: { images: newImages },
+            content: ''
+          };
+        });
       };
 
       const addImage = () => {
@@ -524,7 +789,7 @@ export default function MultiBlockEditor({ value, onChange }) {
                 <div className="rounded-xl border border-[#464554] bg-[#010f1f] p-2 overflow-hidden flex justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img 
-                    src={img.url} 
+                    src={driveImageUrl(img.url)} 
                     alt={img.alt || 'Image preview'} 
                     className="max-h-[300px] rounded-lg object-contain"
                     onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}

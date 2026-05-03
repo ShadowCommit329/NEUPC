@@ -12,6 +12,7 @@ import {
   useTransition,
   useMemo,
   useEffect,
+  useRef,
 } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -30,6 +31,7 @@ import {
   Loader2,
   StickyNote,
   ChevronDown,
+  List,
 } from 'lucide-react';
 import VideoPlayer from './VideoPlayer';
 import {
@@ -312,6 +314,104 @@ function NotesPanel({ lessonId, initialNotes, onSave }) {
   );
 }
 
+// ─── Table of Contents ────────────────────────────────────────────────────────
+
+function TableOfContents({ contentRef }) {
+  const [headings, setHeadings] = useState([]);
+  const [activeId, setActiveId] = useState('');
+
+  // Extract headings from rendered content
+  useEffect(() => {
+    const container = contentRef?.current;
+    if (!container) return;
+
+    // Small delay to let content render (including dangerouslySetInnerHTML)
+    const timer = setTimeout(() => {
+      const els = container.querySelectorAll('h2, h3, h4');
+      const items = [];
+      els.forEach((el, i) => {
+        // Assign id if missing
+        if (!el.id) {
+          el.id = `heading-${i}-${el.textContent.slice(0, 20).replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '').toLowerCase()}`;
+        }
+        items.push({
+          id: el.id,
+          text: el.textContent,
+          level: parseInt(el.tagName.charAt(1)),
+        });
+      });
+      setHeadings(items);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [contentRef]);
+
+  // Track active heading with IntersectionObserver
+  useEffect(() => {
+    if (headings.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Find the first visible heading
+        const visible = entries.filter((e) => e.isIntersecting);
+        if (visible.length > 0) {
+          setActiveId(visible[0].target.id);
+        }
+      },
+      { rootMargin: '-80px 0px -60% 0px', threshold: 0.1 }
+    );
+
+    headings.forEach((h) => {
+      const el = document.getElementById(h.id);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, [headings]);
+
+  if (headings.length < 2) return null;
+
+  return (
+    <div className="hidden xl:block w-56 shrink-0">
+      <div className="sticky top-6">
+        <div className="flex items-center gap-2 mb-4 px-1">
+          <List className="h-3.5 w-3.5 text-[#8083ff]" />
+          <span className="text-[11px] font-bold text-[#908fa0] uppercase tracking-wider">On this page</span>
+        </div>
+        <nav className="max-h-[calc(100vh-12rem)] overflow-y-auto custom-scrollbar pr-2">
+          <ul className="space-y-0.5 border-l border-[#273647]">
+            {headings.map((h) => {
+              const isActive = activeId === h.id;
+              const indent = h.level === 2 ? 'pl-3' : h.level === 3 ? 'pl-5' : 'pl-7';
+              return (
+                <li key={h.id}>
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById(h.id);
+                      if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        setActiveId(h.id);
+                      }
+                    }}
+                    className={`w-full text-left block py-1.5 ${indent} text-[12px] leading-snug transition-all border-l-2 -ml-px truncate ${
+                      isActive
+                        ? 'border-[#8083ff] text-[#c0c1ff] font-semibold'
+                        : 'border-transparent text-[#464554] hover:text-[#908fa0] hover:border-[#464554]'
+                    }`}
+                    title={h.text}
+                  >
+                    {h.text}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function LessonViewClient({
@@ -324,6 +424,7 @@ export default function LessonViewClient({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [completing, startCompleting] = useTransition();
   const [localProgress, setLocalProgress] = useState(lessonProgress);
+  const contentAreaRef = useRef(null);
 
   // Current lesson's saved position
   const currentProgress = localProgress[lesson.id];
@@ -448,104 +549,112 @@ export default function LessonViewClient({
           </div>
         </div>
 
-        {/* Lesson content */}
-        <div className="flex-1 space-y-6 p-4 lg:p-6">
-          {/* Breadcrumb (desktop) */}
-          <div className="hidden items-center gap-1.5 text-[11px] text-gray-600 lg:flex">
-            <Link href={`/account/member/bootcamps/${bootcamp.id}`} className="hover:text-white">
-              {bootcamp.title}
-            </Link>
-            <span className="text-gray-700">›</span>
-            <span className="text-gray-400">{lesson.title}</span>
-          </div>
+        {/* Lesson content + TOC wrapper */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Scrollable main content */}
+          <div ref={contentAreaRef} className="flex-1 min-w-0 space-y-6 p-4 lg:p-6 overflow-y-auto">
+            {/* Breadcrumb (desktop) */}
+            <div className="hidden items-center gap-1.5 text-[11px] text-gray-600 lg:flex">
+              <Link href={`/account/member/bootcamps/${bootcamp.id}`} className="hover:text-white">
+                {bootcamp.title}
+              </Link>
+              <span className="text-gray-700">›</span>
+              <span className="text-gray-400">{lesson.title}</span>
+            </div>
 
-          {/* Title block */}
-          <div className="rounded-2xl border border-white/6 bg-gradient-to-br from-white/4 to-transparent p-5">
-            <h1 className="text-xl font-extrabold leading-tight tracking-tight text-white lg:text-2xl">
-              {lesson.title}
-            </h1>
-            {lesson.duration > 0 && (
-              <div className="mt-2 flex items-center gap-1.5 text-[12px] text-gray-500">
-                <Clock className="h-3.5 w-3.5" />
-                {formatDuration(lesson.duration)}
+            {/* Title block */}
+            <div className="rounded-2xl border border-white/6 bg-gradient-to-br from-white/4 to-transparent p-5">
+              <h1 className="text-xl font-extrabold leading-tight tracking-tight text-white lg:text-2xl">
+                {lesson.title}
+              </h1>
+              {lesson.duration > 0 && (
+                <div className="mt-2 flex items-center gap-1.5 text-[12px] text-gray-500">
+                  <Clock className="h-3.5 w-3.5" />
+                  {formatDuration(lesson.duration)}
+                </div>
+              )}
+            </div>
+
+            {/* Video Player */}
+            <VideoPlayer
+              lesson={lesson}
+              initialPosition={initialPosition}
+              onProgress={handleProgress}
+              onComplete={handleVideoComplete}
+            />
+
+            {/* Completion toggle */}
+            <div className={`flex items-center justify-between rounded-2xl border px-5 py-4 transition-colors ${isCompleted ? 'border-emerald-500/20 bg-emerald-500/6' : 'border-white/8 bg-white/3'}`}>
+              <div className="flex items-center gap-3">
+                {isCompleted ? (
+                  <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                ) : (
+                  <Circle className="h-5 w-5 text-gray-600" />
+                )}
+                <div>
+                  <p className={`text-sm font-semibold ${isCompleted ? 'text-emerald-300' : 'text-white'}`}>
+                    {isCompleted ? 'Lesson complete!' : 'Mark as complete'}
+                  </p>
+                  <p className="text-[11px] text-gray-600">
+                    {isCompleted ? 'Great work — keep going' : 'Mark done when finished'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={toggleComplete}
+                disabled={completing}
+                className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm transition-all disabled:opacity-50 ${
+                  isCompleted
+                    ? 'border border-emerald-500/25 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/20'
+                    : 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-emerald-500/20 hover:from-emerald-400 hover:to-emerald-500'
+                }`}
+              >
+                {completing && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isCompleted ? '✓ Done' : 'Complete'}
+              </button>
+            </div>
+
+            {/* Rich content */}
+            {lesson.content && (
+              <LessonContentRenderer content={lesson.content} lessonId={lesson.id} />
+            )}
+
+            {/* Attachments */}
+            {lesson.attachments?.length > 0 && (
+              <div className="rounded-xl border border-white/8 bg-white/3 p-4">
+                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
+                  <Download className="h-4 w-4 text-purple-400" />
+                  Attachments
+                </h3>
+                <div className="space-y-2">
+                  {lesson.attachments.map((att, i) => (
+                    <a
+                      key={i}
+                      href={att.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-lg border border-white/6 bg-white/2 px-3 py-2 text-xs text-gray-300 hover:bg-white/4"
+                    >
+                      <FileText className="h-4 w-4 text-gray-500" />
+                      {att.name || `Attachment ${i + 1}`}
+                    </a>
+                  ))}
+                </div>
               </div>
             )}
+
+            {/* Notes */}
+            <NotesPanel
+              lessonId={lesson.id}
+              initialNotes={currentProgress?.notes}
+              onSave={handleSaveNotes}
+            />
           </div>
 
-          {/* Video Player */}
-          <VideoPlayer
-            lesson={lesson}
-            initialPosition={initialPosition}
-            onProgress={handleProgress}
-            onComplete={handleVideoComplete}
-          />
-
-          {/* Completion toggle */}
-          <div className={`flex items-center justify-between rounded-2xl border px-5 py-4 transition-colors ${isCompleted ? 'border-emerald-500/20 bg-emerald-500/6' : 'border-white/8 bg-white/3'}`}>
-            <div className="flex items-center gap-3">
-              {isCompleted ? (
-                <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-              ) : (
-                <Circle className="h-5 w-5 text-gray-600" />
-              )}
-              <div>
-                <p className={`text-sm font-semibold ${isCompleted ? 'text-emerald-300' : 'text-white'}`}>
-                  {isCompleted ? 'Lesson complete!' : 'Mark as complete'}
-                </p>
-                <p className="text-[11px] text-gray-600">
-                  {isCompleted ? 'Great work — keep going' : 'Mark done when finished'}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={toggleComplete}
-              disabled={completing}
-              className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm transition-all disabled:opacity-50 ${
-                isCompleted
-                  ? 'border border-emerald-500/25 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/20'
-                  : 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-emerald-500/20 hover:from-emerald-400 hover:to-emerald-500'
-              }`}
-            >
-              {completing && <Loader2 className="h-4 w-4 animate-spin" />}
-              {isCompleted ? '✓ Done' : 'Complete'}
-            </button>
+          {/* Right side: Table of Contents */}
+          <div className="hidden xl:block shrink-0 border-l border-white/6 p-4 pt-6 overflow-y-auto">
+            <TableOfContents contentRef={contentAreaRef} />
           </div>
-
-          {/* Rich content */}
-          {lesson.content && (
-            <LessonContentRenderer content={lesson.content} />
-          )}
-
-          {/* Attachments */}
-          {lesson.attachments?.length > 0 && (
-            <div className="rounded-xl border border-white/8 bg-white/3 p-4">
-              <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
-                <Download className="h-4 w-4 text-purple-400" />
-                Attachments
-              </h3>
-              <div className="space-y-2">
-                {lesson.attachments.map((att, i) => (
-                  <a
-                    key={i}
-                    href={att.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 rounded-lg border border-white/6 bg-white/2 px-3 py-2 text-xs text-gray-300 hover:bg-white/4"
-                  >
-                    <FileText className="h-4 w-4 text-gray-500" />
-                    {att.name || `Attachment ${i + 1}`}
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Notes */}
-          <NotesPanel
-            lessonId={lesson.id}
-            initialNotes={currentProgress?.notes}
-            onSave={handleSaveNotes}
-          />
         </div>
 
         {/* Navigation footer */}

@@ -12,8 +12,8 @@ import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/app/_lib/supabase';
 import { auth } from '@/app/_lib/auth';
 import { uploadToDrive } from './gdrive';
+import { extractDriveFileId } from './utils';
 import {
-  extractDriveFileId,
   getFileMetadata,
   canAccessFile,
 } from './bootcamp-video';
@@ -808,7 +808,9 @@ export async function updateLesson(lessonId, data) {
     .single();
 
   if (module?.courses?.bootcamp_id) {
-    revalidatePath(`/account/admin/bootcamps/${module.courses.bootcamp_id}`);
+    const bootcampId = module.courses.bootcamp_id;
+    revalidatePath(`/account/admin/bootcamps/${bootcampId}`);
+    revalidatePath(`/account/member/bootcamps/${bootcampId}/${lessonId}`);
   }
 
   return lesson;

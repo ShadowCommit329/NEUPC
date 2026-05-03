@@ -170,3 +170,71 @@ export function stripHtml(html) {
   if (!html) return '';
   return html.replace(/<[^>]*>/g, '').trim();
 }
+
+/**
+ * Extract video ID from various Google Drive URL formats.
+ *
+ * Supported formats:
+ * - https://drive.google.com/file/d/{fileId}/view
+ * - https://drive.google.com/open?id={fileId}
+ * - https://drive.google.com/uc?id={fileId}
+ * - Plain file ID
+ *
+ * @param {string} input - Drive URL or file ID
+ * @returns {string|null} - Extracted file ID or null if invalid
+ */
+export function extractDriveFileId(input) {
+  if (!input) return null;
+
+  // Already a plain ID (25+ chars, alphanumeric with dashes/underscores)
+  if (/^[\w-]{25,}$/.test(input) && !input.includes('http')) {
+    return input;
+  }
+
+  // Ensure it's a Google Drive related URL
+  if (!input.includes('drive.google.com') && 
+      !input.includes('docs.google.com') && 
+      !input.includes('lh3.googleusercontent.com')) {
+    return null;
+  }
+
+  // Try to extract from URL
+  const patterns = [/\/file\/d\/([^/]+)/, /[?&]id=([^&]+)/, /\/d\/([^/]+)/];
+
+  for (const pattern of patterns) {
+    const match = input.match(pattern);
+    if (match) {
+      // Ensure the extracted ID looks like a valid Google Drive ID
+      if (match[1].length >= 15) {
+        return match[1];
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Get a YouTube embed URL from various YouTube URL formats.
+ *
+ * @param {string} input - YouTube URL or video ID
+ * @returns {string|null} - YouTube embed URL or null if invalid
+ */
+export function getYouTubeEmbedUrl(input) {
+  if (!input) return null;
+
+  // Extract video ID from various YouTube URL formats
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?\s]+)/,
+    /^([a-zA-Z0-9_-]{11})$/, // Plain video ID
+  ];
+
+  for (const pattern of patterns) {
+    const match = input.match(pattern);
+    if (match) {
+      return `https://www.youtube.com/embed/${match[1]}`;
+    }
+  }
+
+  return null;
+}

@@ -45,12 +45,19 @@ async function fetchImage(url) {
     redirect: 'follow',
     next: { revalidate: SEVEN_DAYS },
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    console.warn(`Upstream fetch failed: ${res.status} for ${url}`);
+    return null;
+  }
   const ct = res.headers.get('content-type') || '';
-  if (!ct.startsWith('image/')) return null;
+  // Professional: Be more lenient with content-types, but prioritize images
+  if (ct && !ct.startsWith('image/') && !ct.includes('octet-stream')) {
+    console.warn(`Invalid content-type: ${ct} for ${url}`);
+    return null;
+  }
   const body = await res.arrayBuffer();
   if (body.byteLength === 0) return null;
-  return { body, ct };
+  return { body, ct: ct.startsWith('image/') ? ct : 'image/jpeg' };
 }
 
 function imageResponse(body, ct) {
@@ -108,6 +115,14 @@ export async function GET(request, { params }) {
     if (result) {
       memCache.set(id, result);
       return imageResponse(result.body, result.ct);
+    }
+
+    // Try alternate direct link format
+    const altUpstream = `https://drive.google.com/uc?export=view&id=${id}`;
+    const altResult = await fetchImage(altUpstream);
+    if (altResult) {
+      memCache.set(id, altResult);
+      return imageResponse(altResult.body, altResult.ct);
     }
 
     const fallback = `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;

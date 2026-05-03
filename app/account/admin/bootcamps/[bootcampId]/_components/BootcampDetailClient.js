@@ -4,16 +4,25 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  ChevronRight,
+  ChevronLeft,
   Save,
   Loader2,
   Users,
   Settings,
   LayoutList,
   Eye,
-  CloudUpload,
+  Star,
   ChevronDown,
   Trash2,
+  Calendar,
+  DollarSign,
+  Tag,
+  GraduationCap,
+  Globe,
+  Lock,
+  CheckCircle2,
+  Info,
+  ArrowRight,
 } from 'lucide-react';
 import CurriculumBuilder from '../../_components/CurriculumBuilder';
 import EnrollmentsTab from './EnrollmentsTab';
@@ -23,17 +32,34 @@ import { updateBootcamp } from '@/app/_lib/bootcamp-actions';
 import toast from 'react-hot-toast';
 
 const TABS = [
-  { key: 'details', label: 'General Details' },
+  { key: 'details', label: 'General Details', icon: Info },
   { key: 'curriculum', label: 'Curriculum', icon: LayoutList },
   { key: 'settings', label: 'Settings', icon: Settings },
   { key: 'enrollments', label: 'Enrollments', icon: Users },
 ];
+
+const FIELD = ({ label, children, hint }) => (
+  <div>
+    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">
+      {label}
+    </label>
+    {children}
+    {hint && <p className="mt-1 text-[11px] text-gray-600">{hint}</p>}
+  </div>
+);
+
+const INPUT_CLASS =
+  'w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 outline-none transition-all placeholder:text-gray-600';
+
+const SELECT_CLASS =
+  'w-full appearance-none bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all';
 
 export default function BootcampDetailClient({ bootcamp }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('details');
   const [saving, setSaving] = useState(false);
   const [bootcampData, setBootcampData] = useState(bootcamp);
+  const [hasChanges, setHasChanges] = useState(false);
 
   const [formData, setFormData] = useState({
     title: bootcamp.title || '',
@@ -58,6 +84,7 @@ export default function BootcampDetailClient({ bootcamp }) {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
+    setHasChanges(true);
   };
 
   const handleSave = async () => {
@@ -71,10 +98,11 @@ export default function BootcampDetailClient({ bootcamp }) {
       });
       const updated = await updateBootcamp(bootcamp.id, fd);
       setBootcampData((prev) => ({ ...prev, ...updated }));
-      toast.success('Saved successfully.');
+      setHasChanges(false);
+      toast.success('Changes saved successfully');
       router.refresh();
     } catch (err) {
-      toast.error(err.message || 'Failed to save');
+      toast.error(err.message || 'Failed to save changes');
     } finally {
       setSaving(false);
     }
@@ -84,136 +112,189 @@ export default function BootcampDetailClient({ bootcamp }) {
     setBootcampData((prev) => ({ ...prev, courses }));
   }, []);
 
-  const statusLabel = getStatusConfig(bootcampData.status)?.label ?? bootcampData.status;
+  const sc = getStatusConfig(formData.status);
 
   return (
-    <div className="p-6 md:p-8 pt-10 max-w-7xl mx-auto space-y-8">
-      {/* Breadcrumb + title */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
+    <div className="min-h-screen p-6 md:p-8 pt-8 max-w-7xl mx-auto space-y-6">
 
-          <div className="flex items-center gap-3">
-            <h1 className="kinetic-headline text-3xl font-bold text-white">
-              {bootcampData.title || 'New Track'}
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="min-w-0">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 mb-2">
+            <Link
+              href="/account/admin/bootcamps"
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors font-medium"
+            >
+              <ChevronLeft className="h-3 w-3" />
+              All Tracks
+            </Link>
+            <span className="text-gray-700">/</span>
+            <span className="text-xs text-gray-600 truncate max-w-[200px]">{bootcampData.title}</span>
+          </div>
+
+          {/* Title + Status */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="kinetic-headline text-2xl md:text-3xl font-bold text-white truncate max-w-[500px]">
+              {bootcampData.title || 'Untitled Track'}
             </h1>
-            <span className="bg-violet-500/10 text-violet-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-violet-500/20 uppercase tracking-wider">
-              {statusLabel}
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${sc.badge}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${sc.dot} ${formData.status === 'published' ? 'animate-pulse' : ''}`} />
+              {sc.label}
             </span>
+            {bootcampData.is_featured && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-300 ring-1 ring-amber-500/25">
+                <Star className="h-2.5 w-2.5 fill-current" />
+                Featured
+              </span>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        {/* Save button */}
+        <div className="flex items-center gap-3 shrink-0">
+          {hasChanges && (
+            <span className="hidden sm:flex items-center gap-1.5 text-xs text-amber-400/80 font-medium">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+              Unsaved changes
+            </span>
+          )}
           <button
             onClick={handleSave}
             disabled={saving}
-            className="text-sm font-semibold px-5 py-2.5 rounded-xl bg-violet-600 text-white hover:bg-violet-500 hover:shadow-[0_0_20px_rgba(124,92,255,0.4)] transition-all flex items-center gap-2 disabled:opacity-60"
+            className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 hover:shadow-[0_0_20px_rgba(124,92,255,0.4)] transition-all disabled:opacity-60"
           >
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Save className="h-4 w-4" />
             )}
-            Save Changes
+            {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* ── Tabs ─────────────────────────────────────────────────────────── */}
       <div className="border-b border-white/10">
-        <nav className="flex gap-8 -mb-px overflow-x-auto scrollbar-hide">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`pb-4 border-b-2 text-sm font-medium transition-colors whitespace-nowrap ${
-                activeTab === tab.key
-                  ? 'border-violet-500 text-violet-400'
-                  : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-white/10'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <nav className="flex gap-0 -mb-px overflow-x-auto scrollbar-hide">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-2 pb-3 pt-1 px-4 border-b-2 text-sm font-medium transition-all whitespace-nowrap ${
+                  activeTab === tab.key
+                    ? 'border-violet-500 text-violet-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-300 hover:border-white/10'
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
         </nav>
       </div>
 
-      {/* GENERAL DETAILS TAB */}
+      {/* ── GENERAL DETAILS TAB ─────────────────────────────────────────── */}
       {activeTab === 'details' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main column */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Basic Info */}
-            <div className="glass-panel holographic-card rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-white mb-5">
-                Basic Information
-              </h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">
-                    Track Title
-                  </label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleChange}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-base text-white focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 outline-none transition-all placeholder:text-gray-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">
-                    Subtitle / Short Description
-                  </label>
-                  <input
-                    type="text"
-                    name="subtitle"
-                    value={formData.subtitle}
-                    onChange={handleChange}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-base text-white focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 outline-none transition-all placeholder:text-gray-600"
-                  />
-                </div>
-              </div>
-            </div>
 
-            {/* Description */}
-            <div className="glass-panel holographic-card rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-white mb-5">
-                About this Track
-              </h2>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows={10}
-                placeholder="Write a detailed description of this bootcamp..."
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white resize-y focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 outline-none transition-all placeholder:text-gray-600"
-              />
-            </div>
+          {/* Main column */}
+          <div className="lg:col-span-2 space-y-5">
+
+            {/* Basic Info */}
+            <section className="glass-panel holographic-card no-lift rounded-2xl p-6 space-y-5">
+              <div className="flex items-center gap-2 mb-1">
+                <GraduationCap className="h-4 w-4 text-violet-400" />
+                <h2 className="text-base font-bold text-white">Basic Information</h2>
+              </div>
+
+              <FIELD label="Track Title">
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  placeholder="e.g., Full Stack Web Development Bootcamp"
+                  className={INPUT_CLASS}
+                />
+              </FIELD>
+
+              <FIELD label="Subtitle" hint="A short tagline shown below the title.">
+                <input
+                  type="text"
+                  name="subtitle"
+                  value={formData.subtitle}
+                  onChange={handleChange}
+                  placeholder="e.g., Master modern web development in 12 weeks"
+                  className={INPUT_CLASS}
+                />
+              </FIELD>
+
+              <FIELD label="Description" hint="Detailed overview shown on the bootcamp page.">
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  rows={8}
+                  placeholder="Write a detailed description of this bootcamp..."
+                  className={`${INPUT_CLASS} resize-y`}
+                />
+              </FIELD>
+            </section>
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Status */}
-            <div className="glass-panel holographic-card rounded-2xl p-6">
-              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wider">
-                Status
+          <div className="space-y-5">
+
+            {/* Publish Status */}
+            <section className="glass-panel holographic-card no-lift rounded-2xl p-5">
+              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wider flex items-center gap-1.5">
+                <Eye className="h-3.5 w-3.5" />
+                Visibility
               </h3>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
-                style={{ colorScheme: 'dark' }}
-              >
-                {BOOTCAMP_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {getStatusConfig(s)?.label ?? s}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div className="space-y-2">
+                {BOOTCAMP_STATUSES.map((s) => {
+                  const cfg = getStatusConfig(s);
+                  const icons = { published: Globe, draft: Lock, archived: CheckCircle2 };
+                  const StatusIcon = icons[s] || Globe;
+                  return (
+                    <label
+                      key={s}
+                      className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${
+                        formData.status === s
+                          ? 'bg-white/8 border-white/15'
+                          : 'border-transparent hover:bg-white/5'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="status"
+                        value={s}
+                        checked={formData.status === s}
+                        onChange={handleChange}
+                        className="sr-only"
+                      />
+                      <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${cfg.badge}`}>
+                        <StatusIcon className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-white">{cfg.label}</div>
+                        <div className="text-[11px] text-gray-500">{cfg.description}</div>
+                      </div>
+                      {formData.status === s && (
+                        <CheckCircle2 className="h-4 w-4 text-violet-400 ml-auto" />
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            </section>
 
             {/* Thumbnail */}
-            <div className="glass-panel holographic-card rounded-2xl p-6">
+            <section className="glass-panel holographic-card no-lift rounded-2xl p-5">
               <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wider">
                 Track Thumbnail
               </h3>
@@ -223,93 +304,75 @@ export default function BootcampDetailClient({ bootcamp }) {
                 onUploadSuccess={(data) => {
                   if (data?.url) {
                     setFormData((prev) => ({ ...prev, thumbnail: data.url }));
+                    setHasChanges(true);
                   }
                 }}
               />
-              <p className="text-xs text-gray-500 mt-3 text-center">
-                Recommended size: 1200×630px. Max 5MB.
+              <p className="text-[11px] text-gray-600 mt-2.5 text-center">
+                Recommended: 1200×630px · Max 5MB
               </p>
-            </div>
+            </section>
 
             {/* Metadata */}
-            <div className="glass-panel holographic-card rounded-2xl p-6">
-              <h3 className="text-xs font-semibold text-gray-400 mb-4 uppercase tracking-wider">
+            <section className="glass-panel holographic-card no-lift rounded-2xl p-5 space-y-4">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Tag className="h-3.5 w-3.5" />
                 Metadata
               </h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">
-                    Category
-                  </label>
-                  <div className="relative">
-                    <select
-                      name="category"
-                      value={formData.category}
-                      onChange={handleChange}
-                      className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all pr-8"
-                      style={{ colorScheme: 'dark' }}
-                    >
-                      <option value="Web Development">Web Development</option>
-                      <option value="Data Science">Data Science</option>
-                      <option value="Mobile App Dev">Mobile App Dev</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">
-                    Difficulty Level
-                  </label>
-                  <div className="relative">
-                    <select
-                      name="difficulty"
-                      value={formData.difficulty}
-                      onChange={handleChange}
-                      className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all pr-8"
-                      style={{ colorScheme: 'dark' }}
-                    >
-                      <option value="Beginner">Beginner</option>
-                      <option value="Intermediate">Intermediate</option>
-                      <option value="Advanced">Advanced</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">
-                    Slug
-                  </label>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-gray-500">/bootcamps/</span>
-                    <input
-                      type="text"
-                      name="slug"
-                      value={formData.slug}
-                      onChange={handleChange}
-                      className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase">
-                    Price (BDT)
-                  </label>
+
+              <FIELD label="URL Slug" hint="/bootcamps/{slug}">
+                <input
+                  type="text"
+                  name="slug"
+                  value={formData.slug}
+                  onChange={handleChange}
+                  placeholder="my-bootcamp-slug"
+                  className={INPUT_CLASS}
+                />
+              </FIELD>
+
+              <div className="relative">
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Category</label>
+                <select name="category" value={formData.category} onChange={handleChange} className={SELECT_CLASS} style={{ colorScheme: 'dark' }}>
+                  <option value="Web Development">Web Development</option>
+                  <option value="Data Science">Data Science</option>
+                  <option value="Mobile App Dev">Mobile App Dev</option>
+                  <option value="DevOps">DevOps</option>
+                  <option value="Cybersecurity">Cybersecurity</option>
+                </select>
+                <ChevronDown className="absolute right-3 bottom-2.5 h-4 w-4 text-gray-500 pointer-events-none" />
+              </div>
+
+              <div className="relative">
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Difficulty</label>
+                <select name="difficulty" value={formData.difficulty} onChange={handleChange} className={SELECT_CLASS} style={{ colorScheme: 'dark' }}>
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                </select>
+                <ChevronDown className="absolute right-3 bottom-2.5 h-4 w-4 text-gray-500 pointer-events-none" />
+              </div>
+
+              <FIELD label="Price (BDT)">
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
                   <input
                     type="number"
                     name="price"
                     value={formData.price}
                     onChange={handleChange}
                     min="0"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
+                    placeholder="0 for free"
+                    className={`${INPUT_CLASS} pl-9`}
                   />
                 </div>
-              </div>
-            </div>
+              </FIELD>
+            </section>
           </div>
         </div>
       )}
 
-      {/* CURRICULUM TAB */}
+      {/* ── CURRICULUM TAB ─────────────────────────────────────────────── */}
       {activeTab === 'curriculum' && (
         <CurriculumBuilder
           bootcampId={bootcamp.id}
@@ -318,140 +381,117 @@ export default function BootcampDetailClient({ bootcamp }) {
         />
       )}
 
-      {/* SETTINGS TAB */}
+      {/* ── SETTINGS TAB ────────────────────────────────────────────────── */}
       {activeTab === 'settings' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <section className="glass-panel holographic-card rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-white mb-1">
-                Enrollment Settings
-              </h2>
-              <p className="text-sm text-gray-400 mb-6">
-                Manage how club members can join this learning path.
-              </p>
-              <div className="space-y-4">
-                <label className="flex items-start gap-4 p-4 bg-white/5 border border-white/10 rounded-xl cursor-pointer hover:bg-white/10 transition-colors">
-                  <input
-                    type="radio"
-                    name="enrollment_type"
-                    value="open"
-                    defaultChecked
-                    className="mt-1 text-violet-500 focus:ring-violet-500 bg-white/10 border-transparent"
-                  />
-                  <div>
-                    <div className="text-sm font-bold text-white">
-                      Open Enrollment
-                    </div>
-                    <div className="text-sm text-gray-400 mt-1">
-                      Anyone can join instantly.
-                    </div>
-                  </div>
-                </label>
-                <label className="flex items-start gap-4 p-4 bg-white/5 border border-white/10 rounded-xl cursor-pointer hover:bg-white/10 transition-colors">
-                  <input
-                    type="radio"
-                    name="enrollment_type"
-                    value="application"
-                    className="mt-1 text-violet-500 focus:ring-violet-500 bg-white/10 border-transparent"
-                  />
-                  <div>
-                    <div className="text-sm font-bold text-white">
-                      Invite Only
-                    </div>
-                    <div className="text-sm text-gray-400 mt-1">
-                      Members must be manually approved.
-                    </div>
-                  </div>
-                </label>
-              </div>
-            </section>
+          <div className="lg:col-span-2 space-y-5">
 
-            <section className="glass-panel holographic-card rounded-2xl p-6">
-              <h2 className="text-xl font-bold text-white mb-5">
-                Schedule
-              </h2>
+            {/* Schedule */}
+            <section className="glass-panel holographic-card no-lift rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-5">
+                <Calendar className="h-4 w-4 text-violet-400" />
+                <h2 className="text-base font-bold text-white">Schedule</h2>
+              </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-400 mb-1.5">
-                    Start Date
-                  </label>
+                <FIELD label="Start Date">
                   <input
                     type="date"
                     name="start_date"
                     value={formData.start_date}
                     onChange={handleChange}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
+                    className={INPUT_CLASS}
                     style={{ colorScheme: 'dark' }}
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-400 mb-1.5">
-                    End Date
-                  </label>
+                </FIELD>
+                <FIELD label="End Date">
                   <input
                     type="date"
                     name="end_date"
                     value={formData.end_date}
                     onChange={handleChange}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
+                    className={INPUT_CLASS}
                     style={{ colorScheme: 'dark' }}
                   />
-                </div>
+                </FIELD>
               </div>
-              <div className="mt-5">
-                <label className="block text-xs font-semibold text-gray-400 mb-1.5">
-                  Max Students
-                </label>
-                <input
-                  type="number"
-                  name="max_students"
-                  value={formData.max_students}
-                  onChange={handleChange}
-                  min="1"
-                  placeholder="Leave empty for unlimited"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all placeholder:text-gray-600"
-                />
+              <div className="mt-4 grid grid-cols-2 gap-4">
+                <FIELD label="Batch Info">
+                  <input
+                    type="text"
+                    name="batch_info"
+                    value={formData.batch_info}
+                    onChange={handleChange}
+                    placeholder="e.g., Batch 5 · Spring 2026"
+                    className={INPUT_CLASS}
+                  />
+                </FIELD>
+                <FIELD label="Max Students" hint="Leave blank for unlimited.">
+                  <div className="relative">
+                    <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
+                    <input
+                      type="number"
+                      name="max_students"
+                      value={formData.max_students}
+                      onChange={handleChange}
+                      min="1"
+                      placeholder="Unlimited"
+                      className={`${INPUT_CLASS} pl-9`}
+                    />
+                  </div>
+                </FIELD>
               </div>
-              <div className="mt-5">
-                <label className="block text-xs font-semibold text-gray-400 mb-1.5">
-                  Batch Info
-                </label>
-                <input
-                  type="text"
-                  name="batch_info"
-                  value={formData.batch_info}
-                  onChange={handleChange}
-                  placeholder="e.g., Batch 5 - Spring 2026"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all placeholder:text-gray-600"
-                />
+            </section>
+
+            {/* Enrollment Settings */}
+            <section className="glass-panel holographic-card no-lift rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="h-4 w-4 text-violet-400" />
+                <h2 className="text-base font-bold text-white">Enrollment Settings</h2>
+              </div>
+              <p className="text-sm text-gray-500 mb-5">
+                Control how club members can join this learning path.
+              </p>
+              <div className="space-y-3">
+                {[
+                  { value: 'open', label: 'Open Enrollment', desc: 'Anyone can join instantly without approval.', icon: Globe },
+                  { value: 'application', label: 'Invite Only', desc: 'Members must be manually approved by an admin.', icon: Lock },
+                ].map(({ value, label, desc, icon: Icon }) => (
+                  <label
+                    key={value}
+                    className="flex items-start gap-4 p-4 bg-white/4 border border-white/8 rounded-xl cursor-pointer hover:bg-white/8 hover:border-white/15 transition-all"
+                  >
+                    <input
+                      type="radio"
+                      name="enrollment_type"
+                      value={value}
+                      defaultChecked={value === 'open'}
+                      className="mt-0.5 text-violet-500 focus:ring-violet-500 bg-white/10 border-white/20 accent-violet-500"
+                    />
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 border border-violet-500/20">
+                      <Icon className="h-4 w-4 text-violet-400" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-white">{label}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{desc}</div>
+                    </div>
+                  </label>
+                ))}
               </div>
             </section>
           </div>
 
-          <div className="space-y-6">
-            <section className="bg-red-500/5 border border-red-500/20 rounded-2xl p-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-                <Settings className="w-24 h-24 text-red-500" />
-              </div>
-              <h2 className="text-base font-bold text-red-400 mb-2 relative z-10">
-                Danger Zone
-              </h2>
-              <p className="text-sm text-red-300/70 mb-6 relative z-10">
-                Irreversible actions for this learning path.
-              </p>
-              <button className="w-full bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-semibold py-2.5 px-4 rounded-xl hover:bg-red-500/20 hover:border-red-500/50 transition-all flex items-center justify-between relative z-10">
-                Delete Permanently
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </section>
+          {/* Sidebar */}
+          <div className="space-y-5">
 
-            <section className="glass-panel holographic-card rounded-2xl p-6">
-              <h2 className="text-sm font-bold text-white mb-4">
-                Featured
-              </h2>
+            {/* Featured toggle */}
+            <section className="glass-panel holographic-card no-lift rounded-2xl p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Show on homepage</p>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Star className="h-4 w-4 text-amber-400" />
+                    Featured Track
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">Show this track on the homepage.</p>
                 </div>
                 <label className="relative inline-flex cursor-pointer items-center">
                   <input
@@ -461,15 +501,30 @@ export default function BootcampDetailClient({ bootcamp }) {
                     onChange={handleChange}
                     className="peer sr-only"
                   />
-                  <div className="peer h-6 w-11 rounded-full bg-white/10 peer-checked:bg-amber-500/30 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-gray-400 after:transition-all peer-checked:after:translate-x-full peer-checked:after:bg-amber-400 border border-white/5" />
+                  <div className="peer h-6 w-11 rounded-full bg-white/10 border border-white/5 peer-checked:bg-amber-500/30 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-gray-400 after:transition-all peer-checked:after:translate-x-full peer-checked:after:bg-amber-400" />
                 </label>
               </div>
+            </section>
+
+            {/* Danger Zone */}
+            <section className="relative overflow-hidden rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
+              <div className="absolute -right-4 -top-4 opacity-5 pointer-events-none">
+                <Trash2 className="w-28 h-28 text-red-500" />
+              </div>
+              <h2 className="text-sm font-bold text-red-400 mb-1 relative z-10">Danger Zone</h2>
+              <p className="text-xs text-red-300/60 mb-4 relative z-10">
+                Irreversible and destructive actions.
+              </p>
+              <button className="relative z-10 w-full flex items-center justify-between bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold py-2.5 px-4 rounded-xl hover:bg-red-500/20 hover:border-red-500/50 transition-all">
+                Delete Permanently
+                <Trash2 className="h-4 w-4" />
+              </button>
             </section>
           </div>
         </div>
       )}
 
-      {/* ENROLLMENTS TAB */}
+      {/* ── ENROLLMENTS TAB ─────────────────────────────────────────────── */}
       {activeTab === 'enrollments' && (
         <EnrollmentsTab bootcampId={bootcamp.id} />
       )}
