@@ -29,6 +29,7 @@ import {
   formatDurationSeconds,
 } from './bootcampConfig';
 import toast from 'react-hot-toast';
+import MultiBlockEditor from './MultiBlockEditor';
 
 // Video source icons map
 const VIDEO_SOURCE_ICONS = {
@@ -428,34 +429,17 @@ export default function LessonFormModal({ lesson, onClose, onSaved }) {
               </div>
             </div>
 
-            {/* Description */}
-            <div>
-              <label className="mb-1.5 block text-xs font-medium text-gray-400">
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows={2}
-                placeholder="Brief description of the lesson..."
-                className="w-full resize-none rounded-xl border border-white/8 bg-white/4 px-3 py-2.5 text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-white/20 focus:bg-white/6"
-              />
-            </div>
-
             {/* Content */}
             <div>
               <label className="mb-1.5 block text-xs font-medium text-gray-400">
-                Lesson Content (Optional)
+                Lesson Content Blocks (Optional)
               </label>
-              <textarea
-                name="content"
-                value={formData.content}
-                onChange={handleChange}
-                rows={4}
-                placeholder="Additional text content, code snippets, or notes..."
-                className="w-full resize-none rounded-xl border border-white/8 bg-white/4 px-3 py-2.5 font-mono text-sm text-white placeholder-gray-600 transition-all outline-none focus:border-white/20 focus:bg-white/6"
-              />
+              <div className="rounded-xl overflow-hidden">
+                <MultiBlockEditor
+                  value={formData.content}
+                  onChange={(val) => setFormData((prev) => ({ ...prev, content: val }))}
+                />
+              </div>
               <p className="mt-1 text-[10px] text-gray-600">
                 This content will be displayed below the video
               </p>

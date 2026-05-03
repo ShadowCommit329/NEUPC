@@ -44,6 +44,8 @@ import {
   formatDurationSeconds,
 } from './bootcampConfig';
 import toast from 'react-hot-toast';
+import RichTextEditor from '@/app/_components/ui/RichTextEditor';
+import MultiBlockEditor from './MultiBlockEditor';
 
 // ─── Inline rename input ───────────────────────────────────────────────────────
 
@@ -91,16 +93,65 @@ function LessonEditor({ lesson, onSaved, onClose }) {
   const [errors, setErrors] = useState({});
   const [deleting, setDeleting] = useState(false);
 
-  const [form, setForm] = useState({
-    title: lesson.title || '',
-    description: lesson.description || '',
-    content: lesson.content || '',
-    video_source: lesson.video_source || 'none',
-    video_id: lesson.video_id || '',
-    video_url: lesson.video_url || '',
-    duration: lesson.duration || 0,
-    is_free_preview: lesson.is_free_preview || false,
-    is_published: lesson.is_published !== false,
+  const [form, setForm] = useState(() => {
+    let content = lesson.content || '';
+    
+    // Migration: if the lesson has a legacy global video but no video blocks in content
+    if (lesson.video_source && lesson.video_source !== 'none' && lesson.video_id) {
+      try {
+        let blocks = content ? JSON.parse(content) : [];
+        if (Array.isArray(blocks)) {
+          const hasVideoBlock = blocks.some(b => b.type === 'video');
+          if (!hasVideoBlock) {
+            blocks.unshift({
+              id: crypto.randomUUID(),
+              type: 'video',
+              data: {
+                videos: [{
+                  id: crypto.randomUUID(),
+                  video_source: lesson.video_source,
+                  video_id: lesson.video_id,
+                  duration: lesson.duration || 0
+                }]
+              }
+            });
+            content = JSON.stringify(blocks);
+          }
+        }
+      } catch (e) {
+        // Not JSON, or other error. Maybe legacy HTML content?
+        const legacyVideoBlock = {
+          id: crypto.randomUUID(),
+          type: 'video',
+          data: {
+            videos: [{
+              id: crypto.randomUUID(),
+              video_source: lesson.video_source,
+              video_id: lesson.video_id,
+              duration: lesson.duration || 0
+            }]
+          }
+        };
+        const richTextBlock = {
+          id: crypto.randomUUID(),
+          type: 'richText',
+          content: content
+        };
+        content = JSON.stringify([legacyVideoBlock, richTextBlock]);
+      }
+    }
+
+    return {
+      title: lesson.title || '',
+      description: lesson.description || '',
+      content: content,
+      video_source: lesson.video_source || 'none',
+      video_id: lesson.video_id || '',
+      video_url: lesson.video_url || '',
+      duration: lesson.duration || 0,
+      is_free_preview: lesson.is_free_preview || false,
+      is_published: lesson.is_published !== false,
+    };
   });
 
   const set = (name, value) => {
@@ -223,136 +274,7 @@ function LessonEditor({ lesson, onSaved, onClose }) {
         </div>
       </div>
 
-      {/* Video block */}
-      <div className="bg-[#010f1f] rounded-xl border border-[#c0c1ff]/40 relative overflow-hidden group">
-        <div className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab z-10">
-          <GripVertical className="h-5 w-5 text-[#908fa0]" />
-        </div>
-        <div className="p-6 pl-10 flex flex-col gap-4">
-          <div className="flex items-center gap-3">
-            <span className="bg-[#8083ff]/20 text-[#c0c1ff] p-2 rounded-lg shrink-0">
-              <Play className="h-5 w-5" />
-            </span>
-            <h4 className="text-base font-semibold text-[#d4e4fa]">Video Content</h4>
-          </div>
-
-          {/* Source picker */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {VIDEO_SOURCES.map((source) => {
-              const config = getVideoSourceConfig(source);
-              const Icon = VIDEO_ICONS[source] || FileText;
-              const active = form.video_source === source;
-              return (
-                <button
-                  key={source}
-                  type="button"
-                  onClick={() => set('video_source', source)}
-                  className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-all text-xs font-medium ${
-                    active
-                      ? 'border-[#c0c1ff]/50 bg-[#c0c1ff]/10 text-[#c0c1ff]'
-                      : 'border-[#464554] bg-[#051424] text-[#908fa0] hover:border-[#908fa0]'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {config.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Drive */}
-          {form.video_source === 'drive' && (
-            <div className="space-y-3 rounded-xl border border-[#464554] bg-[#051424] p-3">
-              <label className="text-xs font-medium text-[#908fa0] block">
-                Google Drive File ID or URL
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  name="video_id"
-                  value={form.video_id}
-                  onChange={handleChange}
-                  placeholder="File ID or share URL"
-                  className={`flex-1 rounded-lg border bg-[#010f1f] px-3 py-2 text-sm text-[#d4e4fa] placeholder-[#464554] outline-none focus:border-[#c0c1ff] ${
-                    errors.video_id ? 'border-red-500' : 'border-[#464554]'
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={handleValidateDrive}
-                  disabled={validating || !form.video_id}
-                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50 transition-colors shrink-0"
-                >
-                  {validating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
-                  Validate
-                </button>
-              </div>
-              {errors.video_id && (
-                <p className="text-xs text-red-400 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" /> {errors.video_id}
-                </p>
-              )}
-              {driveValidation && (
-                <div className={`flex items-start gap-2 rounded-lg p-2 text-xs ${driveValidation.valid ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                  {driveValidation.valid ? (
-                    <>
-                      <CheckCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="font-medium">Video accessible</p>
-                        {driveValidation.name && <p className="opacity-70">{driveValidation.name}</p>}
-                        {driveValidation.duration && <p className="opacity-70">Duration: {formatDurationSeconds(driveValidation.duration)}</p>}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="font-medium">Cannot access video</p>
-                        <p className="opacity-70">{driveValidation.error}</p>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-              <p className="text-[10px] text-[#908fa0]">
-                Share the file with your service account or make it public.
-              </p>
-            </div>
-          )}
-
-          {/* YouTube */}
-          {form.video_source === 'youtube' && (
-            <div className="rounded-xl border border-[#464554] bg-[#051424] p-3 space-y-2">
-              <label className="text-xs font-medium text-[#908fa0] block">
-                YouTube Video URL or ID
-              </label>
-              <input
-                type="text"
-                name="video_id"
-                value={form.video_id}
-                onChange={handleChange}
-                placeholder="e.g., dQw4w9WgXcQ or full URL"
-                className={`w-full rounded-lg border bg-[#010f1f] px-3 py-2 text-sm text-[#d4e4fa] placeholder-[#464554] outline-none focus:border-[#c0c1ff] ${
-                  errors.video_id ? 'border-red-500' : 'border-[#464554]'
-                }`}
-              />
-              {errors.video_id && (
-                <p className="text-xs text-red-400 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" /> {errors.video_id}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Upload placeholder */}
-          {form.video_source === 'upload' && (
-            <div className="rounded-xl border-2 border-dashed border-[#464554] bg-[#051424] p-6 text-center">
-              <Upload className="mx-auto h-8 w-8 text-[#464554]" />
-              <p className="mt-2 text-sm text-[#908fa0]">Upload coming soon — use Drive or YouTube</p>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Legacy video block UI has been removed. Videos are now fully managed within the MultiBlockEditor below. */}
 
       {/* Notes / content block */}
       <div className="bg-[#010f1f] rounded-xl border border-[#464554] relative group">
@@ -367,64 +289,23 @@ function LessonEditor({ lesson, onSaved, onClose }) {
             <h4 className="text-base font-semibold text-[#d4e4fa]">Lesson Notes</h4>
           </div>
 
-          {/* Toolbar */}
-          <div className="border border-[#464554] rounded-t-lg bg-[#051424] flex flex-wrap items-center gap-1 p-1">
-            <div className="flex items-center gap-1 pr-2 border-r border-[#464554]">
-              <select className="bg-transparent border-none text-sm text-[#d4e4fa] focus:ring-0 cursor-pointer py-1 outline-none">
-                <option>Normal Text</option>
-                <option>Heading 1</option>
-                <option>Heading 2</option>
-              </select>
-            </div>
-            {[['B','font-bold'],['I','italic'],['U','underline']].map(([l,s]) => (
-              <button key={l} type="button" className="p-1.5 rounded hover:bg-[#1c2b3c] text-[#d4e4fa] transition-colors text-sm w-8">
-                <span className={s}>{l}</span>
-              </button>
-            ))}
-            <div className="w-px h-5 bg-[#464554] mx-1" />
-            {['≡','1.','❝'].map((icon, i) => (
-              <button key={i} type="button" className="p-1.5 rounded hover:bg-[#1c2b3c] text-[#d4e4fa] transition-colors text-sm w-8">{icon}</button>
-            ))}
-            <div className="w-px h-5 bg-[#464554] mx-1" />
-            {['🔗','🖼','<>'].map((icon, i) => (
-              <button key={i} type="button" className="p-1.5 rounded hover:bg-[#1c2b3c] text-[#d4e4fa] transition-colors text-sm w-8">{icon}</button>
-            ))}
-          </div>
-
-          {/* Description */}
-          <textarea
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            rows={3}
-            placeholder="Brief lesson description..."
-            className="w-full border border-[#464554] rounded-lg px-4 py-3 text-sm text-[#d4e4fa] bg-[#051424] placeholder-[#464554] outline-none focus:ring-1 focus:ring-[#c0c1ff] resize-y leading-relaxed"
-          />
-
           {/* Content */}
-          <textarea
-            name="content"
-            value={form.content}
-            onChange={handleChange}
-            rows={6}
-            placeholder="Additional notes, code snippets, resources..."
-            className="w-full border border-t-0 border-[#464554] rounded-b-lg rounded-t-none px-4 py-3 text-sm text-[#d4e4fa] bg-[#051424] placeholder-[#464554] outline-none focus:ring-1 focus:ring-[#c0c1ff] resize-y leading-relaxed font-mono"
-          />
+          <div>
+            <label className="text-xs font-semibold text-[#908fa0] tracking-wider uppercase block mb-1">
+              Lesson Content Blocks
+            </label>
+            <div className="rounded-lg overflow-hidden">
+              <MultiBlockEditor
+                value={form.content}
+                onChange={(val) => set('content', val)}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Add block button */}
-      <button
-        type="button"
-        className="w-full border-2 border-dashed border-[#464554] hover:border-[#c0c1ff] bg-[#051424]/50 hover:bg-[#c0c1ff]/5 rounded-xl py-8 flex flex-col items-center justify-center gap-3 text-[#908fa0] hover:text-[#c0c1ff] transition-all group"
-      >
-        <div className="bg-[#122131] rounded-full p-3 group-hover:bg-[#8083ff]/20 transition-colors">
-          <Plus className="h-5 w-5" />
-        </div>
-        <span className="text-base font-semibold">Add Content Block</span>
-      </button>
-
       {/* Footer actions */}
+
       <div className="flex items-center justify-end gap-3">
         <button
           type="button"
@@ -460,6 +341,10 @@ function ModuleRow({
   onRenameModule,
   onDeleteLesson,
   onRenameLesson,
+  onDragStart,
+  onDrop,
+  draggedItem,
+  courseId,
 }) {
   const [expanded, setExpanded] = useState(true);
   const [renaming, setRenaming] = useState(false);
@@ -467,9 +352,16 @@ function ModuleRow({
   const [menuOpen, setMenuOpen] = useState(false);
 
   const lessons = (module.lessons || []).sort((a, b) => a.order_index - b.order_index);
+  const isDragged = draggedItem?.id === module.id && draggedItem?.type === 'module';
 
   return (
-    <div className="border border-[#464554] rounded-lg bg-[#051424] overflow-hidden">
+    <div
+      draggable
+      onDragStart={(e) => { e.stopPropagation(); onDragStart('module', module.id, courseId); }}
+      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onDrop={(e) => { e.stopPropagation(); onDrop('module', module.id, courseId); }}
+      className={`border border-[#464554] rounded-lg bg-[#051424] overflow-hidden ${isDragged ? 'opacity-50' : ''}`}
+    >
       {/* Module header */}
       <div className="px-3 py-3 flex items-center gap-2 hover:bg-[#0d1c2d] transition-colors group/mod relative">
         <GripVertical className="h-4 w-4 text-[#464554] cursor-grab shrink-0" />
@@ -543,6 +435,10 @@ function ModuleRow({
                 onSelect={() => onSelectLesson(lesson)}
                 onDelete={() => onDeleteLesson(lesson.id, module.id)}
                 onRename={(title) => onRenameLesson(lesson.id, title)}
+                onDragStart={onDragStart}
+                onDrop={onDrop}
+                draggedItem={draggedItem}
+                moduleId={module.id}
               />
             );
           })}
@@ -570,19 +466,24 @@ function ModuleRow({
 
 // ─── Lesson row ────────────────────────────────────────────────────────────────
 
-function LessonRow({ lesson, label, isActive, onSelect, onDelete, onRename }) {
+function LessonRow({ lesson, label, isActive, onSelect, onDelete, onRename, onDragStart, onDrop, draggedItem, moduleId }) {
   const [renaming, setRenaming] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const hasVideo = lesson.video_source && lesson.video_source !== 'none';
+  const isDragged = draggedItem?.id === lesson.id && draggedItem?.type === 'lesson';
 
   return (
     <div
+      draggable
+      onDragStart={(e) => { e.stopPropagation(); onDragStart('lesson', lesson.id, moduleId); }}
+      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onDrop={(e) => { e.stopPropagation(); onDrop('lesson', lesson.id, moduleId); }}
       className={`px-3 py-2 flex items-center gap-2 pl-8 cursor-pointer group/lesson border-l-4 transition-colors ${
         isActive
           ? 'bg-[#c0c1ff]/10 border-[#c0c1ff]'
           : 'border-transparent hover:bg-[#0d1c2d]'
-      }`}
+      } ${isDragged ? 'opacity-50' : ''}`}
       onClick={() => !renaming && onSelect()}
     >
       <GripVertical className="h-3.5 w-3.5 text-[#464554] cursor-grab shrink-0" />
@@ -668,6 +569,9 @@ function CourseRow({
   onRenameCourse,
   onRenameModule,
   onRenameLesson,
+  onDragStart,
+  onDrop,
+  draggedItem,
 }) {
   const [renaming, setRenaming] = useState(false);
   const [expanded, setExpanded] = useState(true);
@@ -675,9 +579,16 @@ function CourseRow({
   const [menuOpen, setMenuOpen] = useState(false);
 
   const modules = (course.modules || []).sort((a, b) => a.order_index - b.order_index);
+  const isDragged = draggedItem?.id === course.id && draggedItem?.type === 'course';
 
   return (
-    <div className="border border-[#464554] rounded-lg bg-[#051424] overflow-hidden">
+    <div
+      draggable
+      onDragStart={(e) => { e.stopPropagation(); onDragStart('course', course.id, null); }}
+      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onDrop={(e) => { e.stopPropagation(); onDrop('course', course.id, null); }}
+      className={`border border-[#464554] rounded-lg bg-[#051424] overflow-hidden ${isDragged ? 'opacity-50' : ''}`}
+    >
       {/* Course header — acts as top-level module group */}
       <div className="px-3 py-3 flex items-center gap-2 bg-[#0d1c2d] hover:bg-[#122131] transition-colors group/course">
         <GripVertical className="h-4 w-4 text-[#464554] cursor-grab shrink-0" />
@@ -764,6 +675,10 @@ function CourseRow({
               onRenameModule={onRenameModule}
               onDeleteLesson={onDeleteLesson}
               onRenameLesson={onRenameLesson}
+              onDragStart={onDragStart}
+              onDrop={onDrop}
+              draggedItem={draggedItem}
+              courseId={course.id}
             />
           ))}
         </div>
@@ -780,6 +695,70 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
   );
   const [activeLesson, setActiveLesson] = useState(null);
   const [addingCourse, setAddingCourse] = useState(false);
+  const [draggedItem, setDraggedItem] = useState(null);
+
+  const handleDragStart = (type, id, parentId) => {
+    setDraggedItem({ type, id, parentId });
+  };
+
+  const handleDrop = async (type, targetId, targetParentId) => {
+    if (!draggedItem || draggedItem.type !== type) return;
+    if (draggedItem.id === targetId) return;
+    if (draggedItem.parentId !== targetParentId) return;
+
+    const reorderList = (items) => {
+      const dragIdx = items.findIndex((i) => i.id === draggedItem.id);
+      const dropIdx = items.findIndex((i) => i.id === targetId);
+      if (dragIdx === -1 || dropIdx === -1) return null;
+      
+      const newItems = [...items];
+      const [dragged] = newItems.splice(dragIdx, 1);
+      newItems.splice(dropIdx, 0, dragged);
+      return newItems.map((item, index) => ({ ...item, order_index: index }));
+    };
+
+    try {
+      if (type === 'course') {
+        const newCourses = reorderList(courses);
+        if (newCourses) {
+          sync(newCourses);
+          await reorderCourses(bootcampId, newCourses.map(c => c.id));
+        }
+      } else if (type === 'module') {
+        const courseId = targetParentId;
+        const course = courses.find(c => c.id === courseId);
+        const newModules = reorderList(course.modules || []);
+        if (newModules) {
+          sync(courses.map(c => c.id === courseId ? { ...c, modules: newModules } : c));
+          await reorderModules(courseId, newModules.map(m => m.id));
+        }
+      } else if (type === 'lesson') {
+        const moduleId = targetParentId;
+        let targetCourseId = null;
+        for (const c of courses) {
+          if ((c.modules || []).some(m => m.id === moduleId)) {
+            targetCourseId = c.id;
+            break;
+          }
+        }
+        if (targetCourseId) {
+          const course = courses.find(c => c.id === targetCourseId);
+          const module = course.modules.find(m => m.id === moduleId);
+          const newLessons = reorderList(module.lessons || []);
+          if (newLessons) {
+            sync(courses.map(c => c.id === targetCourseId ? {
+              ...c,
+              modules: (c.modules || []).map(m => m.id === moduleId ? { ...m, lessons: newLessons } : m)
+            } : c));
+            await reorderLessons(moduleId, newLessons.map(l => l.id));
+          }
+        }
+      }
+    } catch (err) {
+      toast.error('Failed to save order');
+    }
+    setDraggedItem(null);
+  };
 
   const sync = (newCourses) => {
     setCourses(newCourses);
@@ -1000,6 +979,9 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
                 onRenameCourse={handleRenameCourse}
                 onRenameModule={handleRenameModule}
                 onRenameLesson={handleRenameLesson}
+                onDragStart={handleDragStart}
+                onDrop={handleDrop}
+                draggedItem={draggedItem}
               />
             ))
           )}

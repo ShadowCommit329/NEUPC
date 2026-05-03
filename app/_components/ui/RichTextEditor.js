@@ -15,16 +15,23 @@ import {
   useMemo,
   useRef,
   useState,
-} from 'react';
-import { createPortal } from 'react-dom';
+} from "react";
+import { createPortal } from "react-dom";
+import {
+  useFloating,
+  autoUpdate,
+  offset,
+  flip,
+  shift,
+} from "@floating-ui/react";
 import {
   EditorContent,
   useEditor,
   ReactNodeViewRenderer,
   NodeViewWrapper,
-} from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import LinkExtension from '@tiptap/extension-link';
+} from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import LinkExtension from "@tiptap/extension-link";
 import Underline from '@tiptap/extension-underline';
 import ImageExtension from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -888,63 +895,84 @@ export default function RichTextEditor({
   const [showRawHtml, setShowRawHtml] = useState(false);
   const [showCodeLang, setShowCodeLang] = useState(false);
   const savedCodeLangPos = useRef(null);
-  const codeLangBtnRef = useRef(null);
-  const codeLangDropRef = useRef(null);
-  const colorBtnRef = useRef(null);
-  const colorPickerRef = useRef(null);
-  const linkBtnRef = useRef(null);
-  const linkPopoverRef = useRef(null);
+
+  // Floating UI for Code Language
+  const { refs: langRefs, floatingStyles: langStyles } = useFloating({
+    open: showCodeLang,
+    onOpenChange: setShowCodeLang,
+    placement: 'bottom-start',
+    middleware: [offset(4), flip(), shift()],
+    whileElementsMounted: autoUpdate,
+  });
+
+  // Floating UI for Color Picker
+  const { refs: colorRefs, floatingStyles: colorStyles } = useFloating({
+    open: showColorPicker,
+    onOpenChange: setShowColorPicker,
+    placement: 'bottom-start',
+    middleware: [offset(4), flip(), shift()],
+    whileElementsMounted: autoUpdate,
+  });
+
+  // Floating UI for Link Popover
+  const { refs: linkRefs, floatingStyles: linkStyles } = useFloating({
+    open: showLinkPopover,
+    onOpenChange: setShowLinkPopover,
+    placement: 'bottom-start',
+    middleware: [offset(4), flip(), shift()],
+    whileElementsMounted: autoUpdate,
+  });
 
   // Close color picker on outside click
   useEffect(() => {
     if (!showColorPicker) return;
     const handler = (e) => {
       if (
-        colorBtnRef.current &&
-        !colorBtnRef.current.contains(e.target) &&
-        colorPickerRef.current &&
-        !colorPickerRef.current.contains(e.target)
+        colorRefs.reference.current &&
+        !colorRefs.reference.current.contains(e.target) &&
+        colorRefs.floating.current &&
+        !colorRefs.floating.current.contains(e.target)
       ) {
         setShowColorPicker(false);
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [showColorPicker]);
+  }, [showColorPicker, colorRefs.reference, colorRefs.floating]);
 
   // Close code language dropdown on outside click
   useEffect(() => {
     if (!showCodeLang) return;
     const handler = (e) => {
       if (
-        codeLangBtnRef.current &&
-        !codeLangBtnRef.current.contains(e.target) &&
-        codeLangDropRef.current &&
-        !codeLangDropRef.current.contains(e.target)
+        langRefs.reference.current &&
+        !langRefs.reference.current.contains(e.target) &&
+        langRefs.floating.current &&
+        !langRefs.floating.current.contains(e.target)
       ) {
         setShowCodeLang(false);
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [showCodeLang]);
+  }, [showCodeLang, langRefs.reference, langRefs.floating]);
 
   // Close link popover on outside click
   useEffect(() => {
     if (!showLinkPopover) return;
     const handler = (e) => {
       if (
-        linkBtnRef.current &&
-        !linkBtnRef.current.contains(e.target) &&
-        linkPopoverRef.current &&
-        !linkPopoverRef.current.contains(e.target)
+        linkRefs.reference.current &&
+        !linkRefs.reference.current.contains(e.target) &&
+        linkRefs.floating.current &&
+        !linkRefs.floating.current.contains(e.target)
       ) {
         setShowLinkPopover(false);
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [showLinkPopover]);
+  }, [showLinkPopover, linkRefs.reference, linkRefs.floating]);
 
   // Close fullscreen on Escape
   useEffect(() => {
@@ -1187,7 +1215,7 @@ export default function RichTextEditor({
 
   const editorBlock = (
     <div
-      className={`rich-text-editor rounded-xl border border-white/10 bg-gray-950 transition-all ${
+      className={`rich-text-editor min-w-0 w-full rounded-xl border border-white/10 bg-gray-950 transition-all ${
         isFullscreen
           ? containedFullscreen
             ? 'absolute inset-0 z-40 flex flex-col rounded-none border-0'
@@ -1268,7 +1296,7 @@ export default function RichTextEditor({
               {/* Code Block */}
               <div className="relative">
                 <ToolbarButton
-                  ref={codeLangBtnRef}
+                  ref={langRefs.setReference}
                   title="Code block"
                   onClick={() => {
                     if (editor.isActive('codeBlock')) {
@@ -1282,10 +1310,11 @@ export default function RichTextEditor({
                 >
                   <Code2 className="h-4 w-4" />
                 </ToolbarButton>
-                {showCodeLang && (
+                {showCodeLang && createPortal(
                   <div
-                    ref={codeLangDropRef}
-                    className="absolute top-full left-0 z-50 mt-1 max-h-60 w-44 overflow-y-auto rounded-xl border border-white/10 bg-[#0d1117] py-1 shadow-xl"
+                    ref={langRefs.setFloating}
+                    style={langStyles}
+                    className="z-100 max-h-60 w-44 overflow-y-auto rounded-xl border border-white/10 bg-[#0d1117] py-1 shadow-xl"
                   >
                     {[
                       ['plaintext', 'Plain Text'],
@@ -1333,7 +1362,8 @@ export default function RichTextEditor({
                         {label}
                       </button>
                     ))}
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
             </ToolbarGroup>
@@ -1344,7 +1374,7 @@ export default function RichTextEditor({
             <ToolbarGroup>
               <div className="relative">
                 <button
-                  ref={colorBtnRef}
+                  ref={colorRefs.setReference}
                   type="button"
                   title="Text color"
                   onClick={() => setShowColorPicker(!showColorPicker)}
@@ -1364,16 +1394,18 @@ export default function RichTextEditor({
                     }}
                   />
                 </button>
-                {showColorPicker && (
+                {showColorPicker && createPortal(
                   <div
-                    ref={colorPickerRef}
-                    className="absolute top-full left-0 z-50 mt-1"
+                    ref={colorRefs.setFloating}
+                    style={colorStyles}
+                    className="z-100 mt-1"
                   >
                     <ColorPicker
                       editor={editor}
                       onClose={() => setShowColorPicker(false)}
                     />
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
               <ToolbarButton
@@ -1540,7 +1572,7 @@ export default function RichTextEditor({
               </ToolbarButton>
               <div className="relative">
                 <button
-                  ref={linkBtnRef}
+                  ref={linkRefs.setReference}
                   type="button"
                   title="Insert / edit link"
                   onClick={handleLink}
@@ -1552,16 +1584,18 @@ export default function RichTextEditor({
                 >
                   <LinkIcon className="h-4 w-4" />
                 </button>
-                {showLinkPopover && (
+                {showLinkPopover && createPortal(
                   <div
-                    ref={linkPopoverRef}
-                    className="absolute top-full left-0 z-50 mt-1"
+                    ref={linkRefs.setFloating}
+                    style={linkStyles}
+                    className="z-100 mt-1"
                   >
                     <LinkPopover
                       editor={editor}
                       onClose={() => setShowLinkPopover(false)}
                     />
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
               {editor.isActive('link') && (
@@ -1642,12 +1676,12 @@ export default function RichTextEditor({
 
       {/* ── Editor / Preview Area ──────────────────────────────────────────── */}
       <div
-        className={`relative overflow-hidden ${
+        className={`relative overflow-y-auto ${
           isFullscreen
             ? containedFullscreen
-              ? 'min-h-0 flex-1 overflow-y-auto'
-              : 'h-[calc(100vh-88px)] overflow-y-auto'
-            : 'min-h-87.5'
+              ? 'min-h-0 flex-1'
+              : 'h-[calc(100vh-88px)]'
+            : 'min-h-87.5 max-h-[800px]'
         }`}
       >
         {showPreview ? (

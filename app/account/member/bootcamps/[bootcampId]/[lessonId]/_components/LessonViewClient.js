@@ -38,6 +38,7 @@ import {
   markLessonIncomplete,
   saveLessonNotes,
 } from '@/app/_lib/bootcamp-actions';
+import LessonContentRenderer from './LessonContentRenderer';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -510,25 +511,9 @@ export default function LessonViewClient({
             </button>
           </div>
 
-          {/* Description */}
-          {lesson.description && (
-            <div className="rounded-xl border border-white/8 bg-white/3 p-4">
-              <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-                <BookOpen className="h-4 w-4 text-blue-400" />
-                About this lesson
-              </h3>
-              <p className="text-sm whitespace-pre-wrap text-gray-400">
-                {lesson.description}
-              </p>
-            </div>
-          )}
-
           {/* Rich content */}
           {lesson.content && (
-            <div
-              className="blog-content rounded-xl border border-white/8 bg-white/3 p-6"
-              dangerouslySetInnerHTML={{ __html: lesson.content }}
-            />
+            <LessonContentRenderer content={lesson.content} />
           )}
 
           {/* Attachments */}

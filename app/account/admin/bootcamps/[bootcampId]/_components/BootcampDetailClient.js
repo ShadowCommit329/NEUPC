@@ -13,6 +13,7 @@ import {
   Eye,
   CloudUpload,
   ChevronDown,
+  Trash2,
 } from 'lucide-react';
 import CurriculumBuilder from '../../_components/CurriculumBuilder';
 import EnrollmentsTab from './EnrollmentsTab';
@@ -86,26 +87,16 @@ export default function BootcampDetailClient({ bootcamp }) {
   const statusLabel = getStatusConfig(bootcampData.status)?.label ?? bootcampData.status;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto w-full pt-8 px-8 pb-16">
+    <div className="p-6 md:p-8 pt-10 max-w-7xl mx-auto space-y-8">
       {/* Breadcrumb + title */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <nav className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-            <Link
-              href="/account/admin/bootcamps"
-              className="hover:text-indigo-600 transition-colors"
-            >
-              Learning Paths
-            </Link>
-            <ChevronRight className="h-4 w-4" />
-            <span className="text-gray-700">{bootcampData.title || 'New Track'}</span>
-          </nav>
+
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-semibold text-gray-900 tracking-tight">
+            <h1 className="kinetic-headline text-3xl font-bold text-white">
               {bootcampData.title || 'New Track'}
             </h1>
-            <span className="bg-gray-100 text-gray-500 text-xs font-semibold px-2.5 py-1 rounded border border-gray-200 uppercase tracking-wider">
+            <span className="bg-violet-500/10 text-violet-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-violet-500/20 uppercase tracking-wider">
               {statusLabel}
             </span>
           </div>
@@ -113,10 +104,10 @@ export default function BootcampDetailClient({ bootcamp }) {
         <div className="flex items-center gap-3">
           {bootcampData.status === 'published' && (
             <a
-              href={`/bootcamps/${bootcampData.slug}`}
+              href={`/account/member/bootcamps/preview/${bootcampData.slug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium px-5 py-2 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2"
+              className="text-sm font-medium px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 text-white hover:bg-white/10 transition-colors flex items-center gap-2"
             >
               <Eye className="h-4 w-4" />
               Preview
@@ -125,7 +116,7 @@ export default function BootcampDetailClient({ bootcamp }) {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="text-sm font-semibold px-5 py-2 rounded-full bg-indigo-600 text-white hover:bg-indigo-500 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-60"
+            className="text-sm font-semibold px-5 py-2.5 rounded-xl bg-violet-600 text-white hover:bg-violet-500 hover:shadow-[0_0_20px_rgba(124,92,255,0.4)] transition-all flex items-center gap-2 disabled:opacity-60"
           >
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -138,16 +129,16 @@ export default function BootcampDetailClient({ bootcamp }) {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-8">
-        <nav className="flex gap-8 -mb-px">
+      <div className="border-b border-white/10">
+        <nav className="flex gap-8 -mb-px overflow-x-auto scrollbar-hide">
           {TABS.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`pb-3 border-b-2 text-sm font-medium transition-colors ${
+              className={`pb-4 border-b-2 text-sm font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab.key
-                  ? 'border-indigo-600 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-800'
+                  ? 'border-violet-500 text-violet-400'
+                  : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-white/10'
               }`}
             >
               {tab.label}
@@ -162,13 +153,13 @@ export default function BootcampDetailClient({ bootcamp }) {
           {/* Main column */}
           <div className="lg:col-span-2 space-y-6">
             {/* Basic Info */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-5">
+            <div className="glass-panel holographic-card rounded-2xl p-6">
+              <h2 className="text-xl font-bold text-white mb-5">
                 Basic Information
               </h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">
                     Track Title
                   </label>
                   <input
@@ -176,11 +167,11 @@ export default function BootcampDetailClient({ bootcamp }) {
                     name="title"
                     value={formData.title}
                     onChange={handleChange}
-                    className="w-full bg-gray-50 border border-gray-200 rounded px-3 py-2 text-base text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-base text-white focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 outline-none transition-all placeholder:text-gray-600"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">
                     Subtitle / Short Description
                   </label>
                   <input
@@ -188,15 +179,15 @@ export default function BootcampDetailClient({ bootcamp }) {
                     name="subtitle"
                     value={formData.subtitle}
                     onChange={handleChange}
-                    className="w-full bg-gray-50 border border-gray-200 rounded px-3 py-2 text-base text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-base text-white focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 outline-none transition-all placeholder:text-gray-600"
                   />
                 </div>
               </div>
             </div>
 
             {/* Description */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-5">
+            <div className="glass-panel holographic-card rounded-2xl p-6">
+              <h2 className="text-xl font-bold text-white mb-5">
                 About this Track
               </h2>
               <textarea
@@ -205,23 +196,24 @@ export default function BootcampDetailClient({ bootcamp }) {
                 onChange={handleChange}
                 rows={10}
                 placeholder="Write a detailed description of this bootcamp..."
-                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 resize-y focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors placeholder:text-gray-400"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white resize-y focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 outline-none transition-all placeholder:text-gray-600"
               />
             </div>
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-5">
+          <div className="space-y-6">
             {/* Status */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
-              <h3 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">
+            <div className="glass-panel holographic-card rounded-2xl p-6">
+              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wider">
                 Status
               </h3>
               <select
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
-                className="bg-gray-50 border border-gray-200 rounded px-3 py-1.5 text-sm text-gray-800 outline-none focus:border-indigo-400"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
+                style={{ colorScheme: 'dark' }}
               >
                 {BOOTCAMP_STATUSES.map((s) => (
                   <option key={s} value={s}>
@@ -232,8 +224,8 @@ export default function BootcampDetailClient({ bootcamp }) {
             </div>
 
             {/* Thumbnail */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
-              <h3 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wider">
+            <div className="glass-panel holographic-card rounded-2xl p-6">
+              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wider">
                 Track Thumbnail
               </h3>
               <ThumbnailUploader
@@ -245,14 +237,14 @@ export default function BootcampDetailClient({ bootcamp }) {
                   }
                 }}
               />
-              <p className="text-xs text-gray-400 mt-3 text-center">
+              <p className="text-xs text-gray-500 mt-3 text-center">
                 Recommended size: 1200×630px. Max 5MB.
               </p>
             </div>
 
             {/* Metadata */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
-              <h3 className="text-xs font-semibold text-gray-500 mb-4 uppercase tracking-wider">
+            <div className="glass-panel holographic-card rounded-2xl p-6">
+              <h3 className="text-xs font-semibold text-gray-400 mb-4 uppercase tracking-wider">
                 Metadata
               </h3>
               <div className="space-y-4">
@@ -265,13 +257,14 @@ export default function BootcampDetailClient({ bootcamp }) {
                       name="category"
                       value={formData.category}
                       onChange={handleChange}
-                      className="w-full appearance-none bg-gray-50 border border-gray-200 rounded px-3 py-2 text-sm text-gray-800 outline-none focus:border-indigo-400 pr-8"
+                      className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all pr-8"
+                      style={{ colorScheme: 'dark' }}
                     >
                       <option value="Web Development">Web Development</option>
                       <option value="Data Science">Data Science</option>
                       <option value="Mobile App Dev">Mobile App Dev</option>
                     </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                   </div>
                 </div>
                 <div>
@@ -283,13 +276,14 @@ export default function BootcampDetailClient({ bootcamp }) {
                       name="difficulty"
                       value={formData.difficulty}
                       onChange={handleChange}
-                      className="w-full appearance-none bg-gray-50 border border-gray-200 rounded px-3 py-2 text-sm text-gray-800 outline-none focus:border-indigo-400 pr-8"
+                      className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all pr-8"
+                      style={{ colorScheme: 'dark' }}
                     >
                       <option value="Beginner">Beginner</option>
                       <option value="Intermediate">Intermediate</option>
                       <option value="Advanced">Advanced</option>
                     </select>
-                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                   </div>
                 </div>
                 <div>
@@ -297,13 +291,13 @@ export default function BootcampDetailClient({ bootcamp }) {
                     Slug
                   </label>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-gray-400">/bootcamps/</span>
+                    <span className="text-xs text-gray-500">/preview/</span>
                     <input
                       type="text"
                       name="slug"
                       value={formData.slug}
                       onChange={handleChange}
-                      className="flex-1 bg-gray-50 border border-gray-200 rounded px-3 py-2 text-sm text-gray-800 outline-none focus:border-indigo-400"
+                      className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
                     />
                   </div>
                 </div>
@@ -317,7 +311,7 @@ export default function BootcampDetailClient({ bootcamp }) {
                     value={formData.price}
                     onChange={handleChange}
                     min="0"
-                    className="w-full bg-gray-50 border border-gray-200 rounded px-3 py-2 text-sm text-gray-800 outline-none focus:border-indigo-400"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
                   />
                 </div>
               </div>
@@ -339,43 +333,43 @@ export default function BootcampDetailClient({ bootcamp }) {
       {activeTab === 'settings' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <section className="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">
+            <section className="glass-panel holographic-card rounded-2xl p-6">
+              <h2 className="text-xl font-bold text-white mb-1">
                 Enrollment Settings
               </h2>
-              <p className="text-sm text-gray-500 mb-6">
+              <p className="text-sm text-gray-400 mb-6">
                 Manage how club members can join this learning path.
               </p>
-              <div className="space-y-3">
-                <label className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+              <div className="space-y-4">
+                <label className="flex items-start gap-4 p-4 bg-white/5 border border-white/10 rounded-xl cursor-pointer hover:bg-white/10 transition-colors">
                   <input
                     type="radio"
                     name="enrollment_type"
                     value="open"
                     defaultChecked
-                    className="mt-1 text-indigo-600"
+                    className="mt-1 text-violet-500 focus:ring-violet-500 bg-white/10 border-transparent"
                   />
                   <div>
-                    <div className="text-sm font-medium text-gray-900">
+                    <div className="text-sm font-bold text-white">
                       Open Enrollment
                     </div>
-                    <div className="text-sm text-gray-500 mt-1">
+                    <div className="text-sm text-gray-400 mt-1">
                       Anyone can join instantly.
                     </div>
                   </div>
                 </label>
-                <label className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                <label className="flex items-start gap-4 p-4 bg-white/5 border border-white/10 rounded-xl cursor-pointer hover:bg-white/10 transition-colors">
                   <input
                     type="radio"
                     name="enrollment_type"
                     value="application"
-                    className="mt-1 text-indigo-600"
+                    className="mt-1 text-violet-500 focus:ring-violet-500 bg-white/10 border-transparent"
                   />
                   <div>
-                    <div className="text-sm font-medium text-gray-900">
+                    <div className="text-sm font-bold text-white">
                       Invite Only
                     </div>
-                    <div className="text-sm text-gray-500 mt-1">
+                    <div className="text-sm text-gray-400 mt-1">
                       Members must be manually approved.
                     </div>
                   </div>
@@ -383,13 +377,13 @@ export default function BootcampDetailClient({ bootcamp }) {
               </div>
             </section>
 
-            <section className="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            <section className="glass-panel holographic-card rounded-2xl p-6">
+              <h2 className="text-xl font-bold text-white mb-5">
                 Schedule
               </h2>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                  <label className="block text-xs font-semibold text-gray-400 mb-1.5">
                     Start Date
                   </label>
                   <input
@@ -397,11 +391,12 @@ export default function BootcampDetailClient({ bootcamp }) {
                     name="start_date"
                     value={formData.start_date}
                     onChange={handleChange}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-indigo-400"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
+                    style={{ colorScheme: 'dark' }}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                  <label className="block text-xs font-semibold text-gray-400 mb-1.5">
                     End Date
                   </label>
                   <input
@@ -409,12 +404,13 @@ export default function BootcampDetailClient({ bootcamp }) {
                     name="end_date"
                     value={formData.end_date}
                     onChange={handleChange}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-indigo-400"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all"
+                    style={{ colorScheme: 'dark' }}
                   />
                 </div>
               </div>
-              <div className="mt-4">
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">
+              <div className="mt-5">
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5">
                   Max Students
                 </label>
                 <input
@@ -424,11 +420,11 @@ export default function BootcampDetailClient({ bootcamp }) {
                   onChange={handleChange}
                   min="1"
                   placeholder="Leave empty for unlimited"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-indigo-400 placeholder:text-gray-400"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all placeholder:text-gray-600"
                 />
               </div>
-              <div className="mt-4">
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">
+              <div className="mt-5">
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5">
                   Batch Info
                 </label>
                 <input
@@ -437,33 +433,36 @@ export default function BootcampDetailClient({ bootcamp }) {
                   value={formData.batch_info}
                   onChange={handleChange}
                   placeholder="e.g., Batch 5 - Spring 2026"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 outline-none focus:border-indigo-400 placeholder:text-gray-400"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/50 transition-all placeholder:text-gray-600"
                 />
               </div>
             </section>
           </div>
 
           <div className="space-y-6">
-            <section className="bg-red-50 rounded-xl border border-red-200 p-6">
-              <h2 className="text-base font-semibold text-red-600 mb-2">
+            <section className="bg-red-500/5 border border-red-500/20 rounded-2xl p-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                <Settings className="w-24 h-24 text-red-500" />
+              </div>
+              <h2 className="text-base font-bold text-red-400 mb-2 relative z-10">
                 Danger Zone
               </h2>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-red-300/70 mb-6 relative z-10">
                 Irreversible actions for this learning path.
               </p>
-              <button className="w-full bg-red-600 text-white text-sm font-medium py-2 px-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-between">
+              <button className="w-full bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-semibold py-2.5 px-4 rounded-xl hover:bg-red-500/20 hover:border-red-500/50 transition-all flex items-center justify-between relative z-10">
                 Delete Permanently
-                <span className="text-base">🗑</span>
+                <Trash2 className="h-4 w-4" />
               </button>
             </section>
 
-            <section className="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">
+            <section className="glass-panel holographic-card rounded-2xl p-6">
+              <h2 className="text-sm font-bold text-white mb-4">
                 Featured
               </h2>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-700">Show on homepage</p>
+                  <p className="text-sm text-gray-400">Show on homepage</p>
                 </div>
                 <label className="relative inline-flex cursor-pointer items-center">
                   <input
@@ -473,7 +472,7 @@ export default function BootcampDetailClient({ bootcamp }) {
                     onChange={handleChange}
                     className="peer sr-only"
                   />
-                  <div className="peer h-5 w-9 rounded-full bg-gray-200 peer-checked:bg-amber-400 after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-4" />
+                  <div className="peer h-6 w-11 rounded-full bg-white/10 peer-checked:bg-amber-500/30 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-gray-400 after:transition-all peer-checked:after:translate-x-full peer-checked:after:bg-amber-400 border border-white/5" />
                 </label>
               </div>
             </section>
@@ -485,7 +484,6 @@ export default function BootcampDetailClient({ bootcamp }) {
       {activeTab === 'enrollments' && (
         <EnrollmentsTab bootcampId={bootcamp.id} />
       )}
-      </div>
     </div>
   );
 }

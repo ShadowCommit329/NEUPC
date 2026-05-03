@@ -211,7 +211,7 @@ export async function getBootcampWithCurriculum(idOrSlug) {
         modules (
           id, title, description, order_index, is_published, total_lessons, total_duration,
           lessons (
-            id, title, description, video_source, duration, order_index, 
+            id, title, description, content, video_source, video_id, video_url, duration, order_index, 
             is_free_preview, is_published
           )
         )
