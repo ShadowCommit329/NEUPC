@@ -131,23 +131,42 @@ export async function streamVideo(fileId, rangeHeader = null) {
   headers['Accept-Ranges'] = 'bytes';
   headers['Cache-Control'] = 'private, max-age=3600';
 
-  // Get the video stream with range
-  const response = await drive.files.get(
-    {
-      fileId,
-      alt: 'media',
-    },
-    {
-      responseType: 'stream',
-      headers: rangeHeader ? { Range: `bytes=${start}-${end}` } : {},
-    }
-  );
+  try {
+    // Get the video stream with range
+    const response = await drive.files.get(
+      {
+        fileId,
+        alt: 'media',
+        acknowledgeAbuse: true, // Bypasses the abuse flag error if the file was flagged
+      },
+      {
+        responseType: 'stream',
+        headers: rangeHeader ? { Range: `bytes=${start}-${end}` } : {},
+      }
+    );
 
-  return {
-    stream: response.data,
-    headers,
-    status,
-  };
+    return {
+      stream: response.data,
+      headers,
+      status,
+    };
+  } catch (err) {
+    // Handle the specific "cannotDownloadFile" error from Google Drive
+    if (err.message && err.message.includes('cannot be downloaded by the user')) {
+      console.error('\n======================================================');
+      console.error('❌ GOOGLE DRIVE PERMISSION ERROR ❌');
+      console.error('The Service Account is blocked from streaming this video.');
+      console.error('Google Drive prevents API streaming if downloads are restricted.');
+      console.error('');
+      console.error('HOW TO FIX THIS ISSUE:');
+      console.error('Option A: Grant the Service Account "Editor" access to the video or folder in Google Drive.');
+      console.error('Option B: In Drive sharing settings, click the gear icon ⚙️ and ensure');
+      console.error('          "Viewers and commenters can see the option to download..." is CHECKED.');
+      console.error('======================================================\n');
+      throw new Error('Drive Permission Error: cannotDownloadFile (Downloads are restricted)');
+    }
+    throw err;
+  }
 }
 
 /**

@@ -87,6 +87,7 @@ function DriveVideoPlayer({
     loading: true,
     error: null,
     showControls: true,
+    useIframeFallback: false,
   });
 
   const videoSrc = `/api/video/${lessonId}${fileId ? `?fileId=${fileId}` : ''}`;
@@ -267,10 +268,28 @@ function DriveVideoPlayer({
       onComplete?.();
     },
     onError: (e) => {
+      const error = e.target.error;
+      let errorMsg = 'Failed to load video. Please try again.';
+
+      // Fallback to Google Drive iframe player for unsupported formats if we have a fileId
+      if (error && error.code === 4 && fileId) {
+        setState((s) => ({
+          ...s,
+          loading: false,
+          useIframeFallback: true,
+        }));
+        return;
+      }
+
+      if (error && error.code === 4) {
+        // MEDIA_ERR_SRC_NOT_SUPPORTED (4)
+        errorMsg = 'This video format (e.g. MKV) is not natively supported by web browsers. Please use an MP4 file for web streaming.';
+      }
+
       setState((s) => ({
         ...s,
         loading: false,
-        error: 'Failed to load video. Please try again.',
+        error: errorMsg,
       }));
     },
     onWaiting: () => setState((s) => ({ ...s, loading: true })),
@@ -292,6 +311,21 @@ function DriveVideoPlayer({
           <RefreshCw className="h-4 w-4" />
           Retry
         </button>
+      </div>
+    );
+  }
+
+  // Fallback iframe for MKV and other unsupported formats natively transcoded by Google Drive
+  if (state.useIframeFallback && fileId) {
+    return (
+      <div className="group relative aspect-video w-full overflow-hidden rounded-xl bg-black">
+        <iframe
+          src={`https://drive.google.com/file/d/${fileId}/preview`}
+          className="h-full w-full border-0"
+          allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+          allowFullScreen
+          title="Google Drive Video Player"
+        />
       </div>
     );
   }

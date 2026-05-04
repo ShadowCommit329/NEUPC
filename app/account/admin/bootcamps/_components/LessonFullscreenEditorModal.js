@@ -85,12 +85,12 @@ export default function LessonFullscreenEditorModal({
       <div className="flex-1 flex overflow-hidden">
         
         {/* Leftmost Side: Syllabus */}
-        <div className="w-80 shrink-0 overflow-y-auto border-r border-white/10 bg-[#010f1f] p-4 lg:p-6 custom-scrollbar flex flex-col gap-4">
+        <div className="w-80 shrink-0 overflow-y-auto overflow-x-hidden border-r border-white/10 bg-[#010f1f] p-4 lg:p-6 flex flex-col gap-4 custom-scrollbar">
           {syllabusUI}
         </div>
 
         {/* Middle Side: Editor */}
-        <div className="flex-[3] min-w-0 overflow-y-auto border-r border-white/10 bg-[#0a0d14] p-6 lg:p-8 custom-scrollbar">
+        <div className="flex-[3] min-w-0 overflow-y-auto overflow-x-hidden border-r border-white/10 bg-[#0a0d14] p-6 lg:p-8 custom-scrollbar">
           <div className="max-w-3xl mx-auto flex flex-col gap-6 pb-20">
             {/* Header card */}
             <div className="bg-[#010f1f] rounded-xl border border-[#464554] p-6 flex flex-col gap-4">
@@ -185,7 +185,7 @@ export default function LessonFullscreenEditorModal({
         </div>
 
         {/* Rightmost Side: Preview */}
-        <div className="flex-[2] min-w-0 overflow-y-auto bg-[#080b11] p-6 lg:p-8 custom-scrollbar">
+        <div className="flex-[2] min-w-0 overflow-y-auto overflow-x-hidden bg-[#080b11] p-6 lg:p-8 custom-scrollbar">
           <div className="max-w-3xl mx-auto pb-20">
             {/* Title */}
             <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-white lg:text-3xl mb-4">
