@@ -88,13 +88,12 @@ const VIDEO_ICONS = {
 
 // ─── Lesson editor (right panel) ───────────────────────────────────────────────
 
-function LessonEditor({ lesson, onSaved, onClose, syllabusUI }) {
+function LessonEditor({ lesson, onSaved, onClose, syllabusUI, isFullscreen, setIsFullscreen }) {
   const [saving, setSaving] = useState(false);
   const [validating, setValidating] = useState(false);
   const [driveValidation, setDriveValidation] = useState(null);
   const [errors, setErrors] = useState({});
   const [deleting, setDeleting] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
 
   const [form, setForm] = useState(() => {
     let content = lesson.content || '';
@@ -210,13 +209,13 @@ function LessonEditor({ lesson, onSaved, onClose, syllabusUI }) {
   const durationMins = form.duration ? Math.round(form.duration / 60) : '';
 
   return (
-    <div className="xl:col-span-8 flex flex-col gap-6">
+    <div className="xl:col-span-8 min-w-0 flex flex-col gap-6">
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-[#d4e4fa]">Edit Lesson</h3>
         <button
           type="button"
-          onClick={() => setShowPreview(true)}
+          onClick={() => setIsFullscreen(true)}
           className="px-4 py-2 rounded-full bg-[#122131]/50 border border-[#464554] text-[#c0c1ff] text-sm font-semibold hover:bg-[#122131] hover:text-[#e1e0ff] transition-colors flex items-center gap-2 shadow-sm"
         >
           <Maximize2 className="h-4 w-4" />
@@ -325,7 +324,7 @@ function LessonEditor({ lesson, onSaved, onClose, syllabusUI }) {
       <div className="flex items-center justify-end gap-3">
         <button
           type="button"
-          onClick={() => setShowPreview(true)}
+          onClick={() => setIsFullscreen(true)}
           className="px-6 py-2 rounded-full border border-[#464554] text-[#908fa0] text-sm font-semibold hover:bg-[#0d1c2d] hover:text-[#d4e4fa] transition-colors flex items-center gap-2"
         >
           <Maximize2 className="h-4 w-4" />
@@ -349,7 +348,7 @@ function LessonEditor({ lesson, onSaved, onClose, syllabusUI }) {
         </button>
       </div>
 
-      {showPreview && (
+      {isFullscreen && (
         <LessonFullscreenEditorModal
           form={form}
           set={set}
@@ -358,7 +357,7 @@ function LessonEditor({ lesson, onSaved, onClose, syllabusUI }) {
           durationMins={durationMins}
           handleSave={handleSave}
           saving={saving}
-          onClose={() => setShowPreview(false)}
+          onClose={() => setIsFullscreen(false)}
           syllabusUI={syllabusUI}
         />
       )}
@@ -398,10 +397,10 @@ function ModuleRow({
       onDragStart={(e) => { e.stopPropagation(); onDragStart('module', module.id, courseId); }}
       onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
       onDrop={(e) => { e.stopPropagation(); onDrop('module', module.id, courseId); }}
-      className={`border border-[#464554] rounded-lg bg-[#051424] overflow-hidden ${isDragged ? 'opacity-50' : ''}`}
+      className={`border border-[#464554] rounded-lg bg-[#051424] ${isDragged ? 'opacity-50' : ''}`}
     >
       {/* Module header */}
-      <div className="px-3 py-3 flex items-center gap-2 hover:bg-[#0d1c2d] transition-colors group/mod relative">
+      <div className={`px-3 py-3 flex items-center gap-2 hover:bg-[#0d1c2d] transition-colors group/mod relative ${expanded ? 'rounded-t-lg' : 'rounded-lg'}`}>
         <GripVertical className="h-4 w-4 text-[#464554] cursor-grab shrink-0" />
         <button onClick={() => setExpanded((v) => !v)} className="text-[#908fa0] shrink-0">
           <ChevronRight className={`h-4 w-4 transition-transform ${expanded ? 'rotate-90' : ''}`} />
@@ -461,7 +460,7 @@ function ModuleRow({
 
       {/* Lessons */}
       {expanded && (
-        <div className="flex flex-col bg-[#010f1f] border-t border-[#464554]">
+        <div className="flex flex-col bg-[#010f1f] border-t border-[#464554] rounded-b-lg">
           {lessons.map((lesson, lIdx) => {
             const isActive = lesson.id === activeLessonId;
             return (
@@ -625,10 +624,10 @@ function CourseRow({
       onDragStart={(e) => { e.stopPropagation(); onDragStart('course', course.id, null); }}
       onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
       onDrop={(e) => { e.stopPropagation(); onDrop('course', course.id, null); }}
-      className={`border border-[#464554] rounded-lg bg-[#051424] overflow-hidden ${isDragged ? 'opacity-50' : ''}`}
+      className={`border border-[#464554] rounded-lg bg-[#051424] ${isDragged ? 'opacity-50' : ''}`}
     >
       {/* Course header — acts as top-level module group */}
-      <div className="px-3 py-3 flex items-center gap-2 bg-[#0d1c2d] hover:bg-[#122131] transition-colors group/course">
+      <div className={`px-3 py-3 flex items-center gap-2 bg-[#0d1c2d] hover:bg-[#122131] transition-colors group/course ${expanded ? 'rounded-t-lg' : 'rounded-lg'}`}>
         <GripVertical className="h-4 w-4 text-[#464554] cursor-grab shrink-0" />
         <button onClick={() => setExpanded((v) => !v)} className="text-[#908fa0] shrink-0">
           <ChevronRight className={`h-4 w-4 transition-transform ${expanded ? 'rotate-90' : ''}`} />
@@ -734,6 +733,7 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
   const [activeLesson, setActiveLesson] = useState(null);
   const [addingCourse, setAddingCourse] = useState(false);
   const [draggedItem, setDraggedItem] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const handleDragStart = (type, id, parentId) => {
     setDraggedItem({ type, id, parentId });
@@ -1028,7 +1028,7 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
   return (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
       {/* ── Left: Syllabus ─────────────────────────────────────────────────── */}
-      <div className="xl:col-span-4 flex flex-col gap-4 bg-[#010f1f] p-4 rounded-xl border border-[#464554] min-h-[500px]">
+      <div className="xl:col-span-4 min-w-0 flex flex-col gap-4 bg-[#010f1f] p-4 rounded-xl border border-[#464554] min-h-[500px]">
         {syllabusUI}
       </div>
 
@@ -1040,6 +1040,8 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
           onSaved={handleLessonSaved}
           onClose={() => setActiveLesson(null)}
           syllabusUI={syllabusUI}
+          isFullscreen={isFullscreen}
+          setIsFullscreen={setIsFullscreen}
         />
       ) : (
         <div className="xl:col-span-8">
