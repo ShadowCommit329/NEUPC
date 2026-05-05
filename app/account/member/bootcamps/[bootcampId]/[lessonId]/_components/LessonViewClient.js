@@ -190,7 +190,7 @@ function Sidebar({ bootcamp, currentLessonId, lessonProgress, onSelectLesson, is
   return (
     <>
       {/* Desktop sidebar */}
-      <div className="hidden w-96 xl:w-[28rem] 2xl:w-[32rem] shrink-0 border-r border-white/6 lg:block">{content}</div>
+      <div className="hidden w-72 shrink-0 border-r border-white/6 lg:block">{content}</div>
 
       {/* Mobile drawer */}
       {isOpen && (

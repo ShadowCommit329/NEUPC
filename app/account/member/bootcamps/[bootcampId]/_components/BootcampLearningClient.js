@@ -390,7 +390,7 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress = {} }
         </div>
 
         {/* ── Curriculum ── */}
-        <div>
+        <div className="mx-auto max-w-2xl">
           <div className="mb-4 sm:mb-5 flex items-center justify-between">
             <div>
               <h2 className="text-base sm:text-lg font-extrabold tracking-tight text-white">Course Curriculum</h2>

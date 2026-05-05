@@ -104,15 +104,34 @@ export async function getFileMetadata(fileId) {
 /**
  * Convert a Node.js Readable to a Web API ReadableStream (required by Next.js App Router).
  */
-function toWebStream(nodeStream) {
+function toWebStream(nodeStream, onCancel) {
+  let closed = false;
   return new ReadableStream({
     start(controller) {
-      nodeStream.on('data', (chunk) => controller.enqueue(chunk));
-      nodeStream.on('end', () => controller.close());
-      nodeStream.on('error', (err) => controller.error(err));
+      nodeStream.on('data', (chunk) => {
+        if (closed) return;
+        try {
+          controller.enqueue(chunk);
+        } catch {
+          closed = true;
+          nodeStream.destroy();
+        }
+      });
+      nodeStream.on('end', () => {
+        if (closed) return;
+        closed = true;
+        try { controller.close(); } catch {}
+      });
+      nodeStream.on('error', (err) => {
+        if (closed) return;
+        closed = true;
+        try { controller.error(err); } catch {}
+      });
     },
     cancel() {
+      closed = true;
       nodeStream.destroy();
+      onCancel?.();
     },
   });
 }
@@ -123,8 +142,9 @@ function toWebStream(nodeStream) {
  */
 export function transcodeToMp4(inputStream) {
   const passthrough = new PassThrough();
+  let killed = false;
 
-  ffmpeg(inputStream)
+  const command = ffmpeg(inputStream)
     .outputOptions([
       '-c:v libx264',
       '-preset ultrafast',
@@ -136,12 +156,26 @@ export function transcodeToMp4(inputStream) {
     ])
     .output(passthrough)
     .on('error', (err) => {
-      console.error('ffmpeg transcode error:', err.message);
+      // Suppress expected client-disconnect errors
+      const msg = err?.message || '';
+      if (killed || msg.includes('SIGKILL') || msg.includes('Output stream closed') || msg.includes('premature close')) {
+        return;
+      }
+      console.error('ffmpeg transcode error:', msg);
       passthrough.destroy(err);
-    })
-    .run();
+    });
 
-  return toWebStream(passthrough);
+  command.run();
+
+  const cleanup = () => {
+    if (killed) return;
+    killed = true;
+    try { command.kill('SIGKILL'); } catch {}
+    try { inputStream.destroy?.(); } catch {}
+    try { passthrough.destroy(); } catch {}
+  };
+
+  return toWebStream(passthrough, cleanup);
 }
 
 export async function streamVideo(fileId, rangeHeader = null) {
@@ -215,7 +249,9 @@ export async function streamVideo(fileId, rangeHeader = null) {
     );
 
     return {
-      stream: toWebStream(response.data),
+      stream: toWebStream(response.data, () => {
+        try { response.data.destroy?.(); } catch {}
+      }),
       headers,
       status,
     };
