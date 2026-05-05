@@ -18,6 +18,24 @@
 
 import { google } from 'googleapis';
 import { extractDriveFileId, getYouTubeEmbedUrl } from './utils';
+import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
+import ffmpeg from 'fluent-ffmpeg';
+import { PassThrough, Readable } from 'stream';
+
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+
+// MIME types that browsers can play natively without transcoding
+const NATIVE_BROWSER_TYPES = new Set([
+  'video/mp4',
+  'video/webm',
+  'video/ogg',
+]);
+
+function needsTranscode(mimeType) {
+  if (!mimeType) return false;
+  const base = mimeType.split(';')[0].trim().toLowerCase();
+  return !NATIVE_BROWSER_TYPES.has(base);
+}
 
 let _driveClient = null;
 
@@ -84,13 +102,48 @@ export async function getFileMetadata(fileId) {
 }
 
 /**
- * Stream a video file from Google Drive with support for HTTP Range requests.
- * This enables seeking and partial content delivery for video players.
- *
- * @param {string} fileId - The Google Drive file ID
- * @param {string} rangeHeader - The HTTP Range header value (e.g., "bytes=0-1000")
- * @returns {Promise<{stream: ReadableStream, headers: Object, status: number}>}
+ * Convert a Node.js Readable to a Web API ReadableStream (required by Next.js App Router).
  */
+function toWebStream(nodeStream) {
+  return new ReadableStream({
+    start(controller) {
+      nodeStream.on('data', (chunk) => controller.enqueue(chunk));
+      nodeStream.on('end', () => controller.close());
+      nodeStream.on('error', (err) => controller.error(err));
+    },
+    cancel() {
+      nodeStream.destroy();
+    },
+  });
+}
+
+/**
+ * Transcode a Node.js Readable stream to H.264/AAC MP4 via ffmpeg.
+ * Returns a Web API ReadableStream for use with NextResponse.
+ */
+export function transcodeToMp4(inputStream) {
+  const passthrough = new PassThrough();
+
+  ffmpeg(inputStream)
+    .outputOptions([
+      '-c:v libx264',
+      '-preset ultrafast',
+      '-crf 23',
+      '-c:a aac',
+      '-b:a 128k',
+      '-movflags frag_keyframe+empty_moov+faststart',
+      '-f mp4',
+    ])
+    .output(passthrough)
+    .on('error', (err) => {
+      console.error('ffmpeg transcode error:', err.message);
+      passthrough.destroy(err);
+    })
+    .run();
+
+  return toWebStream(passthrough);
+}
+
 export async function streamVideo(fileId, rangeHeader = null) {
   if (!fileId || typeof fileId !== 'string') {
     throw new Error('Invalid file ID');
@@ -102,8 +155,29 @@ export async function streamVideo(fileId, rangeHeader = null) {
   const metadata = await getFileMetadata(fileId);
   const fileSize = metadata.size;
   const contentType = metadata.mimeType || 'video/mp4';
+  const shouldTranscode = needsTranscode(contentType);
 
-  // Parse range header if present
+  // Transcoded streams have unknown output size — serve as full 200, no range support
+  if (shouldTranscode) {
+    const driveResponse = await drive.files.get(
+      { fileId, alt: 'media', acknowledgeAbuse: true },
+      { responseType: 'stream' }
+    );
+
+    const transcodedStream = transcodeToMp4(driveResponse.data);
+
+    return {
+      stream: transcodedStream,
+      headers: {
+        'Content-Type': 'video/mp4',
+        'Cache-Control': 'private, max-age=3600',
+        'X-Transcoded': '1',
+      },
+      status: 200,
+    };
+  }
+
+  // Native format — serve with range support
   let start = 0;
   let end = fileSize - 1;
   let status = 200;
@@ -121,7 +195,7 @@ export async function streamVideo(fileId, rangeHeader = null) {
         end = start + maxChunkSize - 1;
       }
 
-      status = 206; // Partial Content
+      status = 206;
       headers['Content-Range'] = `bytes ${start}-${end}/${fileSize}`;
     }
   }
@@ -132,13 +206,8 @@ export async function streamVideo(fileId, rangeHeader = null) {
   headers['Cache-Control'] = 'private, max-age=3600';
 
   try {
-    // Get the video stream with range
     const response = await drive.files.get(
-      {
-        fileId,
-        alt: 'media',
-        acknowledgeAbuse: true, // Bypasses the abuse flag error if the file was flagged
-      },
+      { fileId, alt: 'media', acknowledgeAbuse: true },
       {
         responseType: 'stream',
         headers: rangeHeader ? { Range: `bytes=${start}-${end}` } : {},
@@ -146,7 +215,7 @@ export async function streamVideo(fileId, rangeHeader = null) {
     );
 
     return {
-      stream: response.data,
+      stream: toWebStream(response.data),
       headers,
       status,
     };
@@ -207,21 +276,3 @@ export function formatDuration(seconds) {
   return `${secs}s`;
 }
 
-/**
- * Format duration for display in lesson list (compact).
- *
- * @param {number} seconds - Duration in seconds
- * @returns {string} - Compact duration (e.g., "1:23:45", "23:45", "3:20")
- */
-export function formatDurationCompact(seconds) {
-  if (!seconds || seconds <= 0) return '0:00';
-
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-
-  if (hours > 0) {
-    return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  }
-  return `${minutes}:${String(secs).padStart(2, '0')}`;
-}

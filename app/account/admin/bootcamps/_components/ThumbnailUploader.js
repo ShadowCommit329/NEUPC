@@ -55,38 +55,18 @@ export default function ThumbnailUploader({
       setError(null);
 
       try {
+        if (!uploadAction) {
+          throw new Error('uploadAction prop is required');
+        }
         const formData = new FormData();
         formData.append('file', file);
-        if (uploadAction) {
-          const result = await uploadAction(formData);
-          if (result?.error) {
-            throw new Error(result.error || 'Upload failed');
-          }
-          setPreview(result?.url || URL.createObjectURL(file));
-          if (onUploadSuccess) {
-            onUploadSuccess(result);
-          }
-        } else {
-          formData.append('bootcampId', bootcampId);
-
-          const response = await fetch('/api/admin/upload/thumbnail', {
-            method: 'POST',
-            body: formData,
-          });
-
-          const result = await response.json();
-
-          if (!response.ok) {
-            throw new Error(result.error || 'Upload failed');
-          }
-
-          // Use the returned URL for preview (falls back to local blob)
-          setPreview(result.data?.url || URL.createObjectURL(file));
-
-          // Notify parent component
-          if (onUploadSuccess) {
-            onUploadSuccess(result.data);
-          }
+        const result = await uploadAction(formData);
+        if (result?.error) {
+          throw new Error(result.error || 'Upload failed');
+        }
+        setPreview(result?.url || URL.createObjectURL(file));
+        if (onUploadSuccess) {
+          onUploadSuccess(result);
         }
       } catch (err) {
         console.error('Upload error:', err);

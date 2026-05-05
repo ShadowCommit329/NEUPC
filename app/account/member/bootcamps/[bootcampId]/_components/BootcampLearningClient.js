@@ -231,8 +231,13 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress = {} }
   const allLessons = useMemo(() => {
     const lessons = [];
     bootcamp?.courses?.forEach((c) => {
+      if (c.is_published === false) return;
       c.modules?.forEach((m) => {
-        m.lessons?.forEach((l) => lessons.push(l));
+        if (m.is_published === false) return;
+        m.lessons?.forEach((l) => {
+          if (l.is_published === false) return;
+          lessons.push(l);
+        });
       });
     });
     return lessons;
@@ -343,7 +348,7 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress = {} }
               <div className="flex shrink-0 items-center gap-3 rounded-2xl border border-white/8 bg-white/3 px-4 py-3 sm:flex-col sm:items-center sm:gap-2 sm:px-5 sm:py-4 sm:text-center sm:min-w-[120px]">
                 <div className="relative flex items-center justify-center">
                   <ProgressRing percent={progressPercent} size={72} />
-                  <span className="absolute text-[17px] font-extrabold tabular-nums text-white rotate-90 sm:rotate-0" style={{transform: 'none'}}>
+                  <span className="absolute text-[17px] font-extrabold tabular-nums text-white">
                     {progressPercent}%
                   </span>
                 </div>

@@ -989,7 +989,7 @@ export default function CurriculumBuilder({ bootcampId, initialCourses = [], onC
             className="text-[#c0c1ff] hover:text-[#e1e0ff] text-sm flex items-center gap-1 font-medium transition-colors disabled:opacity-50"
           >
             {addingCourse ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-            Add Module
+            Add Course
           </button>
         </div>
 

@@ -8,7 +8,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { requireRole } from '@/app/_lib/auth-guard';
 import {
-  getBootcampWithCurriculum,
+  getBootcampCurriculumLight,
   getLesson,
   checkEnrollment,
   getBootcampProgress,
@@ -44,11 +44,11 @@ export default async function LessonPage({ params }) {
     notFound();
   }
 
-  // Verify lesson belongs to the bootcamp
+  // Verify lesson belongs to the bootcamp; reject mismatched URL outright
+  // rather than redirecting (avoids leaking other-bootcamp lesson IDs).
   const lessonBootcampId = lesson.modules?.courses?.bootcamps?.id;
   if (lessonBootcampId && lessonBootcampId !== bootcampId) {
-    // Redirect to correct URL
-    redirect(`/account/member/bootcamps/${lessonBootcampId}/${lessonId}`);
+    notFound();
   }
 
   // Check enrollment (unless it's a free preview)
@@ -59,10 +59,10 @@ export default async function LessonPage({ params }) {
     }
   }
 
-  // Fetch bootcamp for curriculum sidebar
+  // Fetch bootcamp for curriculum sidebar (light: no lesson content)
   let bootcamp;
   try {
-    bootcamp = await getBootcampWithCurriculum(bootcampId);
+    bootcamp = await getBootcampCurriculumLight(bootcampId);
   } catch {
     notFound();
   }
