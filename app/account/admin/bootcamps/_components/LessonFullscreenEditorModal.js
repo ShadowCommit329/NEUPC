@@ -1,8 +1,8 @@
 'use client';
 
 import { X, Clock, Play, Save, Loader2, GripVertical, BookOpen, ChevronRight, AlertCircle } from 'lucide-react';
-import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/LessonContentRenderer';
-import VideoPlayer from '@/app/account/member/bootcamps/[bootcampId]/[lessonId]/_components/VideoPlayer';
+import LessonContentRenderer from '@/app/account/member/bootcamps/[bootcampSlug]/[lessonId]/_components/LessonContentRenderer';
+import VideoPlayer from '@/app/account/member/bootcamps/[bootcampSlug]/[lessonId]/_components/VideoPlayer';
 import MultiBlockEditor from './MultiBlockEditor';
 
 function formatDuration(seconds) {
