@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { 
   Plus, 
   Trash2, 
@@ -306,25 +306,24 @@ export default function MultiBlockEditor({ value, onChange }) {
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dragHandleActive, setDragHandleActive] = useState(null);
 
-  // Sync value changes from outside (e.g. when changing selected lesson)
-  // Use derived state pattern instead of useEffect to prevent infinite flip-flop loops
+  // Sync value changes from outside (e.g. when changing selected lesson).
+  // Compare by reference first (cheap); only re-parse if reference differs.
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
     setPrevValue(value);
-    const parsed = parseContentBlocks(value);
-    if (JSON.stringify(parsed) !== JSON.stringify(blocks)) {
-      setBlocks(parsed);
-    }
+    setBlocks(parseContentBlocks(value));
   }
 
-  // Sync local blocks back to the parent (onChange)
+  // Sync local blocks back to the parent (onChange).
+  // Cache last-emitted serialization so we don't re-emit unchanged content.
+  const lastEmittedRef = useRef(value);
   useEffect(() => {
     const serialized = JSON.stringify(blocks);
-    // Only notify parent if the content actually changed and is different from current value
-    if (serialized !== value) {
+    if (serialized !== lastEmittedRef.current) {
+      lastEmittedRef.current = serialized;
       onChange(serialized);
     }
-  }, [blocks, onChange, value]);
+  }, [blocks, onChange]);
 
   const updateBlocks = useCallback((newBlocks) => {
     setBlocks(newBlocks);

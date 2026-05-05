@@ -28,7 +28,7 @@ import CurriculumBuilder from '../../_components/CurriculumBuilder';
 import EnrollmentsTab from './EnrollmentsTab';
 import ThumbnailUploader from '../../_components/ThumbnailUploader';
 import { getStatusConfig, BOOTCAMP_STATUSES } from '../../_components/bootcampConfig';
-import { updateBootcamp } from '@/app/_lib/bootcamp-actions';
+import { updateBootcamp, uploadBootcampThumbnailAction, deleteBootcamp } from '@/app/_lib/bootcamp-actions';
 import toast from 'react-hot-toast';
 
 const TABS = [
@@ -92,7 +92,7 @@ export default function BootcampDetailClient({ bootcamp }) {
     try {
       const fd = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
-        if (value !== null && value !== undefined && value !== '') {
+        if (value !== null && value !== undefined) {
           fd.append(key, String(value));
         }
       });
@@ -111,6 +111,20 @@ export default function BootcampDetailClient({ bootcamp }) {
   const handleCoursesChange = useCallback((courses) => {
     setBootcampData((prev) => ({ ...prev, courses }));
   }, []);
+
+  const [deleting, setDeleting] = useState(false);
+  const handleDelete = async () => {
+    if (!confirm(`Permanently delete "${bootcampData.title}"? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await deleteBootcamp(bootcamp.id);
+      toast.success('Bootcamp deleted');
+      router.push('/account/admin/bootcamps');
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete');
+      setDeleting(false);
+    }
+  };
 
   const sc = getStatusConfig(formData.status);
 
@@ -301,11 +315,16 @@ export default function BootcampDetailClient({ bootcamp }) {
               <ThumbnailUploader
                 bootcampId={bootcamp.id}
                 currentThumbnail={formData.thumbnail}
+                uploadAction={uploadBootcampThumbnailAction}
                 onUploadSuccess={(data) => {
                   if (data?.url) {
                     setFormData((prev) => ({ ...prev, thumbnail: data.url }));
                     setHasChanges(true);
                   }
+                }}
+                onRemove={() => {
+                  setFormData((prev) => ({ ...prev, thumbnail: '' }));
+                  setHasChanges(true);
                 }}
               />
               <p className="text-[11px] text-gray-600 mt-2.5 text-center">
@@ -442,42 +461,6 @@ export default function BootcampDetailClient({ bootcamp }) {
               </div>
             </section>
 
-            {/* Enrollment Settings */}
-            <section className="glass-panel holographic-card no-lift rounded-2xl p-6">
-              <div className="flex items-center gap-2 mb-2">
-                <Users className="h-4 w-4 text-violet-400" />
-                <h2 className="text-base font-bold text-white">Enrollment Settings</h2>
-              </div>
-              <p className="text-sm text-gray-500 mb-5">
-                Control how club members can join this learning path.
-              </p>
-              <div className="space-y-3">
-                {[
-                  { value: 'open', label: 'Open Enrollment', desc: 'Anyone can join instantly without approval.', icon: Globe },
-                  { value: 'application', label: 'Invite Only', desc: 'Members must be manually approved by an admin.', icon: Lock },
-                ].map(({ value, label, desc, icon: Icon }) => (
-                  <label
-                    key={value}
-                    className="flex items-start gap-4 p-4 bg-white/4 border border-white/8 rounded-xl cursor-pointer hover:bg-white/8 hover:border-white/15 transition-all"
-                  >
-                    <input
-                      type="radio"
-                      name="enrollment_type"
-                      value={value}
-                      defaultChecked={value === 'open'}
-                      className="mt-0.5 text-violet-500 focus:ring-violet-500 bg-white/10 border-white/20 accent-violet-500"
-                    />
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 border border-violet-500/20">
-                      <Icon className="h-4 w-4 text-violet-400" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-white">{label}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{desc}</div>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </section>
           </div>
 
           {/* Sidebar */}
@@ -515,9 +498,13 @@ export default function BootcampDetailClient({ bootcamp }) {
               <p className="text-xs text-red-300/60 mb-4 relative z-10">
                 Irreversible and destructive actions.
               </p>
-              <button className="relative z-10 w-full flex items-center justify-between bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold py-2.5 px-4 rounded-xl hover:bg-red-500/20 hover:border-red-500/50 transition-all">
-                Delete Permanently
-                <Trash2 className="h-4 w-4" />
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="relative z-10 w-full flex items-center justify-between bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold py-2.5 px-4 rounded-xl hover:bg-red-500/20 hover:border-red-500/50 transition-all disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Delete Permanently'}
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               </button>
             </section>
           </div>

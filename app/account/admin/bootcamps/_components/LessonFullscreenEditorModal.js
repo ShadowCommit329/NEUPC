@@ -85,7 +85,7 @@ export default function LessonFullscreenEditorModal({
       <div className="flex-1 flex overflow-hidden">
         
         {/* Leftmost Side: Syllabus */}
-        <div className="w-80 shrink-0 overflow-y-auto overflow-x-hidden border-r border-white/10 bg-[#010f1f] p-4 lg:p-6 flex flex-col gap-4 custom-scrollbar">
+        <div className="w-80 lg:w-96 xl:w-[28rem] 2xl:w-[32rem] shrink-0 overflow-y-auto overflow-x-hidden border-r border-white/10 bg-[#010f1f] p-4 lg:p-6 flex flex-col gap-4 custom-scrollbar">
           {syllabusUI}
         </div>
 

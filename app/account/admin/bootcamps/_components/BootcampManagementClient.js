@@ -43,23 +43,29 @@ export default function BootcampManagementClient({ initialBootcamps }) {
   const [deleteLoading, setDeleteLoading] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Track locally-deleted IDs so router.refresh re-syncing initial data
+  // does not re-introduce them (until server response excludes them too)
+  const [deletedIds, setDeletedIds] = useState(() => new Set());
+
   useEffect(() => {
-    setBootcamps(initialBootcamps ?? []);
-  }, [initialBootcamps]);
+    setBootcamps((initialBootcamps ?? []).filter((b) => !deletedIds.has(b.id)));
+  }, [initialBootcamps, deletedIds]);
 
   const handleDelete = useCallback(async (id) => {
     if (!confirm('Permanently delete this bootcamp? This cannot be undone.')) return;
     setDeleteLoading(id);
     try {
       await deleteBootcamp(id);
+      setDeletedIds((prev) => new Set(prev).add(id));
       setBootcamps((prev) => prev.filter((b) => b.id !== id));
       toast.success('Bootcamp deleted successfully');
+      router.refresh();
     } catch (err) {
       toast.error(err.message || 'Failed to delete bootcamp');
     } finally {
       setDeleteLoading(null);
     }
-  }, []);
+  }, [router]);
 
   const handleToggleFeatured = useCallback(async (id) => {
     try {

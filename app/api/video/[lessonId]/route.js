@@ -208,7 +208,7 @@ export async function GET(request, { params }) {
           response.headers.set('X-Content-Type-Options', 'nosniff');
           response.headers.set(
             'Content-Disposition',
-            'inline; filename="video.mp4"'
+            'inline; filename="video"'
           );
 
           return response;
