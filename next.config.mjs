@@ -132,7 +132,7 @@ const nextConfig = {
 
   // ── Server External Packages ────────────────────────────────────────────
   // Keep heavy server-only packages out of the client bundle
-  serverExternalPackages: ['nodemailer', 'sanitize-html'],
+  serverExternalPackages: ['nodemailer', 'sanitize-html', 'fluent-ffmpeg', '@ffmpeg-installer/ffmpeg'],
 
   // ── Experimental ──────────────────────────────────────────────────────────
   experimental: {

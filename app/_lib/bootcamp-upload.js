@@ -51,9 +51,11 @@ async function getRootFolderId() {
   const folderName = 'NEUPC_Bootcamps';
   const parentId = process.env.GDRIVE_FOLDER_ID;
 
-  const q = parentId
-    ? `name='${folderName}' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`
-    : `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+  const safeName = escapeDriveQuery(folderName);
+  const safeParent = parentId ? escapeDriveQuery(parentId) : null;
+  const q = safeParent
+    ? `name='${safeName}' and '${safeParent}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`
+    : `name='${safeName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
 
   const response = await drive.files.list({
     q,
@@ -84,12 +86,18 @@ async function getRootFolderId() {
  * @param {string} folderName - Folder name to create/find
  * @returns {Promise<string>} - Folder ID
  */
+function escapeDriveQuery(s) {
+  return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
 async function getOrCreateFolder(parentId, folderName) {
   const drive = getDriveClient();
+  const safeName = escapeDriveQuery(folderName);
+  const safeParent = escapeDriveQuery(parentId);
 
   // Search for existing folder
   const response = await drive.files.list({
-    q: `name='${folderName}' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+    q: `name='${safeName}' and '${safeParent}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
     fields: 'files(id, name)',
     spaces: 'drive',
   });
@@ -331,8 +339,10 @@ export function isValidThumbnailType(mimeType) {
  * @returns {boolean}
  */
 export function isValidVideoType(mimeType) {
-  const validTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
-  return validTypes.includes(mimeType);
+  if (!mimeType) return false;
+  const base = mimeType.split(';')[0].trim().toLowerCase();
+  // Accept any video/* MIME type; incompatible formats are transcoded on playback
+  return base.startsWith('video/') || base === 'application/x-matroska';
 }
 
 /**

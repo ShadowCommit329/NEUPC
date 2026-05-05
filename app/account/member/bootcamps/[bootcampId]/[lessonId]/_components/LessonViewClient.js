@@ -168,16 +168,20 @@ function Sidebar({ bootcamp, currentLessonId, lessonProgress, onSelectLesson, is
 
       {/* Module list */}
       <div className="flex-1 space-y-2 overflow-y-auto p-3 custom-scrollbar">
-        {bootcamp?.courses?.map((course) =>
-          course.modules?.map((module) => (
-            <ModuleAccordion
-              key={module.id}
-              module={module}
-              currentLessonId={currentLessonId}
-              lessonProgress={lessonProgress}
-              onSelectLesson={onSelectLesson}
-            />
-          ))
+        {bootcamp?.courses?.filter((c) => c.is_published !== false).map((course) =>
+          course.modules?.filter((m) => m.is_published !== false).map((module) => {
+            const visibleLessons = (module.lessons || []).filter((l) => l.is_published !== false);
+            if (visibleLessons.length === 0) return null;
+            return (
+              <ModuleAccordion
+                key={module.id}
+                module={{ ...module, lessons: visibleLessons }}
+                currentLessonId={currentLessonId}
+                lessonProgress={lessonProgress}
+                onSelectLesson={onSelectLesson}
+              />
+            );
+          })
         )}
       </div>
     </div>
@@ -186,7 +190,7 @@ function Sidebar({ bootcamp, currentLessonId, lessonProgress, onSelectLesson, is
   return (
     <>
       {/* Desktop sidebar */}
-      <div className="hidden w-64 xl:w-72 shrink-0 border-r border-white/6 lg:block">{content}</div>
+      <div className="hidden w-96 xl:w-[28rem] 2xl:w-[32rem] shrink-0 border-r border-white/6 lg:block">{content}</div>
 
       {/* Mobile drawer */}
       {isOpen && (
@@ -330,11 +334,16 @@ export default function LessonViewClient({ bootcamp, lesson, lessonProgress, use
 
   const allLessons = useMemo(() => {
     const lessons = [];
-    bootcamp?.courses?.forEach((course) =>
-      course.modules?.forEach((module) =>
-        module.lessons?.forEach((l) => lessons.push({ ...l, moduleName: module.title, courseName: course.title }))
-      )
-    );
+    bootcamp?.courses?.forEach((course) => {
+      if (course.is_published === false) return;
+      course.modules?.forEach((module) => {
+        if (module.is_published === false) return;
+        module.lessons?.forEach((l) => {
+          if (l.is_published === false) return;
+          lessons.push({ ...l, moduleName: module.title, courseName: course.title });
+        });
+      });
+    });
     return lessons;
   }, [bootcamp?.courses]);
 

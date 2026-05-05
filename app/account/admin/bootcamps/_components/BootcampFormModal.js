@@ -108,7 +108,7 @@ export default function BootcampFormModal({ bootcamp, onClose, onSaved }) {
     try {
       const fd = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
-        if (value !== null && value !== undefined && value !== '') {
+        if (value !== null && value !== undefined) {
           fd.append(key, String(value));
         }
       });

@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { requireRole } from '@/app/_lib/auth-guard';
 import {
-  getBootcampWithCurriculum,
+  getBootcampCurriculumLight,
   checkEnrollment,
   updateEnrollmentAccess,
   getBootcampProgress,
@@ -11,7 +11,7 @@ import BootcampLearningClient from './_components/BootcampLearningClient';
 export async function generateMetadata({ params }) {
   const { bootcampId } = await params;
   try {
-    const bootcamp = await getBootcampWithCurriculum(bootcampId);
+    const bootcamp = await getBootcampCurriculumLight(bootcampId);
     return { title: `${bootcamp?.title || 'Bootcamp'} | NEUPC` };
   } catch {
     return { title: 'Bootcamp | NEUPC' };
@@ -24,7 +24,7 @@ export default async function BootcampLearningPage({ params }) {
 
   let bootcamp;
   try {
-    bootcamp = await getBootcampWithCurriculum(bootcampId);
+    bootcamp = await getBootcampCurriculumLight(bootcampId);
   } catch {
     notFound();
   }
