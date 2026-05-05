@@ -9,9 +9,9 @@ import {
 import BootcampLearningClient from './_components/BootcampLearningClient';
 
 export async function generateMetadata({ params }) {
-  const { bootcampId } = await params;
+  const { bootcampSlug } = await params;
   try {
-    const bootcamp = await getBootcampCurriculumLight(bootcampId);
+    const bootcamp = await getBootcampCurriculumLight(bootcampSlug);
     return { title: `${bootcamp?.title || 'Bootcamp'} | NEUPC` };
   } catch {
     return { title: 'Bootcamp | NEUPC' };
@@ -19,26 +19,26 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function BootcampLearningPage({ params }) {
-  const { bootcampId } = await params;
+  const { bootcampSlug } = await params;
   await requireRole('member');
 
   let bootcamp;
   try {
-    bootcamp = await getBootcampCurriculumLight(bootcampId);
+    bootcamp = await getBootcampCurriculumLight(bootcampSlug);
   } catch {
     notFound();
   }
 
   if (!bootcamp) notFound();
 
-  const enrollmentCheck = await checkEnrollment(bootcampId);
+  const enrollmentCheck = await checkEnrollment(bootcamp.id);
   if (!enrollmentCheck.enrolled) {
     redirect(`/account/member/bootcamps`);
   }
 
-  await updateEnrollmentAccess(bootcampId).catch(() => {});
+  await updateEnrollmentAccess(bootcamp.id).catch(() => {});
 
-  const { lessonProgress } = await getBootcampProgress(bootcampId).catch(() => ({ lessonProgress: {} }));
+  const { lessonProgress } = await getBootcampProgress(bootcamp.id).catch(() => ({ lessonProgress: {} }));
 
   return <BootcampLearningClient bootcamp={bootcamp} lessonProgress={lessonProgress} />;
 }

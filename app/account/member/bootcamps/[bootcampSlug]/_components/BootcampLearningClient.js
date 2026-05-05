@@ -275,7 +275,7 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress = {} }
         </span>
         {resumeLesson && (
           <Link
-            href={`/account/member/bootcamps/${bootcamp.id}/${resumeLesson.id}`}
+            href={`/account/member/bootcamps/${bootcamp.slug}/${resumeLesson.id}`}
             className="hidden shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-1.5 text-[11px] font-bold text-white shadow-md shadow-emerald-500/20 transition-all hover:from-emerald-400 hover:to-emerald-500 sm:flex"
           >
             <Play className="h-3 w-3 fill-current" />
@@ -377,7 +377,7 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress = {} }
                   </p>
                 </div>
                 <Link
-                  href={`/account/member/bootcamps/${bootcamp.id}/${resumeLesson.id}`}
+                  href={`/account/member/bootcamps/${bootcamp.slug}/${resumeLesson.id}`}
                   className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 sm:px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:from-emerald-400 hover:to-emerald-500 hover:shadow-emerald-500/35 active:scale-95"
                 >
                   <Zap className="h-4 w-4" />
@@ -409,7 +409,7 @@ export default function BootcampLearningClient({ bootcamp, lessonProgress = {} }
                 <CourseSection
                   key={course.id}
                   course={course}
-                  bootcampId={bootcamp.id}
+                  bootcampId={bootcamp.slug}
                   lessonProgress={lessonProgress}
                   courseIndex={ci}
                 />

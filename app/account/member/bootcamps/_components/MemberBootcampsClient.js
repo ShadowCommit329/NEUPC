@@ -72,7 +72,7 @@ function EnrolledCard({ bootcamp, enrollment, colorIdx }) {
 
   return (
     <Link
-      href={`/account/member/bootcamps/${bootcamp.id}`}
+      href={`/account/member/bootcamps/${bootcamp.slug}`}
       className={`group relative flex overflow-hidden rounded-2xl border border-white/8 bg-[#0d1117] transition-all duration-300 hover:border-white/15 hover:shadow-xl hover:-translate-y-0.5 ${c.glow} shadow-lg`}
     >
       {/* Accent bar */}
