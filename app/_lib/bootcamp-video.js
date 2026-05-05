@@ -76,23 +76,58 @@ function getDriveClient() {
  * @param {string} fileId - The Google Drive file ID
  * @returns {Promise<{name: string, mimeType: string, size: number}>}
  */
-export async function getFileMetadata(fileId) {
+// In-memory metadata cache. Drive metadata calls add ~150-300ms per request;
+// caching avoids that on every Range chunk fetch.
+// Short TTL: if file replaced in Drive, stale size causes 416 on range requests.
+const META_CACHE_TTL_MS = 60 * 1000;
+const META_CACHE_MAX = 500;
+const _metaCache = new Map();
+
+function _cacheGet(fileId) {
+  const entry = _metaCache.get(fileId);
+  if (!entry) return null;
+  if (Date.now() - entry.t > META_CACHE_TTL_MS) {
+    _metaCache.delete(fileId);
+    return null;
+  }
+  // LRU bump
+  _metaCache.delete(fileId);
+  _metaCache.set(fileId, entry);
+  return entry.v;
+}
+
+function _cacheSet(fileId, value) {
+  if (_metaCache.size >= META_CACHE_MAX) {
+    const firstKey = _metaCache.keys().next().value;
+    _metaCache.delete(firstKey);
+  }
+  _metaCache.set(fileId, { v: value, t: Date.now() });
+}
+
+export async function getFileMetadata(fileId, { useCache = true } = {}) {
+  if (useCache) {
+    const cached = _cacheGet(fileId);
+    if (cached) return cached;
+  }
   try {
     const drive = getDriveClient();
     const response = await drive.files.get({
       fileId,
-      fields: 'id, name, mimeType, size, videoMediaMetadata',
+      fields: 'id, name, mimeType, size, md5Checksum, videoMediaMetadata',
     });
 
-    return {
+    const meta = {
       id: response.data.id,
       name: response.data.name,
       mimeType: response.data.mimeType,
       size: parseInt(response.data.size, 10),
+      etag: response.data.md5Checksum || null,
       duration: response.data.videoMediaMetadata?.durationMillis
         ? Math.round(response.data.videoMediaMetadata.durationMillis / 1000)
         : null,
     };
+    _cacheSet(fileId, meta);
+    return meta;
   } catch (err) {
     if (err.code === 404 || err.status === 404) {
       throw new Error(`File not found: ${fileId}`);
@@ -223,11 +258,14 @@ export async function streamVideo(fileId, rangeHeader = null) {
       start = match[1] ? parseInt(match[1], 10) : 0;
       end = match[2] ? parseInt(match[2], 10) : fileSize - 1;
 
-      // Limit chunk size to 5MB for better streaming
-      const maxChunkSize = 5 * 1024 * 1024;
-      if (end - start + 1 > maxChunkSize) {
-        end = start + maxChunkSize - 1;
+      // Honor browser-requested chunk size. Browser heuristics pick reasonable
+      // values; capping fights the heuristic and causes more round-trips/stalls.
+      // Hard ceiling at 25MB to bound memory if a misbehaving client asks huge.
+      const hardCap = 25 * 1024 * 1024;
+      if (end - start + 1 > hardCap) {
+        end = start + hardCap - 1;
       }
+      if (end >= fileSize) end = fileSize - 1;
 
       status = 206;
       headers['Content-Range'] = `bytes ${start}-${end}/${fileSize}`;
@@ -238,6 +276,9 @@ export async function streamVideo(fileId, rangeHeader = null) {
   headers['Content-Length'] = end - start + 1;
   headers['Accept-Ranges'] = 'bytes';
   headers['Cache-Control'] = 'private, max-age=3600';
+  // ETag only on full responses. On 206 partial content browsers may use it
+  // for If-Range/If-None-Match against a different byte range and get confused.
+  if (metadata.etag && status === 200) headers['ETag'] = `"${metadata.etag}"`;
 
   try {
     const response = await drive.files.get(
