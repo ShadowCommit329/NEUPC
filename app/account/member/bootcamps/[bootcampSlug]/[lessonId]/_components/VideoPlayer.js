@@ -47,7 +47,7 @@ function YouTubeEmbed({ videoId, onProgress }) {
     )?.[1] || videoId;
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
+    <div className="relative aspect-video max-h-[85vh] w-full overflow-hidden rounded-xl bg-black">
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
           <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
@@ -75,7 +75,10 @@ function DriveVideoPlayer({
   onComplete,
 }) {
   const videoRef = useRef(null);
+  const containerRef = useRef(null);
   const progressTimerRef = useRef(null);
+  const hideControlsTimerRef = useRef(null);
+  const scrubbingRef = useRef(false);
   const [state, setState] = useState({
     playing: false,
     currentTime: initialPosition || 0,
@@ -91,29 +94,47 @@ function DriveVideoPlayer({
 
   const videoSrc = `/api/video/${lessonId}${fileId ? `?fileId=${fileId}` : ''}`;
 
-  // Hide controls after inactivity
-  useEffect(() => {
-    let timeout;
-    const handleMouseMove = () => {
-      setState((s) => ({ ...s, showControls: true }));
-      clearTimeout(timeout);
-      if (state.playing) {
-        timeout = setTimeout(() => {
-          setState((s) => ({ ...s, showControls: false }));
-        }, 3000);
-      }
-    };
+  const showControlsTemporarily = useCallback(() => {
+    setState((s) => ({ ...s, showControls: true }));
+    clearTimeout(hideControlsTimerRef.current);
+    const video = videoRef.current;
+    if (video && !video.paused) {
+      hideControlsTimerRef.current = setTimeout(() => {
+        setState((s) => ({ ...s, showControls: false }));
+      }, 3000);
+    }
+  }, []);
 
-    const container = videoRef.current?.parentElement;
-    container?.addEventListener('mousemove', handleMouseMove);
-    container?.addEventListener('touchstart', handleMouseMove);
+  // Hide controls after inactivity (pointer + touch)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handler = () => showControlsTemporarily();
+    container.addEventListener('mousemove', handler);
+    container.addEventListener('pointermove', handler);
 
     return () => {
-      clearTimeout(timeout);
-      container?.removeEventListener('mousemove', handleMouseMove);
-      container?.removeEventListener('touchstart', handleMouseMove);
+      clearTimeout(hideControlsTimerRef.current);
+      container.removeEventListener('mousemove', handler);
+      container.removeEventListener('pointermove', handler);
     };
-  }, [state.playing]);
+  }, [showControlsTemporarily]);
+
+  // Sync fullscreen state with browser (handles ESC key & iOS native exit)
+  useEffect(() => {
+    const onFsChange = () => {
+      const fs =
+        !!document.fullscreenElement || !!document.webkitFullscreenElement;
+      setState((s) => ({ ...s, fullscreen: fs }));
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    document.addEventListener('webkitfullscreenchange', onFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      document.removeEventListener('webkitfullscreenchange', onFsChange);
+    };
+  }, []);
 
   // Progress tracking with debounce
   useEffect(() => {
@@ -165,15 +186,28 @@ function DriveVideoPlayer({
   }, []);
 
   const toggleFullscreen = useCallback(() => {
-    const container = videoRef.current?.parentElement;
-    if (!container) return;
+    const container = containerRef.current;
+    const video = videoRef.current;
+    if (!container || !video) return;
 
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-      setState((s) => ({ ...s, fullscreen: false }));
-    } else {
+    const isFs =
+      !!document.fullscreenElement || !!document.webkitFullscreenElement;
+
+    if (isFs) {
+      (document.exitFullscreen || document.webkitExitFullscreen)?.call(
+        document
+      );
+      return;
+    }
+
+    // iOS Safari on iPhone doesn't support Element.requestFullscreen;
+    // it only allows native video fullscreen.
+    if (container.requestFullscreen) {
       container.requestFullscreen();
-      setState((s) => ({ ...s, fullscreen: true }));
+    } else if (container.webkitRequestFullscreen) {
+      container.webkitRequestFullscreen();
+    } else if (video.webkitEnterFullscreen) {
+      video.webkitEnterFullscreen();
     }
   }, []);
 
@@ -229,13 +263,57 @@ function DriveVideoPlayer({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [togglePlay, seek, toggleMute, toggleFullscreen]);
 
-  const handleSeek = useCallback((e) => {
+  const seekToClientX = useCallback((clientX, barEl) => {
     const video = videoRef.current;
-    if (!video) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pos = (e.clientX - rect.left) / rect.width;
+    if (!video || !video.duration || !barEl) return;
+    const rect = barEl.getBoundingClientRect();
+    const pos = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     video.currentTime = pos * video.duration;
+    setState((s) => ({ ...s, currentTime: pos * video.duration }));
   }, []);
+
+  const handleProgressPointerDown = useCallback(
+    (e) => {
+      const bar = e.currentTarget;
+      scrubbingRef.current = true;
+      bar.setPointerCapture?.(e.pointerId);
+      seekToClientX(e.clientX, bar);
+    },
+    [seekToClientX]
+  );
+
+  const handleProgressPointerMove = useCallback(
+    (e) => {
+      if (!scrubbingRef.current) return;
+      seekToClientX(e.clientX, e.currentTarget);
+    },
+    [seekToClientX]
+  );
+
+  const handleProgressPointerUp = useCallback((e) => {
+    scrubbingRef.current = false;
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+  }, []);
+
+  // Tap on video surface: toggle controls (mobile) or toggle play (desktop)
+  const handleSurfaceClick = useCallback(
+    (e) => {
+      // Pointer type comes from the click's source. Touch -> coarse pointer.
+      const isCoarse =
+        typeof window !== 'undefined' &&
+        window.matchMedia?.('(pointer: coarse)').matches;
+      if (isCoarse) {
+        if (!state.showControls) {
+          showControlsTemporarily();
+        } else {
+          togglePlay();
+        }
+      } else {
+        togglePlay();
+      }
+    },
+    [state.showControls, showControlsTemporarily, togglePlay]
+  );
 
   const handleVideoEvents = {
     onLoadedMetadata: (e) => {
@@ -298,7 +376,10 @@ function DriveVideoPlayer({
   }
 
   return (
-    <div className="group relative aspect-video w-full overflow-hidden rounded-xl bg-black">
+    <div
+      ref={containerRef}
+      className="group relative aspect-video max-h-[85vh] w-full overflow-hidden rounded-xl bg-black select-none"
+    >
       {/* Video */}
       <video
         ref={videoRef}
@@ -306,13 +387,16 @@ function DriveVideoPlayer({
         className="h-full w-full"
         preload="metadata"
         playsInline
-        onClick={togglePlay}
+        webkit-playsinline="true"
+        x5-playsinline="true"
+        controlsList="nodownload"
+        onClick={handleSurfaceClick}
         {...handleVideoEvents}
       />
 
       {/* Loading overlay */}
       {state.loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/50">
           <Loader2 className="h-10 w-10 animate-spin text-white" />
         </div>
       )}
@@ -321,53 +405,62 @@ function DriveVideoPlayer({
       {!state.playing && !state.loading && (
         <button
           onClick={togglePlay}
+          aria-label="Play"
           className="absolute inset-0 flex items-center justify-center bg-black/30 transition-opacity group-hover:opacity-100"
         >
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
-            <Play className="h-8 w-8 fill-current text-white" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm sm:h-16 sm:w-16">
+            <Play className="h-7 w-7 fill-current text-white sm:h-8 sm:w-8" />
           </div>
         </button>
       )}
 
       {/* Controls */}
       <div
-        className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-4 pt-16 pb-4 transition-opacity ${
-          state.showControls || !state.playing ? 'opacity-100' : 'opacity-0'
+        className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pt-14 pb-3 transition-opacity sm:px-4 sm:pt-16 sm:pb-4 ${
+          state.showControls || !state.playing
+            ? 'opacity-100'
+            : 'pointer-events-none opacity-0'
         }`}
       >
-        {/* Progress bar */}
+        {/* Progress bar — taller hit area, drag to scrub */}
         <div
-          className="relative mb-3 h-1 cursor-pointer rounded-full bg-white/20"
-          onClick={handleSeek}
+          className="group/bar relative mb-3 flex h-5 cursor-pointer touch-none items-center"
+          onPointerDown={handleProgressPointerDown}
+          onPointerMove={handleProgressPointerMove}
+          onPointerUp={handleProgressPointerUp}
+          onPointerCancel={handleProgressPointerUp}
         >
-          {/* Buffered */}
-          <div
-            className="absolute inset-y-0 left-0 rounded-full bg-white/30"
-            style={{
-              width: `${state.duration ? (state.buffered / state.duration) * 100 : 0}%`,
-            }}
-          />
-          {/* Progress */}
-          <div
-            className="absolute inset-y-0 left-0 rounded-full bg-emerald-500"
-            style={{
-              width: `${state.duration ? (state.currentTime / state.duration) * 100 : 0}%`,
-            }}
-          />
-          {/* Thumb */}
-          <div
-            className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-lg"
-            style={{
-              left: `${state.duration ? (state.currentTime / state.duration) * 100 : 0}%`,
-            }}
-          />
+          <div className="relative h-1 w-full rounded-full bg-white/20 transition-[height] group-hover/bar:h-1.5">
+            {/* Buffered */}
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-white/30"
+              style={{
+                width: `${state.duration ? (state.buffered / state.duration) * 100 : 0}%`,
+              }}
+            />
+            {/* Progress */}
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-emerald-500"
+              style={{
+                width: `${state.duration ? (state.currentTime / state.duration) * 100 : 0}%`,
+              }}
+            />
+            {/* Thumb */}
+            <div
+              className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-lg sm:h-3 sm:w-3"
+              style={{
+                left: `${state.duration ? (state.currentTime / state.duration) * 100 : 0}%`,
+              }}
+            />
+          </div>
         </div>
 
         {/* Control buttons */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3">
           <button
             onClick={togglePlay}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-white hover:bg-white/10"
+            aria-label={state.playing ? 'Pause' : 'Play'}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10 sm:h-9 sm:w-9"
           >
             {state.playing ? (
               <Pause className="h-5 w-5 fill-current" />
@@ -376,23 +469,27 @@ function DriveVideoPlayer({
             )}
           </button>
 
+          {/* Skip buttons hidden on very small screens */}
           <button
             onClick={() => seek(-10)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-white hover:bg-white/10"
+            aria-label="Rewind 10 seconds"
+            className="hidden h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10 min-[480px]:flex sm:h-9 sm:w-9"
           >
             <SkipBack className="h-4 w-4" />
           </button>
 
           <button
             onClick={() => seek(10)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-white hover:bg-white/10"
+            aria-label="Forward 10 seconds"
+            className="hidden h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10 min-[480px]:flex sm:h-9 sm:w-9"
           >
             <SkipForward className="h-4 w-4" />
           </button>
 
           <button
             onClick={toggleMute}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-white hover:bg-white/10"
+            aria-label={state.muted ? 'Unmute' : 'Mute'}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10 sm:h-9 sm:w-9"
           >
             {state.muted ? (
               <VolumeX className="h-4 w-4" />
@@ -402,7 +499,7 @@ function DriveVideoPlayer({
           </button>
 
           {/* Time */}
-          <span className="ml-1 font-mono text-xs text-white/80">
+          <span className="ml-0.5 font-mono text-[11px] text-white/80 tabular-nums sm:ml-1 sm:text-xs">
             {formatTime(state.currentTime)} / {formatTime(state.duration)}
           </span>
 
@@ -410,7 +507,8 @@ function DriveVideoPlayer({
 
           <button
             onClick={toggleFullscreen}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-white hover:bg-white/10"
+            aria-label={state.fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10 sm:h-9 sm:w-9"
           >
             {state.fullscreen ? (
               <Minimize className="h-4 w-4" />

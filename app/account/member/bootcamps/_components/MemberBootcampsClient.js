@@ -72,24 +72,24 @@ function EnrolledCard({ bootcamp, enrollment, colorIdx }) {
 
   return (
     <Link
-      href={`/account/member/bootcamps/${bootcamp.id}`}
+      href={`/account/member/bootcamps/${bootcamp.slug}`}
       className={`group relative flex overflow-hidden rounded-2xl border border-white/8 bg-[#0d1117] transition-all duration-300 hover:border-white/15 hover:shadow-xl hover:-translate-y-0.5 ${c.glow} shadow-lg`}
     >
       {/* Accent bar */}
       <div className={`w-1 shrink-0 ${c.bar} transition-all duration-300 group-hover:w-1.5`} />
 
       {/* Body */}
-      <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5 min-w-0">
+      <div className="flex flex-1 flex-col gap-2.5 p-3 sm:gap-3 sm:p-5 min-w-0">
         {/* Top row */}
         <div className="flex items-start justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1">
             {bootcamp.category && (
-              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${c.pill}`}>
+              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] sm:px-2.5 sm:text-[11px] font-semibold ${c.pill}`}>
                 {bootcamp.category}
               </span>
             )}
             {bootcamp.difficulty_level && (
-              <span className="rounded-md bg-white/5 px-2 py-0.5 font-mono text-[10px] text-gray-500">
+              <span className="rounded-md bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-gray-500">
                 {bootcamp.difficulty_level}
               </span>
             )}
@@ -100,27 +100,27 @@ function EnrolledCard({ bootcamp, enrollment, colorIdx }) {
             )}
           </div>
           {lastOpened && (
-            <span className="shrink-0 text-[10px] text-gray-600">{lastOpened}</span>
+            <span className="shrink-0 text-[10px] text-gray-600 hidden xs:block sm:block">{lastOpened}</span>
           )}
         </div>
 
         {/* Title */}
-        <h3 className="text-[15px] font-bold leading-snug tracking-tight text-white/95 transition-colors group-hover:text-white line-clamp-2">
+        <h3 className="text-[13px] sm:text-[15px] font-bold leading-snug tracking-tight text-white/95 transition-colors group-hover:text-white line-clamp-2">
           {bootcamp.title || 'Untitled Bootcamp'}
         </h3>
 
         {/* Current lesson chip */}
         {enrollment?.current_lesson_title && (
-          <div className="inline-flex items-center gap-2 self-start rounded-xl border border-white/6 bg-white/4 px-3 py-1.5 text-[11px] text-gray-400 transition-colors group-hover:border-white/10 max-w-full">
+          <div className="inline-flex min-w-0 items-center gap-1.5 self-start rounded-xl border border-white/6 bg-white/4 px-2.5 py-1 text-[10px] sm:px-3 sm:py-1.5 sm:text-[11px] text-gray-400 transition-colors group-hover:border-white/10 max-w-full overflow-hidden">
             <Play className={`h-3 w-3 shrink-0 ${c.text}`} />
-            <span className="truncate">Lesson {completedLessons + 1} · {enrollment.current_lesson_title}</span>
+            <span className="truncate">L{completedLessons + 1} · {enrollment.current_lesson_title}</span>
           </div>
         )}
 
         {/* Progress bar */}
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="text-gray-500">{completedLessons} / {totalLessons} lessons</span>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between text-[10px] sm:text-[11px]">
+            <span className="text-gray-500">{completedLessons}/{totalLessons} lessons</span>
             <span className={`font-bold tabular-nums ${c.text}`}>{progress}%</span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/6">
@@ -133,22 +133,22 @@ function EnrolledCard({ bootcamp, enrollment, colorIdx }) {
 
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-white/6 pt-2">
-          <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
-            <Clock className="h-3 w-3" />
-            {remainingLessons > 0
-              ? `${remainingLessons} lesson${remainingLessons !== 1 ? 's' : ''} left`
-              : 'All done'}
-            {duration && ` · ${duration}`}
+          <div className="flex items-center gap-1 text-[10px] sm:gap-1.5 sm:text-[11px] text-gray-600 min-w-0">
+            <Clock className="h-3 w-3 shrink-0" />
+            <span className="truncate">
+              {remainingLessons > 0 ? `${remainingLessons} left` : 'All done'}
+              {duration && ` · ${duration}`}
+            </span>
           </div>
-          <span className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition-all duration-200 ${c.btn}`}>
+          <span className={`inline-flex shrink-0 items-center gap-1 rounded-xl px-2.5 py-1.5 text-[10px] sm:gap-1.5 sm:px-3 sm:text-[11px] font-semibold text-white shadow-sm transition-all duration-200 ${c.btn}`}>
             <Play className="h-3 w-3 fill-current" />
-            {isComplete ? 'Review' : 'Resume'}
+            <span className="hidden xs:inline sm:inline">{isComplete ? 'Review' : 'Resume'}</span>
           </span>
         </div>
       </div>
 
       {/* Thumbnail */}
-      <div className="hidden w-32 shrink-0 overflow-hidden sm:block md:w-40">
+      <div className="hidden w-24 shrink-0 overflow-hidden sm:block sm:w-32 md:w-40">
         {bootcamp.thumbnail ? (
           <div className="relative h-full w-full">
             <SafeImg
@@ -179,7 +179,7 @@ function AvailableCard({ bootcamp, onEnroll, isEnrolling, colorIdx }) {
     <div className="group flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-[#0d1117] shadow-lg transition-all duration-300 hover:border-white/15 hover:shadow-xl hover:-translate-y-1">
       {/* Banner */}
       {bootcamp.thumbnail ? (
-        <div className="relative h-36 w-full shrink-0 overflow-hidden">
+        <div className="relative h-32 w-full shrink-0 overflow-hidden sm:h-36">
           <SafeImg
             src={bootcamp.thumbnail}
             alt={bootcamp.title || ''}
@@ -195,7 +195,7 @@ function AvailableCard({ bootcamp, onEnroll, isEnrolling, colorIdx }) {
           )}
         </div>
       ) : (
-        <div className={`relative flex h-36 w-full shrink-0 items-center justify-center bg-gradient-to-br ${gradient}`}>
+        <div className={`relative flex h-32 w-full shrink-0 items-center justify-center bg-gradient-to-br sm:h-36 ${gradient}`}>
           <BookOpen className="h-10 w-10 text-white/30" />
           {bootcamp.is_featured && (
             <div className="absolute top-2 left-2">
@@ -207,7 +207,7 @@ function AvailableCard({ bootcamp, onEnroll, isEnrolling, colorIdx }) {
         </div>
       )}
 
-      <div className="flex flex-1 flex-col gap-3 p-4">
+      <div className="flex flex-1 flex-col gap-2.5 p-3 sm:gap-3 sm:p-4">
         {/* Category + level */}
         <div className="flex flex-wrap items-center gap-1.5">
           {bootcamp.category && (
@@ -223,12 +223,12 @@ function AvailableCard({ bootcamp, onEnroll, isEnrolling, colorIdx }) {
         </div>
 
         {/* Title */}
-        <h3 className="text-[14px] font-bold leading-snug tracking-tight text-white/90 transition-colors group-hover:text-white line-clamp-2 flex-1">
+        <h3 className="text-[13px] sm:text-[14px] font-bold leading-snug tracking-tight text-white/90 transition-colors group-hover:text-white line-clamp-2 flex-1">
           {bootcamp.title || 'Untitled Bootcamp'}
         </h3>
 
         {/* Meta */}
-        <div className="flex flex-wrap items-center gap-2 text-[11px] text-gray-500">
+        <div className="flex flex-wrap items-center gap-1.5 text-[10px] sm:gap-2 sm:text-[11px] text-gray-500">
           {totalLessons > 0 && (
             <span className="flex items-center gap-1">
               <BookOpen className="h-3 w-3" />
@@ -256,7 +256,7 @@ function AvailableCard({ bootcamp, onEnroll, isEnrolling, colorIdx }) {
         <button
           onClick={() => onEnroll(bootcamp.id)}
           disabled={isEnrolling}
-          className="mt-auto flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600/80 to-violet-700/80 py-2.5 text-[12.5px] font-semibold text-white ring-1 ring-violet-500/30 transition-all hover:from-violet-500 hover:to-violet-600 hover:ring-violet-400/40 hover:shadow-lg hover:shadow-violet-500/20 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]"
+          className="mt-auto flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600/80 to-violet-700/80 py-2.5 text-[12px] sm:text-[12.5px] font-semibold text-white ring-1 ring-violet-500/30 transition-all hover:from-violet-500 hover:to-violet-600 hover:ring-violet-400/40 hover:shadow-lg hover:shadow-violet-500/20 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98] min-h-[44px] sm:min-h-0"
         >
           {isEnrolling ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -505,7 +505,7 @@ export default function MemberBootcampsClient({ bootcamps = [], enrollmentMap = 
           {filteredAvailable.length === 0 ? (
             <EmptySearch query={search} onClear={() => setSearch('')} />
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {visibleAvailable.map((bootcamp, i) => (
                 <AvailableCard
                   key={bootcamp.id}

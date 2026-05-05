@@ -29,7 +29,7 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function LessonPage({ params }) {
-  const { bootcampId, lessonId } = await params;
+  const { bootcampSlug, lessonId } = await params;
   const { user } = await requireRole('member');
 
   // Fetch lesson data
@@ -44,34 +44,35 @@ export default async function LessonPage({ params }) {
     notFound();
   }
 
-  // Verify lesson belongs to the bootcamp; reject mismatched URL outright
-  // rather than redirecting (avoids leaking other-bootcamp lesson IDs).
+  // Fetch bootcamp by slug to get the UUID for enrollment/progress checks
+  let bootcamp;
+  try {
+    bootcamp = await getBootcampCurriculumLight(bootcampSlug);
+  } catch {
+    notFound();
+  }
+
+  if (!bootcamp) notFound();
+
+  // Verify lesson belongs to this bootcamp
   const lessonBootcampId = lesson.modules?.courses?.bootcamps?.id;
-  if (lessonBootcampId && lessonBootcampId !== bootcampId) {
+  if (lessonBootcampId && lessonBootcampId !== bootcamp.id) {
     notFound();
   }
 
   // Check enrollment (unless it's a free preview)
   if (!lesson.is_free_preview) {
-    const enrollmentCheck = await checkEnrollment(bootcampId);
+    const enrollmentCheck = await checkEnrollment(bootcamp.id);
     if (!enrollmentCheck.enrolled) {
-      redirect(`/bootcamps/${bootcampId}`);
+      redirect(`/bootcamps/${bootcampSlug}`);
     }
   }
 
-  // Fetch bootcamp for curriculum sidebar (light: no lesson content)
-  let bootcamp;
-  try {
-    bootcamp = await getBootcampCurriculumLight(bootcampId);
-  } catch {
-    notFound();
-  }
-
   // Update last accessed
-  await updateEnrollmentAccess(bootcampId).catch(() => {});
+  await updateEnrollmentAccess(bootcamp.id).catch(() => {});
 
   // Get user's progress
-  const progressData = await getBootcampProgress(bootcampId).catch(() => ({
+  const progressData = await getBootcampProgress(bootcamp.id).catch(() => ({
     progress: [],
     lessonProgress: {},
   }));

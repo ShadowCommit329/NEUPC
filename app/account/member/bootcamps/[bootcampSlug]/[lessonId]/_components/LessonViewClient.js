@@ -190,7 +190,7 @@ function Sidebar({ bootcamp, currentLessonId, lessonProgress, onSelectLesson, is
   return (
     <>
       {/* Desktop sidebar */}
-      <div className="hidden w-96 xl:w-[28rem] 2xl:w-[32rem] shrink-0 border-r border-white/6 lg:block">{content}</div>
+      <div className="hidden w-72 shrink-0 border-r border-white/6 lg:block">{content}</div>
 
       {/* Mobile drawer */}
       {isOpen && (
@@ -352,8 +352,8 @@ export default function LessonViewClient({ bootcamp, lesson, lessonProgress, use
   const nextLesson = currentIndex < allLessons.length - 1 ? allLessons[currentIndex + 1] : null;
 
   const goToLesson = useCallback(
-    (targetLesson) => { setSidebarOpen(false); router.push(`/account/member/bootcamps/${bootcamp.id}/${targetLesson.id}`); },
-    [bootcamp?.id, router]
+    (targetLesson) => { setSidebarOpen(false); router.push(`/account/member/bootcamps/${bootcamp.slug}/${targetLesson.id}`); },
+    [bootcamp?.slug, router]
   );
 
   const handleProgress = useCallback(async (progressData) => {
@@ -426,7 +426,7 @@ export default function LessonViewClient({ bootcamp, lesson, lessonProgress, use
 
               {/* Breadcrumb (desktop) */}
               <div className="hidden items-center gap-1.5 text-[11px] text-gray-600 lg:flex">
-                <Link href={`/account/member/bootcamps/${bootcamp.id}`} className="hover:text-white transition-colors">
+                <Link href={`/account/member/bootcamps/${bootcamp.slug}`} className="hover:text-white transition-colors">
                   {bootcamp.title}
                 </Link>
                 <span>›</span>
@@ -574,7 +574,7 @@ export default function LessonViewClient({ bootcamp, lesson, lessonProgress, use
               </button>
             ) : (
               <Link
-                href={`/account/member/bootcamps/${bootcamp.id}`}
+                href={`/account/member/bootcamps/${bootcamp.slug}`}
                 className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-3 sm:px-5 py-2.5 text-[12px] sm:text-[13px] font-bold text-white shadow-md shadow-emerald-500/20 transition-all hover:from-emerald-400 hover:to-emerald-500"
               >
                 <CheckCircle2 className="h-4 w-4" />
