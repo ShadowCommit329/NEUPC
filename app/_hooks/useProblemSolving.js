@@ -20,12 +20,14 @@ import {
   cleanupLeetCodeDataAction,
 } from '@/app/_lib/problem-solving-actions';
 
+import { dummyData } from './useProblemSolving.mock';
+
 /**
  * Hook for fetching current user's problem solving data
  */
 export function useProblemSolving() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(dummyData);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [syncingPlatform, setSyncingPlatform] = useState(null);
@@ -44,6 +46,10 @@ export function useProblemSolving() {
         setLoading(true);
       }
 
+      // Temporary mock data mapping
+      setData(dummyData);
+      setError(null);
+      /*
       const result = await getProblemSolvingData();
 
       if (!result.success) {
@@ -53,7 +59,7 @@ export function useProblemSolving() {
       }
 
       setData(result.data);
-      setError(null);
+      */
     } catch (err) {
       if (!background) {
         setError(err.message);

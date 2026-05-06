@@ -39,9 +39,5 @@ export const metadata = {
 export default async function ProblemSolvingPage() {
   const { user } = await requireRole('member');
 
-  return (
-    <div className="mx-auto w-full max-w-[1600px] px-4 pt-6 pb-10 sm:px-6 sm:pt-8 lg:px-8 xl:px-10 2xl:px-12">
-      <ProblemSolvingClient userId={user.id} />
-    </div>
-  );
+  return <ProblemSolvingClient userId={user.id} />;
 }
